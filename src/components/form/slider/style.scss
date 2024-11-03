@@ -1,0 +1,120 @@
+@import "../../../css/_functions.scss";
+
+:host {
+  display: block;
+}
+
+.c-form-slider {
+  position: relative;
+  display: grid;
+  margin-inline: 0.5rem;
+  grid-template-areas:
+    "leading control trailing"
+    "a bottomtip b";
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  grid-template-rows: auto auto;
+
+  &.__vertical {
+    grid-template-areas:
+      "leading a"
+      "control bottomtip"
+      "trailing b";
+  }
+  .leading {
+    grid-area: leading;
+    display: flex;
+    align-items: center;
+  }
+  .trailing {
+    grid-area: trailing;
+    display: flex;
+    align-items: center;
+  }
+
+  .control {
+    position: relative;
+    grid-area: control;
+    display: flex;
+    align-items: center;
+    min-height: 1rem;
+    &:hover {
+      .thumb {
+        box-shadow:
+          1px 4px 2px -2px rgba(0, 0, 0, 0.3),
+          1px 3px 3px 0 rgba(0, 0, 0, 0.24),
+          1px 2px 5px 0 rgba(0, 0, 0, 0.22);
+      }
+    }
+  }
+  &.__dragging {
+    .thumb {
+      box-shadow:
+        1px 4px 2px -2px rgba(0, 0, 0, 0.3),
+        1px 3px 3px 0 rgba(0, 0, 0, 0.24),
+        1px 2px 5px 0 rgba(0, 0, 0, 0.22) !important;
+    }
+  }
+  .tick {
+    position: absolute;
+    background-color: color(--l-color-text);
+    border-radius: var(--l-border-radius-full);
+    &.__filled {
+      background-color: #fff;
+    }
+  }
+
+  .track {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    display: flex;
+    align-items: center;
+    transform: translateY(-50%);
+    width: 100%;
+    background-color: color(--l-color-border, 0.5);
+    transition: all 0.2s ease;
+  }
+  .track-filled {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 180%;
+    background-color: currentColor;
+    transition: background-color 0.2s ease;
+  }
+  .thumb {
+    position: relative;
+    transform: translateX(-50%);
+    background-color: currentColor;
+    transition:
+      background-color 0.3s ease,
+      box-shadow 0.3s,
+      border-radius 0.3s,
+      width 0.3s,
+      height 0.3s;
+    box-shadow:
+      0 3px 1px -2px rgba(0, 0, 0, 0.2),
+      0 2px 2px 0 rgba(0, 0, 0, 0.14),
+      0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  }
+
+  .bottom-tip {
+    grid-area: bottomtip;
+    position: relative;
+    display: flex;
+    // min-height: 1.5rem;
+    .mark {
+      position: absolute;
+      font-size: 0.875rem;
+      transform: translateX(-50%);
+
+      &[data-perc="0.00"] {
+        transform: translateX(0%);
+      }
+      &[data-perc="100.00"] {
+        transform: translateX(-100%);
+      }
+    }
+  }
+}

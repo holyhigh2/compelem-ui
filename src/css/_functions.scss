@@ -1,0 +1,17 @@
+/**
+* 使用颜色变量 $color是变量时必须是空格分隔rgb颜色格式
+*/
+@function color($color, $opacity: 1) {
+    @if str-index($color, "--l-")==1 {
+        @return rgb(var($color)/ $opacity)
+    }
+
+    @else if str-index($color, "--")==1 {
+        @return rgb(var($color)/ $opacity)
+    }
+
+    @else {
+        @return opacify($color, $opacity)
+    }
+
+}

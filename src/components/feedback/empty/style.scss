@@ -1,0 +1,23 @@
+@import "../../../css/_mixins.scss";
+@import "../../../css/_functions.scss";
+
+.c-empty {
+  > h3 {
+    margin: 0;
+    margin-bottom: var(--l-margin-sm);
+    text-align: center;
+    @include text-md;
+  }
+  > p {
+    margin: 0;
+    text-align: center;
+    color: color(--l-color-text-secondary);
+    @include text-sm;
+  }
+  .actions {
+    text-align: center;
+    > l-button {
+      margin: var(--l-margin-lg);
+    }
+  }
+}

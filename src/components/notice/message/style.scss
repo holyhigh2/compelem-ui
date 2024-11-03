@@ -1,0 +1,198 @@
+@import "../../../css/_functions.scss";
+@import "../../../css/utils";
+
+:host {
+  display: block;
+  max-width: 50vw;
+}
+
+.c-message {
+  position: relative;
+  flex-direction: row;
+  padding: 0.6rem 1rem;
+  padding-right: 2rem;
+  box-sizing: border-box;
+
+  .main {
+    display: flex;
+    overflow: hidden;
+  }
+
+  &.__border {
+    border-style: solid;
+    border-width: 0;
+    border-left-width: 4px;
+  }
+
+  &.__closable &-close {
+    display: block;
+  }
+
+  &.__closable {
+    display: grid;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition:
+      opacity 0.4s ease-in-out,
+      grid-template-rows 0.3s ease-in-out,
+      padding 0.3s ease-in-out;
+
+    &.--show {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      padding-top: 0.6rem;
+      padding-bottom: 0.6rem;
+    }
+  }
+
+  &.__round {
+    border-radius: 5px;
+
+    &.__border {
+      border-top-width: 1px;
+      border-bottom-width: 1px;
+      border-right-width: 1px;
+    }
+  }
+
+  &.__info {
+    background-color: color(--l-color-blue-50);
+
+    .c-message-icon {
+      color: color(--l-color-blue-400);
+    }
+
+    .c-message-close {
+      color: color(--l-color-blue-500);
+    }
+
+    .c-message-title {
+      color: color(--l-color-blue-800);
+    }
+
+    .c-message-descr {
+      color: color(--l-color-blue-700);
+    }
+
+    &.__border {
+      border-color: color(--l-color-blue-400);
+    }
+  }
+
+  &.__success {
+    background-color: color(--l-color-green-50);
+
+    .c-message-icon {
+      color: color(--l-color-green-400);
+    }
+
+    .c-message-close {
+      color: color(--l-color-green-500);
+    }
+
+    .c-message-title {
+      color: color(--l-color-green-800);
+    }
+
+    .c-message-descr {
+      color: color(--l-color-green-700);
+    }
+
+    &.__border {
+      border-color: color(--l-color-green-400);
+    }
+  }
+
+  &.__warning {
+    background-color: color(--l-color-yellow-50);
+
+    .c-message-icon {
+      color: color(--l-color-yellow-400);
+    }
+
+    .c-message-close {
+      color: color(--l-color-yellow-500);
+    }
+
+    .c-message-title {
+      color: color(--l-color-yellow-800);
+    }
+
+    .c-message-descr {
+      color: color(--l-color-yellow-700);
+    }
+
+    &.__border {
+      border-color: color(--l-color-yellow-400);
+    }
+  }
+
+  &.__error {
+    background-color: color(--l-color-red-50);
+
+    .c-message-icon {
+      color: color(--l-color-red-400);
+    }
+
+    .c-message-close {
+      color: color(--l-color-red-500);
+    }
+
+    .c-message-title {
+      color: color(--l-color-red-800);
+    }
+
+    .c-message-descr {
+      color: color(--l-color-red-700);
+    }
+
+    &.__border {
+      border-color: color(--l-color-red-400);
+    }
+  }
+
+  &-icon {
+    l-icon {
+      display: inline-block;
+      width: 1.25rem;
+      height: 1.25rem;
+      background-size: contain;
+      margin-right: 0.5rem;
+    }
+  }
+
+  &-title {
+    margin: 0;
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  &-descr {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &-content {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  &-close {
+    display: none;
+    position: absolute;
+    right: 0.3rem;
+    top: 0.5rem;
+    color: #666;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+  }
+}

@@ -1,0 +1,255 @@
+@import "../../../css/_functions.scss";
+@import "../../../css/_mixins.scss";
+@import "../../../css/_utils.scss";
+
+:host {
+  position: fixed;
+}
+
+.c-drawer {
+  padding: 0;
+  border: none;
+  outline: none;
+  overflow: hidden;
+  position: fixed;
+  margin: 0;
+  max-width: unset;
+  max-height: unset;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  box-shadow:
+    rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+    rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+    rgba(0, 0, 0, 0.1) 0px 0px 25px -5px,
+    rgba(0, 0, 0, 0.1) 0px 0px 10px -6px;
+
+  transition: all 0.2s;
+
+  &.__round {
+    border-radius: var(--l-border-radius-lg);
+  }
+
+  &.placement- {
+    &top {
+      width: 100% !important;
+      top: 0;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      transform: translateY(-100%);
+
+      &.__shake {
+        animation-name: shake-top;
+      }
+    }
+
+    &bottom {
+      width: 100% !important;
+      top: 100%;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      transform: translateY(0%);
+
+      &.__shake {
+        animation-name: shake-bottom;
+      }
+    }
+
+    &right {
+      height: 100vh;
+      left: 100%;
+      top: 0;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      transform: translateX(0%);
+
+      &.__shake {
+        animation-name: shake-right;
+      }
+    }
+
+    &left {
+      height: 100vh;
+      top: 0;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      transform: translateX(-100%);
+
+      &.__shake {
+        animation-name: shake-left;
+      }
+    }
+  }
+
+  &::backdrop {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  &.__visible {
+    &::backdrop {
+      opacity: 1;
+    }
+
+    &.placement- {
+      &top {
+        transform: translateY(0%);
+      }
+
+      &bottom {
+        transform: translateY(-100%);
+      }
+
+      &right {
+        transform: translateX(-100%);
+      }
+
+      &left {
+        transform: translateX(0%);
+      }
+    }
+  }
+
+  .--wrapper {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    // padding: 1.35rem;
+    height: 100%;
+
+    .--close {
+      position: absolute;
+      font-size: 1.5rem;
+      right: 0.25rem;
+      cursor: pointer;
+    }
+
+    > main {
+      padding-bottom: 1rem;
+      flex: 1;
+
+      // margin-top: .5rem;
+      overflow: auto;
+      word-break: break-all;
+    }
+
+    > footer {
+      text-align: right;
+    }
+  }
+
+  &.__shake {
+    animation-duration: 0.3s;
+    animation-timing-function: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    animation-name: ani-shake;
+  }
+
+  slot[name="footer"]::slotted(l-button) {
+    margin-left: 0.5rem;
+  }
+}
+
+@keyframes shake-right {
+  0% {
+    margin-left: 10px;
+  }
+
+  20% {
+    margin-left: 0px;
+  }
+
+  40% {
+    margin-left: 10px;
+  }
+
+  60% {
+    margin-left: 0px;
+  }
+
+  80% {
+    margin-left: 10px;
+  }
+
+  100% {
+    margin-left: 0px;
+  }
+}
+
+@keyframes shake-left {
+  0% {
+    margin-left: -10px;
+  }
+
+  20% {
+    margin-left: 0px;
+  }
+
+  40% {
+    margin-left: -10px;
+  }
+
+  60% {
+    margin-left: 0px;
+  }
+
+  80% {
+    margin-left: -10px;
+  }
+
+  100% {
+    margin-left: 0px;
+  }
+}
+
+@keyframes shake-top {
+  0% {
+    margin-top: -10px;
+  }
+
+  20% {
+    margin-top: 0px;
+  }
+
+  40% {
+    margin-top: -10px;
+  }
+
+  60% {
+    margin-top: 0px;
+  }
+
+  80% {
+    margin-top: -10px;
+  }
+
+  100% {
+    margin-top: 0px;
+  }
+}
+
+@keyframes shake-bottom {
+  0% {
+    margin-top: 10px;
+  }
+
+  20% {
+    margin-top: 0px;
+  }
+
+  40% {
+    margin-top: 10px;
+  }
+
+  60% {
+    margin-top: 0px;
+  }
+
+  80% {
+    margin-top: 10px;
+  }
+
+  100% {
+    margin-top: 0px;
+  }
+}

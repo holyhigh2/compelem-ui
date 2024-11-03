@@ -1,0 +1,105 @@
+@import "../../../css/_mixins.scss";
+@import "../../../css/_functions.scss";
+
+.c-progress-circular {
+  position: relative;
+  transition: 0.5s;
+  transform-origin: center center;
+
+  > svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: center;
+    transition: all 0.2s ease;
+  }
+
+  .--track {
+    stroke: color(--l-color-border, 0.5);
+    transition: all 0.3s ease;
+  }
+
+  .--thumb {
+    stroke: currentColor;
+    transform: rotateZ(-90deg);
+    transform-origin: center;
+    transition: all 0.3s ease;
+  }
+
+  .--content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  &.__indeterminate {
+    > svg {
+      transform: rotate(-90deg);
+      animation: progress-circular-rotate 1.5s linear infinite;
+    }
+
+    .--thumb {
+      animation:
+        progress-circular-dash 1.5s ease-in-out infinite alternate,
+        progress-circular-rotate 1.5s linear infinite;
+    }
+  }
+}
+@keyframes progress-circular-rotate {
+  100% {
+    transform: rotate(270deg);
+  }
+}
+
+.c-progress-linear {
+  position: relative;
+  overflow: hidden;
+  margin-inline: 0.5rem;
+  transition: all 0.3s ease;
+
+  .--track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: color(--l-color-border, 0.5);
+    transition: all 0.2s ease;
+    border-radius: var(--l-border-radius-lg);
+  }
+  .--thumb {
+    background-color: currentColor;
+    height: 100%;
+    transition: all 0.3s ease;
+    border-radius: var(--l-border-radius-lg);
+  }
+  &.__indeterminate {
+    .--thumb {
+      position: absolute;
+      animation: progress-linear-dash 1.2s linear infinite;
+    }
+  }
+}
+@keyframes progress-linear-dash {
+  0% {
+    left: -10%;
+    width: 10%;
+  }
+  30% {
+    left: 20%;
+    width: 40%;
+  }
+  60% {
+    left: 40%;
+    width: 60%;
+  }
+  90% {
+    left: 100%;
+    width: 30%;
+  }
+  100% {
+    left: 100%;
+    width: 0%;
+  }
+}

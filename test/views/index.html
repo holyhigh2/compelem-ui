@@ -1,0 +1,74 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .active {
+      color: #fff;
+      background-color: rgb(24, 68, 124);
+    }
+
+    l-navbar {
+      background-image: radial-gradient(farthest-side at 0% 10%, rgb(68, 180, 227), rgb(18, 53, 111));
+    }
+  </style>
+  <link rel="stylesheet" type="text/css" href="../root.css">
+  </link>
+  <script src="../tailwindcss3.4.3.js"></script>
+  <script src="../compelem-ui.js"></script>
+</head>
+
+<body>
+  <l-container>
+    <l-header>
+      <l-navbar class="mb-2" vertical active-index="1">
+        <div slot="brand">
+          <img class="mx-auto h-10 w-auto" src="../img/logo.png" alt="eHorus" />
+        </div>
+        <div class="nav-item" index="1" onclick="jumpTo('./system.html')">系统配置</div>
+        <div class="nav-item" index="2" onclick="jumpTo('./home.html')">采集配置111</div>
+        <div class="nav-item" index="3" onclick="jumpTo('./protocol.html')">规约配置1</div>
+        <!-- <l-dropdown-menu index="4" .items="[{text:'aa'}]" trigger="click">
+            下拉菜单
+<svg class="pointer-events-none inline top-0 h-full w-5 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+          </l-dropdown-menu> -->
+        <div slot="right">
+          <l-dropdown>
+            <button type="button"
+              class="relative flex max-w-xs items-center rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
+              id="user-menu-button" aria-expanded="false" aria-haspopup="true">
+              <span class="absolute -inset-1.5"></span>
+              <span class="sr-only">Open user menu</span>
+              <img class="h-8 w-8 rounded-full"
+                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                alt="">
+            </button>
+          </l-dropdown>
+        </div>
+      </l-navbar>
+    </l-header>
+    <l-container>
+      <iframe id="frame" class="h-full w-full border-none" src="./home.html"></iframe>
+    </l-container>
+  </l-container>
+
+  <script>
+    function jumpTo(url) {
+      frame.src = url
+    }
+  </script>
+</body>
+
+</html>

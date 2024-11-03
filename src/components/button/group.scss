@@ -1,0 +1,16 @@
+@import "../../css/_functions.scss";
+
+:host {
+  display: inline-block;
+  --color-text: var(--l-color-text);
+  transition: all 0.2s;
+}
+
+.c-button-group {
+  display: inline-flex;
+
+  ::slotted(*:not(:first-child)) {
+    margin-left: -1px;
+    border-left: 0;
+  }
+}

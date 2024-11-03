@@ -1,0 +1,148 @@
+@import "../../../css/_functions.scss";
+
+%p-right-after {
+  border-right-color: color(--l-color-text) !important;
+  border-width: 5px 5px 5px 0;
+  left: -4px;
+}
+
+%p-left-after {
+  border-left-color: color(--l-color-text) !important;
+  border-width: 5px 0 5px 5px;
+  right: -4px;
+}
+
+%p-top-after {
+  border-top-color: color(--l-color-text) !important;
+  border-width: 5px 5px 0 5px;
+  bottom: -4px;
+}
+
+%p-bottom-after {
+  border-bottom-color: color(--l-color-text) !important;
+  border-width: 0 5px 5px 5px;
+  top: -4px;
+}
+
+.c-tooltip {
+  position: absolute;
+  left: -9999px;
+  background-color: color(--l-color-text);
+  color: color(--l-color-gray-50);
+  font-size: small;
+  padding: 2px 10px;
+  border-radius: var(--l-border-radius);
+  opacity: 0;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
+  z-index: 9960;
+
+  &.__visible {
+    opacity: 1;
+  }
+
+  &.placement-right {
+    &::after {
+      @extend %p-right-after;
+      top: calc(50% - 5px);
+    }
+
+    &.__start::after {
+      @extend %p-right-after;
+      top: 4px;
+    }
+
+    &.__end::after {
+      @extend %p-right-after;
+      top: auto;
+      bottom: 4px;
+    }
+
+    &.__visible {
+      transform: translateX(3px);
+    }
+  }
+
+  &.placement-left {
+    &::after {
+      @extend %p-left-after;
+      top: calc(50% - 5px);
+    }
+
+    &.__start::after {
+      @extend %p-left-after;
+      top: 4px;
+    }
+
+    &.__end::after {
+      @extend %p-left-after;
+      top: auto;
+      bottom: 4px;
+    }
+
+    &.__visible {
+      transform: translateX(-3px);
+    }
+  }
+
+  &.placement-top {
+    &::after {
+      @extend %p-top-after;
+      left: calc(50% - 5px);
+    }
+
+    &.__start::after {
+      @extend %p-top-after;
+      left: 4px;
+    }
+
+    &.__end::after {
+      @extend %p-top-after;
+      left: auto;
+      right: 4px;
+    }
+
+    &.__visible {
+      transform: translateY(5px);
+    }
+  }
+
+  &.placement-bottom {
+    &::after {
+      @extend %p-bottom-after;
+      left: calc(50% - 5px);
+    }
+
+    &.__start::after {
+      @extend %p-bottom-after;
+      left: 4px;
+    }
+
+    &.__end::after {
+      @extend %p-bottom-after;
+      left: auto;
+      right: 4px;
+    }
+
+    &.__visible {
+      transform: translateY(-3px);
+    }
+  }
+
+  &.__arrow {
+    &::after {
+      border-color: transparent;
+      border-style: solid;
+      content: " ";
+      display: block;
+      height: 0;
+      position: absolute;
+      width: 0;
+    }
+  }
+
+  &-anchor {
+    display: inline-block;
+  }
+}

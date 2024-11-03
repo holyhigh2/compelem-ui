@@ -1,0 +1,58 @@
+@import "../../css/_functions.scss";
+
+.c-link {
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+  outline: none;
+
+  &.__underline:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  &.__disabled {
+    cursor: not-allowed;
+
+    &.__default {
+      color: #c0c4cc;
+    }
+
+    &.__info {
+      color: color(--l-color-info-light);
+    }
+
+    &.__success {
+      color: color(--l-color-success-light);
+    }
+
+    &.__warning {
+      color: color(--l-color-warning-light);
+    }
+
+    &.__error {
+      color: color(--l-color-error-light);
+    }
+  }
+
+  &.__default {
+    color: #666;
+  }
+
+  &.__info {
+    color: color(--l-color-info);
+  }
+
+  &.__success {
+    color: color(--l-color-success);
+  }
+
+  &.__warning {
+    color: color(--l-color-warning);
+  }
+
+  &.__error {
+    color: color(--l-color-error);
+  }
+}

@@ -1,0 +1,57 @@
+@import "../../../css/_functions.scss";
+@import "../../../css/utils";
+
+:host {
+  display: inline-block;
+  border-radius: var(--l-border-radius-md);
+  --l-card-subtitle-opacity: 0.6;
+}
+
+.c-card {
+  border-radius: inherit;
+  transition: box-shadow 0.3s;
+
+  &.__shadow-always {
+    box-shadow: var(--l-shadow-lg);
+  }
+  &.__shadow-hover {
+    &:hover {
+      box-shadow: var(--l-shadow-lg);
+    }
+  }
+
+  .--content {
+    > h3 {
+      font-size: 1.125rem;
+      font-weight: 500;
+      line-height: 1.5;
+      letter-spacing: 0.0125em;
+      text-overflow: ellipsis;
+      text-transform: none;
+      white-space: nowrap;
+      word-break: normal;
+      word-wrap: break-word;
+      padding: 0;
+      margin: 0;
+    }
+    > p {
+      font-size: 0.875rem;
+      font-weight: 400;
+      line-height: 1.25;
+      white-space: nowrap;
+      margin: 0;
+      opacity: var(--l-card-subtitle-opacity);
+    }
+  }
+  > header {
+    padding: 0.625rem 1rem;
+  }
+  > main {
+    padding: 1rem;
+    padding-top: 0;
+    font-size: 0.875rem;
+  }
+  > footer {
+    padding: 0.5rem;
+  }
+}

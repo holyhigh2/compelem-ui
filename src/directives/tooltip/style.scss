@@ -1,0 +1,12 @@
+
+//ripple
+.l-ripple{
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    border-radius: 50%;
+    will-change: transform, opacity;
+    opacity: 0.1;
+    transform: scale(0);
+    transition: transform .35s ease, opacity .15s ease;
+}

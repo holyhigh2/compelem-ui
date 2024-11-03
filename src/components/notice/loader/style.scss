@@ -1,0 +1,64 @@
+@import "../../../css/_functions.scss";
+
+:host([backdrop]) .--backdrop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(111, 111, 111, 0.1);
+  z-index: 9901;
+}
+
+:host([fullscreen]) {
+  .--backdrop,
+  .c-loader {
+    position: fixed;
+  }
+}
+
+.c-loader {
+  &.__center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9902;
+  }
+
+  &.__size-xl {
+    font-size: 0.75rem;
+    line-height: 1;
+
+    > l-icon {
+      font-size: 1.25rem;
+    }
+  }
+
+  &.__size-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+
+    > l-icon {
+      font-size: 1.45rem;
+    }
+  }
+
+  &.__size-md {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+
+    > l-icon {
+      font-size: 1.75rem;
+    }
+  }
+
+  &.__size-lg {
+    font-size: 1rem;
+    line-height: 1.25rem;
+
+    > l-icon {
+      font-size: 2rem;
+    }
+  }
+}

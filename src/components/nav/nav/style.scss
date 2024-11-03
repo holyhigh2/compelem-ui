@@ -1,0 +1,229 @@
+@import "../../../css/_functions.scss";
+
+:host {
+  display: block;
+  overflow: hidden;
+  --color: #2196f3;
+}
+
+.c-nav {
+  &.__full {
+    .--items {
+      ::slotted(*) {
+        flex: 1;
+      }
+    }
+  }
+
+  &.__vertical {
+    .--items {
+      display: block;
+
+      ::slotted(*) {
+        text-align: left;
+        word-break: keep-all;
+      }
+    }
+
+    .--container {
+      overflow: hidden;
+    }
+
+    &.__appearance {
+      &-default {
+        padding: 0.5rem 0rem;
+
+        .--items {
+          ::slotted(*) {
+            margin-left: 0 !important;
+          }
+        }
+      }
+
+      &-tab {
+        .--items {
+          ::slotted(*) {
+            border-top-left-radius: var(--l-border-radius-md);
+            border-bottom-left-radius: var(--l-border-radius-md);
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: 1px solid color(--l-color-border) !important;
+            border-bottom: none !important;
+          }
+
+          ::slotted(.active) {
+            border: 1px solid color(--l-color-border) !important;
+            border-right: 0 !important;
+            color: var(--color);
+          }
+
+          ::slotted(:not(.active, [unhoverable]):hover) {
+            color: color(--l-color-gray-900);
+          }
+        }
+      }
+
+      &-underline {
+        .--container {
+          border: 0;
+          border-right: 1px solid color(--l-color-gray-200);
+        }
+
+        .--items {
+          margin-right: -1px;
+
+          ::slotted(*) {
+            border: 0 !important;
+            border-right: 2px solid transparent !important;
+          }
+
+          ::slotted(.active) {
+            border: 0 !important;
+            border-right: 2px solid color(--l-color) !important;
+          }
+
+          ::slotted(:not(.active, [unhoverable]):hover) {
+            border: 0 !important;
+            border-right: 2px solid color(--l-color-border) !important;
+          }
+        }
+      }
+
+      &-card {
+        overflow: hidden;
+
+        .--items {
+          ::slotted(*) {
+            border-bottom: 1px solid color(--l-color-gray-200) !important;
+          }
+
+          ::slotted(.active) {
+            border-bottom: 1px solid color(--l-color-gray-200) !important;
+            margin: auto !important;
+            border-right: 2px solid var(--color) !important;
+          }
+        }
+      }
+    }
+  }
+
+  .--items {
+    align-items: baseline;
+    display: flex;
+
+    //匹配默认插槽
+    ::slotted(*) {
+      font-weight: 500;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      color: color(--l-color-gray-500);
+    }
+  }
+
+  &.__appearance {
+    &-default {
+      .--items {
+        ::slotted(*:not(:first-child)) {
+          margin-left: 0.5rem;
+        }
+      }
+
+      ::slotted(.active) {
+        // background-color: color(--l-color-blue-50);
+        color: var(--color);
+        font-weight: 600;
+        border-radius: var(--l-border-radius-md);
+      }
+
+      ::slotted(:not([unhoverable]):hover) {
+        background-color: color(--l-color-gray-100);
+        border-radius: var(--l-border-radius-md);
+      }
+    }
+
+    &-tab {
+      .--items {
+        ::slotted(*) {
+          display: grid;
+          align-items: center;
+          border-top-left-radius: var(--l-border-radius-md);
+          border-top-right-radius: var(--l-border-radius-md);
+          border-bottom-left-radius: 0;
+          border-bottom-right-radius: 0;
+          border-bottom: 1px solid color(--l-color-border) !important;
+        }
+
+        ::slotted(.active) {
+          border: 1px solid color(--l-color-border) !important;
+          border-bottom: 0 !important;
+          color: var(--color);
+        }
+
+        ::slotted(:not(.active):hover) {
+          color: color(--l-color-gray-900);
+        }
+      }
+    }
+
+    &-underline {
+      .--container {
+        border-bottom: 1px solid color(--l-color-gray-200);
+      }
+
+      .--items {
+        margin-bottom: -1px;
+
+        ::slotted(*) {
+          display: grid;
+          align-items: center;
+          border-radius: 0 !important;
+          border-bottom: 2px solid transparent !important;
+        }
+
+        ::slotted(.active) {
+          color: var(--color);
+          border-bottom: 2px solid var(--color) !important;
+        }
+
+        ::slotted(:not(.active):hover) {
+          color: color(--l-color-gray-600);
+          border-bottom: 2px solid color(--l-color-gray-300) !important;
+        }
+      }
+    }
+
+    &-card {
+      border-radius: var(--l-border-radius-md);
+      box-shadow:
+        rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+        rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+        rgba(0, 0, 0, 0.1) 0px 1px 3px 0px,
+        rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+
+      .--items {
+        ::slotted(*) {
+          display: grid;
+          align-items: center;
+          border-radius: 0 !important;
+          background-color: #fff;
+          border-right: 1px solid color(--l-color-gray-200) !important;
+        }
+
+        ::slotted(.active) {
+          color: color(--l-color-gray-900);
+          border-bottom: 2px solid var(--color) !important;
+          margin-bottom: -2px;
+        }
+
+        ::slotted(:hover) {
+          background-color: color(--l-color-gray-50);
+        }
+      }
+    }
+  }
+
+  &.__vertical {
+  }
+}

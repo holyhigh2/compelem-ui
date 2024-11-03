@@ -1,0 +1,77 @@
+@import "../../../css/_functions.scss";
+@import "../../../css/utils";
+
+:host {
+  display: inline-block;
+  --color: var(--l-color-info);
+}
+
+.c-tag {
+  border-radius: var(--l-border-radius-md);
+  background-color: color(--color, 0.1);
+  color: color(--color);
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.375rem;
+
+  &.__size-sm {
+    padding: 0.125rem 0.375rem;
+    font-size: var(--l-font-sm);
+    line-height: var(--l-lineh-xs);
+
+    .--dot {
+      width: 6px;
+      height: 6px;
+    }
+  }
+
+  &.__size-md {
+    padding: 0.25rem 0.5rem;
+    font-size: var(--l-font-md);
+    line-height: var(--l-lineh-xs);
+
+    .--dot {
+      width: 7px;
+      height: 7px;
+    }
+  }
+
+  &.__size-lg {
+    font-size: var(--l-font-lg);
+    line-height: var(--l-lineh-sm);
+    padding: 0.375rem 0.625rem;
+
+    .--dot {
+      width: 8px;
+      height: 8px;
+    }
+  }
+
+  .--dot {
+    display: inline-block;
+
+    border-radius: var(--l-border-radius-full);
+    background-color: color(--color);
+  }
+
+  &.__pill {
+    border-radius: var(--l-border-radius-full);
+  }
+
+  &.__border {
+    border: 1px solid color(--color, 0.4);
+  }
+
+  &.__flat {
+    background-color: color(--color);
+    color: #fff;
+
+    .--dot {
+      background-color: #fff !important;
+    }
+  }
+
+  .--close {
+    color: color(--color);
+  }
+}

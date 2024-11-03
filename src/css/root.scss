@@ -1,0 +1,137 @@
+/********************
+* base styles
+* @author holyhigh
+*********************/
+:root {
+  --l-index-base: 1000;
+
+  --l-color-blue-50: 239 246 255;
+  --l-color-blue-100: 219 234 254;
+  --l-color-blue-200: 191 219 254;
+  --l-color-blue-300: 147 197 253;
+  --l-color-blue-400: 96 165 250;
+  --l-color-blue-500: 59 130 246;
+  --l-color-blue-600: 37 99 235;
+  --l-color-blue-700: 29 78 216;
+  --l-color-blue-800: 30 64 175;
+
+  --l-color-red-50: 254 242 242;
+  --l-color-red-100: 254 226 226;
+  --l-color-red-200: 254 202 202;
+  --l-color-red-300: 252 165 165;
+  --l-color-red-400: 248 113 113;
+  --l-color-red-500: 239 68 68;
+  --l-color-red-600: 220 38 38;
+  --l-color-red-700: 185 28 28;
+  --l-color-red-800: 153 27 27;
+  --l-color-red-900: 127 29 29;
+
+  --l-color-yellow-50: 254 252 232;
+  --l-color-yellow-100: 254 249 195;
+  --l-color-yellow-200: 254 240 138;
+  --l-color-yellow-300: 253 224 71;
+  --l-color-yellow-400: 250 204 21;
+  --l-color-yellow-500: 234 179 8;
+  --l-color-yellow-600: 202 138 4;
+  --l-color-yellow-700: 161 98 7;
+  --l-color-yellow-800: 133 77 14;
+  --l-color-yellow-900: 113 63 18;
+
+  --l-color-green-50: 240 253 244;
+  --l-color-green-100: 220 252 231;
+  --l-color-green-200: 187 247 208;
+  --l-color-green-300: 134 239 172;
+  --l-color-green-400: 74 222 128;
+  --l-color-green-500: 34 197 94;
+  --l-color-green-600: 22 163 74;
+  --l-color-green-700: 21 128 61;
+  --l-color-green-800: 22 101 52;
+  --l-color-green-900: 20 83 45;
+
+  --l-color-gray-50: 249 250 251;
+  --l-color-gray-100: 243 244 246;
+  --l-color-gray-200: 229 231 235;
+  --l-color-gray-300: 209 213 219;
+  --l-color-gray-400: 156 163 175;
+  --l-color-gray-500: 107 114 128;
+  --l-color-gray-600: 75 85 99;
+  --l-color-gray-700: 55 65 81;
+  --l-color-gray-800: 31 41 55;
+  --l-color-gray-900: 17 24 39;
+  --l-color-gray-950: 3 7 18;
+
+  --l-color-sky-50: 240 249 255;
+  --l-color-sky-100: 224 242 254;
+  --l-color-sky-200: 186 230 253;
+  --l-color-sky-300: 125 211 252;
+  --l-color-sky-400: 56 189 248;
+  --l-color-sky-500: 14 165 233;
+
+  --l-color-primary: var(--l-color-info);
+
+  --l-color-text: var(--l-color-gray-700);
+  --l-color-text-header: var(--l-color-gray-900);
+  --l-color-text-secondary: var(--l-color-gray-500);
+  --l-color-text-active: var(--l-color-sky-500);
+  --l-color-text-desc: var(--l-color-gray-400);
+
+  --l-color-info: 33 150 243;
+  --l-color-success: 76 175 80;
+  --l-color-warning: 255 179 0;
+  --l-color-error: 244 67 54;
+  --l-color-disabled: var(--l-color-gray-50);
+  --l-color-placeholder: var(--l-color-gray-400);
+
+  --l-color-border: var(--l-color-gray-300);
+  --l-color-border-secondary: var(--l-color-gray-200);
+  --l-color-border-active: var(--l-color-blue-400);
+
+  --l-color-info-light: var(--l-color-blue-50);
+  --l-color-success-light: #edfae1;
+  --l-color-warning-light: #fff9e6;
+  --l-color-error-light: var(--l-color-red-50);
+
+  --l-color-background: #fff;
+
+  //border
+  --l-border-radius: 0.2rem;
+  --l-border-radius-md: 0.35rem;
+  --l-border-radius-lg: 0.5rem;
+  --l-border-radius-full: 9999px;
+
+  //text
+  --l-font-xs: 0.75rem;
+  --l-font-sm: 0.875rem;
+  --l-font-md: 1rem;
+  --l-font-lg: 1.125rem;
+  --l-lineh-xs: 1rem;
+  --l-lineh-sm: 1.25rem;
+  --l-lineh-md: 1.5rem;
+  --l-lineh-lg: 1.75rem;
+
+  //shadow
+  --l-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --l-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --l-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  --l-field-label-scale: 0.75em;
+
+  //margin
+  --l-margin-xs: 0.25rem;
+  --l-margin-sm: 0.5rem;
+  --l-margin-md: 0.75rem;
+  --l-margin-lg: 1rem;
+
+  //paddings
+  // 0.375 菜单项（下拉/导航/弹出/list/输入框md（需要-1px）/树节点）上下边距
+  // 0.125 小型卡片内边距，如弹出菜单项间距及容器间距
+  // 1 左侧导航面板内边距
+
+  //fontsize
+  // 0.75rem xs 输入框/按钮/
+  // 0.875 sm/md 菜单项/表单内容
+
+  --l-spacing-slim: 1rem;
+}

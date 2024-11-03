@@ -1,0 +1,15 @@
+/********************
+* base styles
+* @author holyhigh
+*********************/
+@import './root.scss';
+
+//same as --tw
+.text-center {
+    text-align: center;
+}
+
+:host {
+    color: var(--l-color-text);
+    font-size: 14px;
+}

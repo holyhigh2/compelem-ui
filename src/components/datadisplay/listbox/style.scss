@@ -1,0 +1,30 @@
+@import "../../../css/_functions.scss";
+@import "../../../css/_mixins.scss";
+
+:host {
+  --color: #2196f3;
+  display: block;
+  // overflow: auto;
+  // position: relative;
+}
+
+.c-listbox {
+  height: 100%;
+  position: relative;
+  overflow: auto;
+
+  #more {
+    min-height: 1rem;
+  }
+
+  #vlist {
+    position: absolute;
+    top: 0;
+
+    .--vitem {
+      position: absolute;
+      top: 0;
+      box-sizing: border-box;
+    }
+  }
+}

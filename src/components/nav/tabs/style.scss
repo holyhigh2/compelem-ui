@@ -1,0 +1,13 @@
+:host {
+  display: block;
+  --color: #2196f3;
+}
+
+.c-tabs {
+  ::slotted(*) {
+    display: none;
+  }
+  ::slotted(.active) {
+    display: block;
+  }
+}
