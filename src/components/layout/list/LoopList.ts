@@ -110,7 +110,7 @@ export class LoopList extends VirtualLoop(AppearanceElem) {
     @wheel.prevent.throttle:150="${this.onWheel}" @resize.debounce:100="${this.onResize}">
       <div class="ce-list-container" @mutate.child.debounce:100="${this.onListReady}" @click="${this.onItemClick}">
         ${forEach(range(this.vCachedRows), identity, (v, i) => h`
-          <ce-list-item .space="${this.space}" center value="${v}" ${styles({ height: this.rowHeight + 'px', transform: `translateY(${i * (this.rowHeight + this.gap)}px)` }, 'font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md);')} data-row-index="${i}" hoverable appearance="pale" ripple="false">
+          <ce-list-item .space="${this.space}" center value="${v}" ${styles([{ height: this.rowHeight + 'px', transform: `translateY(${i * (this.rowHeight + this.gap)}px)` }, 'font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md);'])} data-row-index="${i}" hoverable appearance="pale" ripple="false">
           </ce-list-item>
         `)}
       </div>

@@ -87,7 +87,7 @@ export abstract class BarActions extends CompElem {
                 <ce-list gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs);">
                     ${forEach(this.allFields, f => f.prop, f => h`
                     <ce-list-item ripple="false" appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:0" ?unmovable="${!f.movable}">
-                    <ce-icon svg="c-svg-drag" color="Gainsboro" size="xs" ${styles('cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' })}></ce-icon>
+                    <ce-icon svg="c-svg-drag" color="Gainsboro" size="xs" ${styles(['cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' }])}></ce-icon>
                     <span style="overflow: hidden;text-overflow: ellipsis;">${f.name}</span>
                     <ce-toggle slot="append" ${show(f.hidable)} ?disabled="${!f.hidable}" 
                     .value="${!this.hiddenList.includes(f.prop)}" 

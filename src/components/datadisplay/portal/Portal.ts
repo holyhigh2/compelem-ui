@@ -65,7 +65,7 @@ export class Portal extends ParentPortal {
     let wrapperEl = document.createElement('ce-portal-widget') as PortalWidget
     wrapperEl.classList.add('widget-wrapper')
 
-    let widget = this.selectable‌WidgetsMap[selectable‌WidgetTag]
+    let widget = this.selectableWidgetsMap[selectable‌WidgetTag]
     USED_WIDGET_MAP.set(wrapperEl, widget)
 
     let startEl = this.__relocateTo(wrapperEl, dropCoordi[0], dropCoordi[1])

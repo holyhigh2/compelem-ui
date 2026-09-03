@@ -353,11 +353,11 @@ export class PortalEditor extends ParentPortal {
   }
 
   //插入挂件
-  __appendWidget(dropCoordi: number[], widgetSize: number[], selectable‌WidgetId: string, widgetProps: Record<string, any>) {
+  __appendWidget(dropCoordi: number[], widgetSize: number[], selectableWidgetId: string, widgetProps: Record<string, any>) {
     let wrapperEl = document.createElement('ce-portal-widget-editor') as PortalWidgetEditor
     wrapperEl.classList.add('widget-wrapper')
 
-    let widget = this.selectable‌WidgetsMap[selectable‌WidgetId]
+    let widget = this.selectableWidgetsMap[selectableWidgetId]
 
     let startEl = this.__relocateTo(wrapperEl, dropCoordi[0], dropCoordi[1])
     if (!startEl) return false

@@ -118,7 +118,7 @@ export class Pagination extends AppearanceElem {
         size="${this.size}" ?disabled="${this.disabled || this.current <= 1}"
         @click="${this.onPrev}"></ce-button>
       ${ifTrue(!this.simple && tp > 1, () => h`
-        ${forEach(this.pages, (p: any, i: number) => i, (p: any) => h`
+        ${forEach(this.pages, (p: any, i) => i, (p: any) => h`
           <ce-button part="pager" data-page="${p}" class="ce-pagination-pager ${p === '...' ? 'ce-pagination-ellipsis' : ''}" appearance="outlined" size="${this.size}"
             ?disabled="${this.disabled || p === '...'}" ?active="${p === this.current}"
             @click="${this.onPagerClick}">${p === '...' ? '…' : p}</ce-button>

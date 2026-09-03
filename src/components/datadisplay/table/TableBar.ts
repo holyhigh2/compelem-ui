@@ -201,7 +201,7 @@ export class TableBar extends CompElem {
             <ce-list gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs);">
               ${forEach(this.tableFields, f => f.prop, f => h`
               <ce-list-item ripple="false" appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:0" ?unmovable="${!f.movable}">
-                <ce-icon .svg="${Drag}" color="Gainsboro" size="xs" ${styles('cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' })}></ce-icon>
+                <ce-icon .svg="${Drag}" color="Gainsboro" size="xs" ${styles(['cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' }])}></ce-icon>
                 <span style="overflow: hidden;text-overflow: ellipsis;">${f.name}</span>
                 <ce-toggle slot="append" ${show(f.hidable)} ?disabled="${!f.hidable}" .value="${!this.hiddenList.includes(f.prop)}" prop="${f.prop}" size="sm" style="color: var(--ce-color-primary)" @change="${this.toggleField}"></ce-toggle>
               </ce-list-item>
