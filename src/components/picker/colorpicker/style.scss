@@ -1,0 +1,241 @@
+/*-------------------------------------
+颜色拾取器皮肤
+-------------------------------------*/
+:host(ce-color-picker) {
+  display: block;
+}
+
+.ce-color-picker {
+  padding: var(--ce-spacing-md);
+  z-index: 3;
+  display: flex;
+
+  >ce-main {
+    overflow: visible;
+  }
+
+  .ce-color-picker-palettes-divider {
+    margin-block: var(--ce-spacing-lg);
+  }
+
+  .ce-color-picker-color-block {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    display: inline-block;
+    border-radius: var(--ce-round-sm);
+    margin-right: var(--ce-spacing-lg);
+    // border: 1px solid var(--ce-color-text-desc);
+  }
+
+  .ce-color-picker-color-header {
+    margin-bottom: var(--ce-spacing-sm);
+    display: flex;
+    height: auto;
+  }
+
+  .ce-color-picker-color-pane {
+    margin-bottom: var(--ce-spacing-md);
+    display: flex;
+    overflow: visible;
+
+    .ce-color-picker-color-swatch {
+      position: relative;
+      background-image: linear-gradient(#0000, #000), linear-gradient(90deg, #fff, #fff0); // linear-gradient(to right, #FFF, rgba(204, 154, 129, 0));
+      border-radius: var(--ce-round-sm);
+
+      .ce-color-picker-color-pointer {
+        pointer-events: none;
+        position: absolute;
+        // left: 0;
+        // top: 100%;
+        width: 8px;
+        height: 8px;
+        background: #000;
+        border: 2px solid #fff;
+        border-radius: 999px;
+        box-shadow: 0 0 3px #000;
+      }
+    }
+
+    .ce-color-picker-alpha-belt {
+      /* 透明度条 */
+      margin-left: var(--ce-spacing-lg);
+      position: relative;
+      width: 16px;
+      min-width: 16px;
+      border-radius: var(--ce-round-sm);
+      background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAGUlEQVR42mM48xsC//6CQAYyBGAMmAQZAgDOmXfBdgh5yQAAAABJRU5ErkJggg==) repeat 0% 70%;
+
+      .ce-color-picker-cover {
+        pointer-events: none;
+        width: 100%;
+        height: 100%;
+        border-radius: var(--ce-round-sm);
+        background-image: linear-gradient(to top, rgba(0, 0, 0, 0), #000);
+      }
+    }
+
+    .ce-color-picker-hue-belt {
+      /* 色相条 */
+      margin-left: var(--ce-spacing-lg);
+      position: relative;
+      width: 16px;
+      min-width: 16px;
+
+      .ce-color-picker-colors {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--ce-round-sm);
+        height: 100%;
+
+        .ce-color-picker-hue-line {
+          pointer-events: none;
+          top: 260px;
+          position: absolute;
+          overflow: hidden;
+          width: 100%;
+          height: 1px;
+        }
+      }
+
+    }
+
+    .ce-color-picker-pointer {
+      pointer-events: none;
+      /* 色带指针 */
+      position: absolute;
+      border: 1px solid #fff;
+      height: 3px;
+      width: 120%;
+      margin-left: -10%;
+      background: #fff;
+      box-shadow: 0 0 3px #000;
+      border-radius: 999px;
+    }
+  }
+
+  .ce-color-picker-color-palette {}
+
+  .ce-color-picker-color-footer {
+    display: flex;
+    align-items: center;
+    height: auto;
+
+    ce-button {
+      margin-right: .5rem;
+      width: 7rem;
+    }
+
+    ce-input {
+      width: 100%;
+
+      &::part(input) {
+        color: var(--input-color);
+        text-align: center;
+      }
+    }
+  }
+}
+
+.ce-color-picker .color {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAGUlEQVR42mM48xsC//6CQAYyBGAMmAQZAgDOmXfBdgh5yQAAAABJRU5ErkJggg==) repeat 40% 10%;
+  border-radius: var(--ce-round-sm);
+  margin-right: var(--ce-spacing-xxs);
+  overflow: hidden;
+  border: 1px solid var(--ce-color-text-desc);
+
+  .ce-color-picker-cover {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+  }
+}
+
+
+
+/* 渐变处理 */
+.ce-color-picker-gradientbar {
+  width: 110px;
+  margin-right: 8px;
+  border-right: 2px inset #000;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-mode {
+  text-align: center;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-mode label {
+  width: 24px;
+  height: 24px;
+  margin-right: .7em;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-mode label.ce-color-picker-actived {
+  border: 1px solid #00B4FF;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-mode label[type="none"] {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAGUlEQVR42mM48xsC//6CQAYyBGAMmAQZAgDOmXfBdgh5yQAAAABJRU5ErkJggg==) !important;
+  background-repeat: repeat;
+  background-position: 40% 10%;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-params {
+  padding-left: 0em;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-params i {
+  color: #aaa;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-params input {
+  width: 2.4em;
+  background: transparent;
+  color: #00B4FF !important;
+  outline: none;
+  height: 18px;
+  padding: 1px 3px;
+  line-height: 1;
+  position: relative;
+  top: -1px;
+  border: 0px solid #00B4FF;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-params input:focus {
+  box-shadow: 0 0px 5px #00B4FF inset;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-grad-belt {
+  width: 30px;
+  margin-top: 3px;
+  margin-left: 3em;
+  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAGUlEQVR42mM48xsC//6CQAYyBGAMmAQZAgDOmXfBdgh5yQAAAABJRU5ErkJggg==) repeat 0% 70%;
+  position: relative;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-grad-belt i {
+  position: absolute;
+  left: -1em;
+  color: #aaa;
+  font-size: 1rem !important;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-grad-belt i:hover {
+  color: #00B4FF;
+}
+
+.ce-color-picker-gradientbar .ce-color-picker-grad-belt i.ce-color-picker-actived {
+  color: #FF7D21;
+}
+
+.ce-color-picker .ce-color-picker-grad-belt .ce-color-picker-cover {
+
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  background-image: linear-gradient(to bottom, #fff, #000);
+}

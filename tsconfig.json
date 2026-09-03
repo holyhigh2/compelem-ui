@@ -1,21 +1,38 @@
 {
-    "compilerOptions": {
-        "target": "ESNext",
-        "module": "ESNext",
-        "noImplicitAny": true,
-        "removeComments": false,
-        "preserveConstEnums": true,
-        "resolveJsonModule":true,
-        "moduleResolution": "Node",
-        "skipLibCheck": true,
-        "strictNullChecks": true,
-        "disableSizeLimit":true,
-        "declaration": true,
-        "esModuleInterop": true,
-        "experimentalDecorators": true
-    },
-    "exclude": [
-        "node_modules",
-        "**/*.spec.ts"
-    ]
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": [
+      "ES2021",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "experimentalDecorators": true,
+    "strict": true,
+    // 组件的 props / states 由 compelem 装饰器在框架内部初始化，
+    // 因此关闭对“属性未在构造函数中赋值”的严格检查（否则会产生大量 TS2564）。
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "vite-env.d.ts",
+    "vite.config.ts",
+    "vite.lib.config.ts"
+  ]
 }

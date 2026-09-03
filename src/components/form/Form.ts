@@ -1,8 +1,8 @@
 import { each, get, isEmpty, isObject, set } from "myfx";
 
-import { CompElem, html, prop, tag, Template, watch } from "compelem";
+import { CompElem, csscope, Csscope, emits, h, prop, tag, Template, watch } from "compelem";
 import { FormItem } from "./FormItem";
-import style from "./style.scss";
+import style from "./style.scss?tmpl";
 /**
  * 表单框
  * @attrs
@@ -14,15 +14,19 @@ import style from "./style.scss";
  *  layout {string} 布局，inline/vertical/horizontal，默认vertical 
  *  model {object} 
  * @slots
- *  default l-form-item
+ *  default ce-form-item
  * @events
  *  change({control,prop,value})
  * @methods
  *  setModel(model) 设置模型对象绑定表单，表单中控件变动时会自动更新模型数据
+ *  validate():Promise 校验表单
+ *  resetValidation() 重置校验
+ *  reset() 重置表单
  *
  * @author holyhigh2
  */
-@tag("l-form")
+@emits('change')
+@tag("ce-form")
 export class Form extends CompElem {
   formItems: Array<FormItem> = [];
   formModel: Record<string, any>;
@@ -32,10 +36,11 @@ export class Form extends CompElem {
   @prop readonly = false;
   @prop plaintext = false;
   @prop layout = 'vertical';
-  @prop({ type: Object, sync: true }) rules: Record<string, Record<string, any> | Record<string, any>[]>
+  @prop({ type: Object, model: true }) rules: Record<string, Record<string, any> | Record<string, any>[]>
   @prop({ type: Object }) model: Record<string, any>;
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style];
   }
   /////////////////////////////////// watches
@@ -44,13 +49,13 @@ export class Form extends CompElem {
     this._changeDisplay(sourceName, nv)
   }
   @watch('layout')
-  watchLayout(nv: any, ov: any, sourceName: string) {
+  watchLayout(nv: any, ov: any) {
     each(this.formItems, item => item.layout = nv);
   }
   //////////////////////////////////// lifecycles
   render(): Template {
-    return html`
-      <form class="c-form">
+    return h`
+      <form class="ce-form">
         <slot></slot>
       </form>
     `;
@@ -86,6 +91,16 @@ export class Form extends CompElem {
       throw errors
     }
   }
+  resetValidation() {
+    each(this.formItems, item => {
+      item._resetValidation();
+    })
+  }
+  reset() {
+    each(this.formItems, item => {
+      item._reset();
+    })
+  }
   //用于formItem调用
   _addToForm(item: FormItem) {
     this.formItems.push(item)
@@ -98,6 +113,6 @@ export class Form extends CompElem {
   }
   _setChange(propChain: string, value: any, e: Event) {
     set(this.formModel, propChain, value)
-    this.emit('change', { control: e.target, prop: propChain, value }, { event: e })
+    this.emit('change', { control: e.target, prop: propChain, value }, e)
   }
 }

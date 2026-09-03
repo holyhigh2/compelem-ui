@@ -1,0 +1,52 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
+@use "../../../css/utils";
+
+:host {
+  --color: var(--ce-color-text);
+  display: block;
+  --list-collapsed-width: 56px;
+  --list-item-height: 32px;
+  transition: width 0.3s;
+  position: relative;
+}
+:host(ce-list) {
+  overflow: hidden;
+}
+
+.ce-list {
+  height: inherit;
+  width: 100%;
+  position: relative;
+  transition: all 0.3s;
+  ce-scroller {
+    height: 100%;
+  }
+  &.is-collapsed {
+    // width: 56px !important;
+    overflow: hidden;
+    ::slotted(*:not(ce-list-item, ce-list-group)) {
+      display: none;
+    }
+    width: var(--list-collapsed-width) !important;
+  }
+  &.ce-list-size-sm {
+    --padding-y: 0.5rem;
+    @include mixins.text-sm;
+  }
+
+  &.ce-list-size-md {
+    --padding-y: 0.75rem;
+  }
+
+  &.ce-list-size-lg {
+    --padding-y: 1.25rem;
+    @include mixins.text-lg;
+  }
+
+  .ce-list-container {
+    display: grid;
+    position: relative;
+    transition: all 0.3s;
+  }
+}

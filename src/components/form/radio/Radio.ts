@@ -1,9 +1,10 @@
-import { bind, classes, html, ifElse, prop, query, show, state, tag, Template, watch } from "compelem";
-import { isBlank, isEmpty, isUndefined } from 'myfx';
+import { bind, classes, csscope, Csscope, emits, h, ifElse, prop, query, show, state, tag, Template, watch } from "compelem";
+import { closest, isBlank, isEmpty, isUndefined } from 'myfx';
 import { Card } from '../../datadisplay/card/Card';
 import { FormControl } from '../FormControl';
-import formStyle from "../style.scss";
-import style from "./style.scss";
+import formStyle from "../style.scss?tmpl";
+import { RadioGroup } from "./RadioGroup";
+import style from "./style.scss?tmpl";
 /**
  * 复选框
  * @attrs
@@ -25,7 +26,8 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag("l-radio")
+@emits('change', 'update:checked')
+@tag("ce-radio")
 export class Radio extends FormControl {
   changeDisplay(stateName: string, enabled: boolean): void {
     throw new Error("Method not implemented.");
@@ -38,15 +40,16 @@ export class Radio extends FormControl {
   @prop subtitle = '';
   @prop checkedClass = '';
   @prop({ type: String }) value = '';
-  @prop({ type: Boolean, sync: true }) checked = false;
+  @prop({ type: Boolean, model: true }) checked = false;
   @state _label = '';
 
   @query('input')
   input: HTMLInputElement;
-  @query('.label>l-card')
+  @query('.ce-form-radio-label>ce-card')
   cardEl: Card;
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [formStyle, style];
   }
   /////////////////////////////////// watches
@@ -60,35 +63,39 @@ export class Radio extends FormControl {
   }
 
   render(): Template {
-    return this.plaintext ? html`${this.checked ? this.value : ''}` : html`
-      <label class="c-form-radio ${classes({
-      __disabled: this.disabled,
-      __reverse: this.reverse,
-      __indeterminate: this.indeterminate
-    })}" >
-        <div class="box-container" ${show(!this.card)}>
-          <input type="radio" tabindex="0" name="${this.name}" ${bind(this.attrs)} value="${this.value || this._label}" ?checked="${this.checked}" @click="${this.onClick}" @change="${this.onChange}" ?readonly="${this.readonly}" ?disabled="${this.disabled}"/>
-          <div class="box c-form-control ${classes({ __disabled: this.disabled, __readonly: this.readonly })}"></div>
+    return h`
+      <label class="ce-form-radio" ${classes({
+      "is-disabled": this.disabled,
+      "ce-form-radio-reverse": this.reverse,
+      "ce-form-radio-indeterminate": this.indeterminate
+    })}>
+      ${ifElse(this.plaintext, () => h`${this.checked ? this.value : ''}`, () => h`
+        <div class="ce-form-radio-box" ${show(!this.card)}>
+          <input type="radio" tabindex="0" @click.stop name="${this.name}" ${bind(this.attrs)} value="${this.value || this._label}" ?checked="${this.checked}" @change="${this.onChange}" ?readonly="${this.readonly}" ?disabled="${this.disabled}"/>
+          <div class="ce-form-radio-box ce-form-control" ${classes({ "is-disabled": this.disabled, "is-readonly": this.readonly })}></div>
         </div>
-        <div class="label">
-        ${ifElse(this.card, () => html`
-          <l-card title="${this.title}" subtitle="${this.subtitle}" shadow="never">
-          </l-card>
-        `, () => html`<div class="title">${this.title}</div><p class="subtitle">${this.subtitle}</p><slot></slot>`)}
+        <div class="ce-form-radio-label">
+        ${ifElse(this.card, () => h`
+          <ce-card title="${this.title}" subtitle="${this.subtitle}" shadow="never">
+          </ce-card>
+        `, () => h`<div class="ce-form-radio-title">${this.title}</div><p class="ce-form-radio-subtitle">${this.subtitle}</p><slot></slot>`)}
         </div>
-      </label>`;
+      `)}
+    </label>`;
   }
 
+  #radioGroup: RadioGroup
   mounted(): void {
+    let radioGroup = closest<RadioGroup>(this, node => node instanceof RadioGroup, 'parentComponent')
+    if (radioGroup) {
+      radioGroup._addChild(this)
+      this.#radioGroup = radioGroup
+    }
     if (isBlank(this.value) && !isEmpty(this.slots.default)) {
       this._label = this.slots.default[0].textContent!
     }
   }
   //////////////////////////////////// methods
-  onClick(e: Event) {
-    if (this.readonly)
-      e.preventDefault();
-  }
   onChange(e: Event) {
     let t = e.target as HTMLInputElement
 
@@ -98,7 +105,10 @@ export class Radio extends FormControl {
     if (this.slots.default && this.slots.default[0] instanceof HTMLElement) {
       this.slots.default[0].toggleAttribute('checked', t.checked)
     }
-    this.emit('change', { value: t.value, checked: t.checked }, { event: e })
+    this.emit('change', { value: t.value, checked: t.checked }, e)
+    if (this.#radioGroup) {
+      this.#radioGroup.onCheckChange(t.value, this)
+    }
   }
   toggleCheck(force: boolean) {
     if (isUndefined(force)) {
@@ -111,5 +121,8 @@ export class Radio extends FormControl {
     if (this.slots.default && this.slots.default[0] instanceof HTMLElement) {
       this.slots.default[0].toggleAttribute('checked', force)
     }
+  }
+  clear(): void {
+
   }
 }

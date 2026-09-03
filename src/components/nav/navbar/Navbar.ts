@@ -1,6 +1,6 @@
-import { classes, CompElem, createRef, html, prop, tag, Template } from "compelem";
+import { classes, CompElem, createRef, h, prop, tag, Template, csscope, Csscope } from "compelem";
 import { find } from "myfx";
-import style from "./style.scss";
+import style from "./style.scss?tmpl";
 /**
  * 导航条
  * @attrs
@@ -16,14 +16,15 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag('l-navbar')
+@tag('ce-navbar')
 export class Navbar extends CompElem {
   slotRef = createRef<HTMLSlotElement>()
   //////////////////////////////////// props
   @prop borderMode = false;
   @prop({ type: String }) activeIndex: string;
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style];
   }
   /////////////////////////////////// watches
@@ -33,18 +34,18 @@ export class Navbar extends CompElem {
   }
 
   render(): Template {
-    return html`
-    <nav class="c-navbar ${classes({ __border: this.borderMode })}">
-      <div class="--container">
-        <div part="left" class="--left-part">
-          <div class="--brand">
+    return h`
+    <nav class="ce-navbar" ${classes({ "ce-navbar-border": this.borderMode })}>
+      <div class="ce-navbar-container">
+        <div part="left" class="ce-navbar-left-part">
+          <div class="ce-navbar-brand">
             <slot name="brand"></slot>
           </div>
-          <div class="--items" @click="${this.onClick}">
+          <div class="ce-navbar-items" @click="${this.onClick}">
             <slot ref="${this.slotRef}" @slotchange="${this.onItemsChange}"></slot>
           </div>
         </div>
-        <div part="right" class="--right-part">
+        <div part="right" class="ce-navbar-right-part">
           <slot name="right"></slot>
         </div>
       </div>
@@ -52,12 +53,6 @@ export class Navbar extends CompElem {
     `;
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() {
-  }
   //////////////////////////////////// methods
   onItemsChange(e: Event) {
     let slot = e.target as HTMLSlotElement
@@ -71,12 +66,12 @@ export class Navbar extends CompElem {
   onClick(e: MouseEvent) {
     let menuItem = e.target as HTMLElement
 
-    let slotRoots = this.slotRef.current.assignedElements();
-    let root = find(slotRoots, root => root.contains(menuItem))
+    let slotRoots = this.slotRef.current?.assignedElements();
+    let root = find(slotRoots!, root => root.contains(menuItem))
 
     if (!menuItem.hasAttribute('index') && !root!.hasAttribute('index')) return;
 
-    slotRoots.forEach(el => el.classList.remove('active'))
+    slotRoots?.forEach(el => el.classList.remove('active'))
     root!.classList.add('active');
   }
 }

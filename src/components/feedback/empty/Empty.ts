@@ -1,14 +1,12 @@
 
-import { CompElem, html, prop, tag, Template } from "compelem";
-import style from "./style.scss";
+import { CompElem, csscope, Csscope, emits, h, prop, show, tag, Template } from "compelem";
+import style from "./style.scss?tmpl";
 /**
  * 空状态提示
- * @attrs
+ * @props
  *  title {array} 加粗标题
  *  text {string} 描述内容
  *  action-text 按钮文本
- *  icon {string} 图标，顶部
- *  image {string} 图片，顶部
  *
  * @slots
  *  - 底部内容
@@ -21,25 +19,28 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag('l-empty')
+@emits('action')
+@tag('ce-empty')
 export class Empty extends CompElem {
 
   //////////////////////////////////// props
   @prop title = '';
   @prop text = '';
   @prop actionText = '';
-  @prop image = '';
-  @prop icon = '';
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style];
   }
   /////////////////////////////////// watches
   //////////////////////////////////// lifecycles
 
   render(): Template {
-    return html`
-    <div class="c-empty">
+    return h`
+    <div class="ce-empty">
+      <p>
+        <slot name="media"></slot>
+      </p>
       <h3>
         ${this.title}
         <slot name="title"></slot>
@@ -48,8 +49,8 @@ export class Empty extends CompElem {
         ${this.text}
         <slot name="text"></slot>
       </p>
-      <div class="actions">
-        <l-button color="text" @click="${this.onAction}">${this.actionText}</l-button>
+      <div class="ce-empty-actions">
+        <ce-button color="text" ${show(!!this.actionText)} @click="${this.onAction}">${this.actionText}</ce-button>
         <slot name="actions"></slot>
       </div>
       <slot></slot>
@@ -59,6 +60,6 @@ export class Empty extends CompElem {
 
   //////////////////////////////////// methods
   onAction(e: Event) {
-    this.emit('action', {}, { event: e })
+    this.emit('action', {}, e)
   }
 }

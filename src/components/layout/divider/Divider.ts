@@ -1,51 +1,59 @@
-import { classes, CompElem, html, ifTrue, prop, tag, Template } from "compelem";
-import style from "./style.scss";
+import { classes, CompElem, csscope, Csscope, h, ifTrue, prop, tag, Template, watch } from "compelem";
+import { isBoolean, isEmpty } from "myfx";
+import { IColorable } from "../../../interfaces/IColorable";
+import { ColorHelper } from "../../../utils/color";
+import style from "./style.scss?tmpl";
 /**
  * 分割线
  * @attrs
- *  target {string} 目标容器选择器，如果为空。默认parentElement
- *  items {array} 字符串数组/{text:,value:,disabled,iconClass}数组，如果数组内容为非对象/字符串则显示为分割条
- *  theme {string} light/dark
- *  trigger {string} hover/click
- *
- *
+ *  vertical {boolean} 是否垂直，默认false
+ *  thickness {number} 厚度，单位px
+ *  inset {boolean|string} 嵌入模式，分割线长度会减小，默认4rem
+ *  inset-align {string} inset模式后对其方式start/center/end，默认center。
+ *  type {string} solid/dashed/dotted/double以及其他border-style可选值
  * @slots
- *  default() 链接内容
+ *  default() 分割线中间内容
  *
  * @author holyhigh2
  */
-@tag('l-divider')
-export class Divider extends CompElem {
+@tag('ce-divider')
+export class Divider extends CompElem implements IColorable {
 
   //////////////////////////////////// props
+  @prop({ type: String }) color: string = 'lightgray';
   @prop vertical = false;
-  @prop underline = true;
-  @prop type = 'default';
+  @prop thickness = 1;
+  @prop type = 'solid';
+  @prop({ type: [Boolean, String] }) inset: boolean | string = false;
+  @prop insetAlign = 'center'
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style];
   }
-  /////////////////////////////////// watches
-  //////////////////////////////////// lifecycles
-  constructor() {
-    super();
-
+  get cssVars() {
+    return {
+      '--thickness': `${this.thickness}px`,
+      '--inset': `${this.inset ? (isBoolean(this.inset) ? '4rem' : this.inset) : '0px'}`,
+      '--border-style': this.type
+    }
   }
-
+  /////////////////////////////////// watches
+  @watch("color", { immediate: true })
+  __watchColor(nv: any, ov: any, sourceName: string) {
+    ColorHelper.setColor(nv, this.style, '--color-divider')
+  }
+  //////////////////////////////////// lifecycles
   render(): Template {
-    return html`
-    <div class="c-divider ${classes({ __vertical: this.vertical })}">
-      ${ifTrue(!this.vertical, () => html`<span class="--inner-wrapper"><slot></slot></span>`)}
+    return h`
+    <div class="ce-divider" ${classes({ "is-vertical": this.vertical, ['ce-divider-inset-align-' + this.insetAlign]: true })}>
+      <div class="ce-divider-content">
+      ${ifTrue(!isEmpty(this.slots.default), () => h`<span class="ce-divider-inner-wrapper"><slot></slot></span>`)}
+      </div>
     </div>
     `;
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() {
-  }
   //////////////////////////////////// methods
 
 }

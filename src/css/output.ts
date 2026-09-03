@@ -1,1 +1,2 @@
-import './root.scss'
+import './root.scss';
+

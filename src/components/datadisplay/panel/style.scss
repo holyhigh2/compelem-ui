@@ -1,60 +1,87 @@
-@import "../../../css/_functions.scss";
-@import "../../../css/_utils";
-@import "../../../css/_mixins";
+@use "../../../css/functions" as fn;
+@use "../../../css/_utils";
+@use "../../../css/mixins";
 
 :host {
-  --padding: 1.25rem;
+  display: block;
+  border-radius: var(--ce-panel-radius);
+  background-color: var(--ce-panel-bg);
+  transition: all .3s;
+  overflow: hidden;
 }
 
-.c-panel {
-  border-radius: var(--l-border-radius-md);
+.ce-panel {
   height: inherit;
-  display: flex;
-  flex-direction: column;
 
-  &.__shadow-always {
-    box-shadow: var(--l-shadow-lg);
+  &.ce-panel-flush {
+    .ce-panel-header {
+      padding-block: 0 !important;
+      padding-inline: 0 !important;
+
+      >ce-button {
+        border-radius: 0 !important;
+        padding-block: calc(var(--ce-panel-gap) * .5);
+      }
+    }
+
+    >main {
+      .ce-panel-body {
+        padding-top: var(--ce-panel-gap);
+      }
+    }
   }
 
-  &.__shadow-hover {
-    box-shadow: var(--l-shadow-lg);
-  }
-
-  .--header {
-    padding: var(--padding);
+  .ce-panel-header {
+    transition: padding-block .3s;
+    padding-block: var(--ce-panel-gap-expanded);
+    padding-inline: var(--ce-panel-padding);
+    font-size: var(--ce-panel-header-size);
     z-index: 0;
 
+    >ce-button {
+      --ce-opacity-underlay: 0.05;
+      height: auto;
+
+      &::part(root) {
+        transition: padding-block .3s;
+        padding-block: var(--ce-panel-gap);
+      }
+    }
+
+    &.ce-panel-flush {
+      padding-inline: 0;
+      padding-block: 0;
+    }
+
     h3 {
-      color: color(--l-color-text);
+      color: fn.color(--ce-color-text-rgb);
       font-family: inherit;
       font-weight: bolder;
       margin: 0;
-      @include text-md;
+      @include mixins.text-md;
       width: 100%;
       display: inline-flex;
       align-items: center;
     }
-
-    &[visible] + main .--body {
-      padding-top: 0;
-    }
   }
 
-  main {
+  >main {
     flex: 1;
     overflow: auto;
+    padding-inline: var(--ce-panel-padding);
+    padding-bottom: var(--ce-panel-padding);
 
-    .--body {
-      display: flex;
-      flex-direction: column;
+    .ce-panel-body {
       height: 100%;
-      box-sizing: border-box;
-      padding: var(--padding);
-      font-size: 0.875rem;
+      font-size: var(--ce-panel-body-size);
     }
   }
 
-  &.__collapsible {
+  >footer {
+    padding-inline: var(--ce-spacing-md);
+  }
+
+  &.ce-panel-collapsible {
     main {
       display: grid;
       overflow: hidden;
@@ -62,33 +89,42 @@
       transition: all 0.3s;
     }
 
-    .--body {
+    .ce-panel-body {
       overflow: hidden;
       transition: all 0.3s;
     }
 
-    .--arrow {
+    .ce-panel-arrow {
       transform: 0 !important;
       transition: transform 0.3s;
     }
 
-    &.__hidden {
+    &.ce-panel-contracted {
+      .ce-panel-header {
+        padding-block: var(--ce-panel-gap);
+
+        >ce-button {
+          height: auto; //var(--ce-button-h);
+
+          &::part(root) {
+            padding-block: calc(var(--ce-panel-gap) / 2);
+          }
+        }
+      }
+
       main {
         grid-template-rows: 0fr;
+        padding-bottom: 0;
 
-        .--body {
+        .ce-panel-body {
           padding-top: 0;
           padding-bottom: 0;
         }
       }
 
-      .--arrow {
+      .ce-panel-arrow {
         transform: rotateZ(-90deg) !important;
       }
-    }
-
-    .--header {
-      padding: calc(var(--padding) / 2);
     }
   }
 }

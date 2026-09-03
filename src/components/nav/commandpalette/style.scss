@@ -1,0 +1,43 @@
+:host(ce-command-palette) {
+  --command-palette-footer-color: var(--ce-color-gray-50);
+}
+
+.ce-command-palette-pane {
+  background: #fff;
+  overflow: hidden;
+  border-radius: var(--ce-round-lg);
+  border: 1px solid var(--ce-color-border-secondary);
+  box-shadow: var(--ce-shadow-pane);
+  > header {
+    display: flex;
+    padding-inline: var(--ce-spacing-md);
+    border-bottom: thin solid var(--ce-color-border-tertiary);
+    ce-input {
+      flex: 1;
+      border: 0;
+      height: 3rem;
+    }
+    .ce-command-palette-search {
+      color: var(--ce-color-placeholder);
+    }
+    .ce-command-palette-esc {
+      color: var(--ce-color-gray-300);
+      padding: var(--ce-spacing-xs) var(--ce-spacing-sm);
+      border-radius: var(--ce-round-md);
+      border: thin solid var(--ce-color-border-tertiary);
+    }
+  }
+  > main {
+    padding: var(--ce-spacing-md);
+  }
+  > footer {
+    border-top: thin solid var(--ce-color-border-tertiary);
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    padding-inline: var(--ce-spacing-md);
+    background-color: var(
+      --command-palette-footer-color, var(--ce-color-gray-50-rgb)
+    );
+  }
+}

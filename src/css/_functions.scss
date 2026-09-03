@@ -1,17 +1,12 @@
+@use "sass:string";
 /**
-* 使用颜色变量 $color是变量时必须是空格分隔rgb颜色格式
+* 使用颜色变量：$color 传 --ce-color-<name>-rgb（通道值轨）时自动套 rgb()；
+* 传标准颜色（hex/rgb/hsl/named）时直接 opacify 透明度。
 */
 @function color($color, $opacity: 1) {
-    @if str-index($color, "--l-")==1 {
-        @return rgb(var($color)/ $opacity)
-    }
-
-    @else if str-index($color, "--")==1 {
-        @return rgb(var($color)/ $opacity)
-    }
-
-    @else {
-        @return opacify($color, $opacity)
-    }
-
+  @if string.index($color, "--") ==1 {
+    @return rgb(var($color) / $opacity);
+  } @else {
+    @return opacify($color, $opacity);
+  }
 }

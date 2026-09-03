@@ -1,0 +1,143 @@
+@use "../../../css/mixins";
+@use "../../../css/functions" as fn;
+@use "../../../css/utils";
+
+:host(ce-date-picker) {
+  display: block;
+  --color: initial;
+  color: fn.color(--ce-color-text-header-rgb);
+  // 固定每行高度，日历体按 6 行预留，5/6 行月共用同一面板高度，避免溢出并被滚轮轮播读到不一致的 s
+  --ce-date-row-h: 2.5rem;
+  min-height: 21em;
+  min-width: 20em;
+}
+
+.ce-date-picker {
+  min-height: inherit;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 var(--ce-spacing-sm) 0;
+    border-bottom: 1px solid fn.color(--ce-color-border-secondary-rgb);
+
+    ce-button {
+      margin-right: var(--ce-spacing-sm);
+    }
+  }
+
+  &-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+
+    >div {
+      position: relative;
+
+      &:last-child {
+        height: calc(6 * var(--ce-date-row-h));
+        flex: none;
+        overflow: hidden;
+      }
+    }
+  }
+
+  &-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    height: 2.75rem;
+    line-height: 2.25rem;
+    color: var(--ce-color-text-desc);
+
+    .ce-date-picker-cell {
+      text-align: center;
+      padding: var(--ce-spacing-sm);
+      border: 1px solid transparent;
+    }
+  }
+
+  &-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    height: var(--ce-date-row-h);
+
+    .ce-date-picker-cell {
+      cursor: pointer;
+      border-radius: var(--ce-round-sm);
+      user-select: none;
+      border: 1px solid transparent;
+
+      &:not([disabled]):hover {
+
+        // border-color: var(--ce-color-text-active);
+        .ce-date-picker-item {
+          background-color: rgb(var(--ce-color-text-rgb) / 0.1);
+        }
+      }
+
+      text-align: center;
+      // padding: var(--ce-spacing-xs);
+
+      color: var(--ce-color-text-desc);
+
+      &.is-in-the-month {
+        // .ce-date-picker-item {
+        color: var(--ce-color-text);
+        // }
+      }
+
+      &[disabled] {
+        cursor: not-allowed;
+        text-decoration: line-through;
+        color: var(--ce-color-border-secondary);
+      }
+    }
+  }
+
+  .ce-date-picker-cell {
+    &.is-today .ce-date-picker-item {
+      border: 1px solid var(--ce-color-text-active);
+    }
+
+    .ce-date-picker-item {
+      width: 2rem;
+      aspect-ratio: 1;
+      margin: 0 auto;
+      display: flex;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+  }
+
+  &-month {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    align-items: center;
+    overflow: hidden;
+    transition: transform 0.3s;
+    // 不透明表面背景：滚轮轮播时离场/入场两月面板互相遮挡，避免日期穿透重叠
+    background: var(--ce-card-bg);
+
+    &.is-no-transition {
+      transition: none !important;
+    }
+
+    &:first-child {
+      transform: translateY(-100%);
+    }
+
+    &:last-child {
+      transform: translateY(100%);
+    }
+  }
+
+  &-month-dates {}
+}

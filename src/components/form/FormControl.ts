@@ -1,7 +1,7 @@
 import { closest, get } from "myfx";
 
-import { CompElem, prop, watch } from "compelem";
-import { getRGBColorValue } from "../../utils";
+import { prop } from "compelem";
+import { AppearanceElem } from "../../base/Appearance";
 import { Form } from "./Form";
 import { FormItem } from "./FormItem";
 /**
@@ -19,40 +19,32 @@ import { FormItem } from "./FormItem";
  * 
  * @author holyhigh2
  */
-export abstract class FormControl extends CompElem {
-  @prop disabled = false;
-  @prop readonly = false;
+export abstract class FormControl extends AppearanceElem {
+
   @prop plaintext = false;
 
-  @prop appearance = "default"; //default/underline
-  @prop color = '';
-  @prop size = "md"; //lg, md, sm, xs
-  @prop round = true;
-  @prop loading = false;
-  @prop({ type: String }) name: string;
+  @prop error = false;
+  @prop({ type: String }) errorMessage: string | undefined
+
+  @prop({ type: String })
+  hint!: string;
+  @prop hideHint = false
+
+  @prop({ type: String })
+  name!: string;
   abstract value: any;
 
-  form: Form
-  formItem: FormItem
+  form!: Form;
+  formItem!: FormItem;
   /////////////////////////////////// watches
-  @watch("color", { immediate: true })
-  watchColor(nv: any, ov: any, sourceName: string) {
-    if (!nv) return;
-
-    let c = nv;
-    switch (nv) {
-      case 'info': case 'success': case 'warning': case 'error': case 'text':
-        c = `var(--l-color-${nv})`
-        break;
-      default:
-        c = getRGBColorValue(c)
-    }
-
-    this.style.setProperty('--color', c)
-  }
 
   connectedCallback(): void {
     super.connectedCallback();
+
+    let parentFormControl = closest(this.parentComponent!, (node) => node instanceof FormControl, "parentComponent")
+    if (parentFormControl) {
+      return;
+    }
 
     this.form = closest(this.parentComponent!, (node) => node instanceof Form, "parentComponent")!
     if (this.form) {

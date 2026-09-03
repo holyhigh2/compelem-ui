@@ -1,0 +1,41 @@
+/********************
+* reset styles
+* @author holyhigh
+*********************/
+* {
+  tab-size: 4;
+  box-sizing: border-box;
+  background-repeat: no-repeat;
+  &:active,
+  &:hover {
+    outline: none;
+  }
+}
+:host,
+html {
+  line-height: 1;
+}
+code {
+  font-family: monospace;
+}
+button {
+  color: inherit;
+  font-size: inherit;
+}
+input {
+  &::placeholder {
+    color: var(--ce-color-placeholder);
+  }
+}
+
+button,
+input[type="button"] {
+  cursor: pointer;
+  outline: none;
+}
+//支持bs icons，需要引入bs-icons的svg文件
+//可以针对字体图标统一提供设置接口，
+@font-face {
+  font-family: "bootstrap-icons";
+  src: url("/fonts/bootstrap-icons.svg") format("svg");
+}

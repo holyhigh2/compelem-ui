@@ -1,5 +1,5 @@
-@import "../../../css/_functions.scss";
-@import "../../../css/_utils.scss";
+@use "../../../css/functions" as fn;
+@use "../../../css/_utils.scss";
 
 :host {
   position: absolute;
@@ -25,7 +25,7 @@
   --item-disabled-color: #bababa;
 }
 
-.c-menu-pane {
+.ce-menu-pane {
   // position: var(--position);
   // overflow: hidden;
   min-width: 8rem;
@@ -49,22 +49,22 @@
     0 30px 30px rgba(0, 0, 0, 0.07),
     0 70px 65px rgba(0, 0, 0, 0.09);
 
-  &.__rounded {
+  &.is-rounded {
     border-radius: 8px;
 
-    .c-menu-pane-item {
+    .ce-menu-pane-item {
       &-wrapper {
         border-radius: 4px;
 
         > button,
-        > .c-menu-pane-item-children {
+        > .ce-menu-pane-item-children {
           border-radius: 4px;
         }
       }
     }
   }
 
-  &.__sub {
+  &.ce-menu-pane-sub {
     position: absolute;
     display: none;
     z-index: 1;
@@ -83,12 +83,12 @@
       padding-top: 4px;
     }
 
-    &.__divider {
+    &.ce-menu-pane-divider {
       border-top: 1px solid;
       border-top-color: var(--item-border);
     }
 
-    &.__disabled * {
+    &.is-disabled * {
       color: var(--item-disabled-color) !important;
     }
 
@@ -96,24 +96,23 @@
       width: 100%;
       text-align: left;
       display: flex;
-      box-sizing: border-box;
       white-space: nowrap;
     }
 
-    &:not(.__disabled, .__custom, .__separated) {
+    &:not(.is-disabled, .ce-menu-pane-custom, .ce-menu-pane-separated) {
       &:hover {
-        > .c-menu-pane-item-wrapper {
+        > .ce-menu-pane-item-wrapper {
           background-color: var(--item-bg-hover);
 
-          > .c-menu-pane-item-children {
-            color: color(--l-color-gray-900);
+          > .ce-menu-pane-item-children {
+            color: fn.color(--ce-color-gray-900-rgb);
           }
         }
       }
     }
 
-    &:not(.__disabled).__separated {
-      > .c-menu-pane-item-wrapper {
+    &:not(.is-disabled).ce-menu-pane-separated {
+      > .ce-menu-pane-item-wrapper {
         > button {
           padding-right: 2px;
 
@@ -127,15 +126,15 @@
           }
         }
 
-        > .c-menu-pane-item-children,
+        > .ce-menu-pane-item-children,
         > button {
           &:hover {
             background-color: var(--item-bg-hover);
-            color: color(--l-color-gray-900);
+            color: fn.color(--ce-color-gray-900-rgb);
           }
         }
 
-        > .c-menu-pane-item-children {
+        > .ce-menu-pane-item-children {
           * {
             pointer-events: none;
           }
@@ -143,17 +142,17 @@
       }
     }
 
-    &.__expanded.__children:not(.__separated) > .c-menu-pane-item-wrapper {
+    &.is-expanded.ce-menu-pane-children:not(.ce-menu-pane-separated) > .ce-menu-pane-item-wrapper {
       background-color: var(--item-bg-hover);
 
-      > .c-menu-pane-item-children {
-        color: color(--l-color-gray-900);
+      > .ce-menu-pane-item-children {
+        color: fn.color(--ce-color-gray-900-rgb);
       }
     }
 
-    &.__expanded.__children.__separated > .c-menu-pane-item-wrapper > .c-menu-pane-item-children {
+    &.is-expanded.ce-menu-pane-children.ce-menu-pane-separated > .ce-menu-pane-item-wrapper > .ce-menu-pane-item-children {
       background-color: var(--item-bg-hover);
-      color: color(--l-color-gray-900);
+      color: fn.color(--ce-color-gray-900-rgb);
     }
 
     &-icon {
@@ -177,20 +176,25 @@
     }
 
     &-checkable {
+      display: inline-flex;
       padding: 0 0.5rem 0 0.2rem;
       text-align: center;
       color: #686868;
       width: 1rem;
       font-size: larger;
+      box-sizing: content-box;
+      svg {
+        vertical-align: text-bottom;
+      }
     }
 
     &-children {
-      width: 1rem;
+      min-width: 1rem;
       text-align: center;
       padding: 0.3rem 0.5rem;
       line-height: 1.8;
       margin-left: 7px;
-      color: color(--l-color-gray-400);
+      color: fn.color(--ce-color-gray-400-rgb);
       display: grid;
       align-items: center;
       justify-content: center;
@@ -210,7 +214,7 @@
     }
   }
 
-  &-item + &-item:not(.__divider) {
+  &-item + &-item:not(.ce-menu-pane-divider) {
     padding-top: 0;
   }
 }

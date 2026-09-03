@@ -1,0 +1,384 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 嵌套布局原语：框架 Csscope.HOST 样式无法穿透本组件 shadow 边界，
+   在此补其 display 等必要规则，使 re-root/re-split/l-header/l-aside/l-main 正常布局 */
+l-container {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+l-header {
+  display: block;
+}
+
+l-aside {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+}
+
+l-main {
+  display: block;
+  flex: 1;
+  overflow: hidden;
+}
+
+.re-root {
+  height: 100%;
+  min-height: 0;
+}
+
+.re-header {
+  height: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--ce-color-border, #e5e7eb);
+
+  .re-toolbar {
+    height: 2.75rem;
+    column-gap: .5rem;
+
+    l-button-group {
+      flex-shrink: 0;
+    }
+
+    l-button {
+      flex-shrink: 0;
+    }
+  }
+}
+
+.re-tb-label {
+  font-size: .8125rem;
+  color: var(--ce-color-text-secondary, #6b7280);
+  white-space: nowrap;
+  margin-left: .25rem;
+}
+
+.re-band-select {
+  width: 8.5rem;
+}
+
+.re-stats-select {
+  width: 7.5rem;
+}
+
+.re-file-input {
+  display: none;
+}
+
+.re-body {
+  min-height: 0;
+}
+
+.re-split {
+  height: 100%;
+  min-height: 0;
+}
+
+.re-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--ce-color-border, #e5e7eb);
+
+  &.ce-reporteditor-settings {
+    border-right: none;
+    border-left: 1px solid var(--ce-color-border, #e5e7eb);
+    position: relative;
+    width: 300px;
+    flex: 0 0 300px;
+  }
+}
+
+/* 全屏预览（preview 模式） */
+.re-preview-full {
+  display: none;
+  height: 100%;
+  min-height: 0;
+
+  l-table {
+    height: 100%;
+  }
+}
+
+/* 设置面板：Tab 栏 */
+.re-settings-tabs {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--ce-color-border, #e5e7eb);
+  background: var(--ce-color-surface-2, #f9fafb);
+
+  .re-tab {
+    flex: 1;
+    height: 1.875rem;
+    border: none;
+    background: transparent;
+    font-size: .8125rem;
+    color: var(--ce-color-text-secondary, #6b7280);
+    cursor: pointer;
+    font-family: inherit;
+
+    &.is-active {
+      color: var(--ce-color-primary, #4f46e5);
+      font-weight: 600;
+      box-shadow: inset 0 -2px 0 var(--ce-color-primary, #4f46e5);
+      background: var(--ce-color-surface, #fff);
+    }
+  }
+}
+
+/* 设置面板：Tab 内容区 */
+.re-tab-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: .625rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+/* —— 样式面板 —— */
+.re-style-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .8125rem;
+  color: var(--ce-color-text, #374151);
+
+  label {
+    width: 3.5rem;
+    flex-shrink: 0;
+    color: var(--ce-color-text-secondary, #6b7280);
+  }
+
+  input[type="color"] {
+    width: 2.5rem;
+    height: 1.625rem;
+    padding: 0;
+    border: 1px solid var(--ce-color-border, #d1d5db);
+    border-radius: .375rem;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="number"] {
+    width: 5rem;
+    height: 1.75rem;
+    border: 1px solid var(--ce-color-border, #d1d5db);
+    border-radius: .375rem;
+    padding: 0 .375rem;
+    font-size: .8125rem;
+    font-family: inherit;
+  }
+
+  .re-style-reset {
+    border: none;
+    background: transparent;
+    color: var(--ce-color-primary, #4f46e5);
+    font-size: .75rem;
+    cursor: pointer;
+    padding: .125rem .25rem;
+    font-family: inherit;
+  }
+
+  .re-style-toggles,
+  .re-style-aligns {
+    display: flex;
+    gap: .25rem;
+
+    button {
+      min-width: 1.75rem;
+      height: 1.75rem;
+      border: 1px solid var(--ce-color-border, #d1d5db);
+      border-radius: .375rem;
+      background: var(--ce-color-surface, #fff);
+      font-size: .8125rem;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--ce-color-text, #374151);
+
+      &.is-active {
+        background: var(--ce-color-primary, #4f46e5);
+        border-color: var(--ce-color-primary, #4f46e5);
+        color: #fff;
+      }
+    }
+  }
+
+  .re-style-toggle.ce-reporteditor-bold { font-weight: 700; }
+  .re-style-toggle.ce-reporteditor-italic { font-style: italic; }
+  .re-style-toggle.ce-reporteditor-underline { text-decoration: underline; }
+
+  &.ce-reporteditor-actions {
+    justify-content: flex-end;
+
+    .re-style-clear-all {
+      border: 1px solid var(--ce-color-danger, #ef4444);
+      color: var(--ce-color-danger, #ef4444);
+      background: transparent;
+      border-radius: .375rem;
+      padding: .25rem .625rem;
+      font-size: .75rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+  }
+}
+
+/* —— 数据源面板 —— */
+.re-ds-type {
+  display: flex;
+  gap: .25rem;
+
+  .re-ds-type-btn {
+    flex: 1;
+    height: 1.75rem;
+    border: 1px solid var(--ce-color-border, #d1d5db);
+    border-radius: .375rem;
+    background: var(--ce-color-surface, #fff);
+    font-size: .8125rem;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--ce-color-text, #374151);
+
+    &.is-active {
+      background: var(--ce-color-primary, #4f46e5);
+      border-color: var(--ce-color-primary, #4f46e5);
+      color: #fff;
+    }
+  }
+}
+
+.re-ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+
+  label {
+    font-size: .75rem;
+    color: var(--ce-color-text-secondary, #6b7280);
+  }
+
+  textarea,
+  input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--ce-color-border, #d1d5db);
+    border-radius: .375rem;
+    padding: .375rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: .75rem;
+    color: var(--ce-color-text, #374151);
+    background: var(--ce-color-surface, #fff);
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: var(--ce-color-primary, #4f46e5);
+    }
+  }
+}
+
+.re-ds-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+
+  .re-ds-status {
+    font-size: .75rem;
+    color: var(--ce-color-text-secondary, #6b7280);
+  }
+}
+
+.re-ds-note {
+  font-size: .6875rem;
+  line-height: 1.6;
+  color: var(--ce-color-text-tertiary, #9ca3af);
+  border-top: 1px dashed var(--ce-color-border, #e5e7eb);
+  padding-top: .5rem;
+
+  code {
+    background: var(--ce-color-surface-2, #f3f4f6);
+    border-radius: .25rem;
+    padding: 0 .25rem;
+  }
+}
+
+.re-pane-title {
+  flex-shrink: 0;
+  height: 1.75rem;
+  line-height: 1.75rem;
+  padding: 0 .625rem;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--ce-color-text-secondary, #6b7280);
+  background: var(--ce-color-surface-2, #f9fafb);
+  border-bottom: 1px solid var(--ce-color-border, #e5e7eb);
+  user-select: none;
+}
+
+.re-pane-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  l-editable,
+  l-table {
+    height: 100%;
+  }
+}
+
+.re-data-panel {
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: .375rem;
+  padding: .5rem .625rem;
+  border-top: 1px solid var(--ce-color-border, #e5e7eb);
+  background: var(--ce-color-surface, #fff);
+  max-height: 45%;
+  overflow: auto;
+
+  .re-data-panel-title {
+    font-size: .75rem;
+    color: var(--ce-color-text-secondary, #6b7280);
+  }
+
+  .re-data-text {
+    width: 100%;
+    min-height: 8rem;
+    flex: 1;
+    resize: vertical;
+    box-sizing: border-box;
+    border: 1px solid var(--ce-color-border, #e5e7eb);
+    border-radius: .375rem;
+    padding: .5rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: .75rem;
+    line-height: 1.4;
+    color: var(--ce-color-text, #374151);
+    background: var(--ce-color-surface, #fff);
+
+    &:focus {
+      outline: none;
+      border-color: var(--ce-color-primary, #4f46e5);
+    }
+  }
+
+  .re-data-panel-actions {
+    display: flex;
+    gap: .5rem;
+    flex-shrink: 0;
+  }
+}

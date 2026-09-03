@@ -1,0 +1,331 @@
+@use "../../../css/mixins";
+@use "../../../css/functions" as fn;
+
+:host(ce-input) {
+  display: block;
+  margin-bottom: 0;
+  transition: margin-bottom 0.2s;
+}
+
+:host(ce-input[error]) {
+  border-color: var(--ce-color-error) !important;
+  color: var(--ce-color-error);
+}
+
+:host(ce-input[hint]) {
+  margin-bottom: calc((var(--ce-font-xs) + var(--ce-spacing-sm)) * 1.35);
+}
+
+:host(ce-input[appearance=""]),
+:host(ce-input[appearance="default"]) {
+  border-width: var(--border-size);
+  border-style: solid;
+  border-color: fn.color(--ce-color-border-rgb);
+}
+
+:host(ce-input[appearance="underlined"]) {
+  border: 0;
+  border-width: 0;
+  border-bottom: 1px solid fn.color(--ce-color-border-rgb);
+  border-radius: 0 !important;
+
+  &::part(control) {
+
+    >input,
+    .ce-input-label {
+      text-align: left;
+      padding-bottom: 0;
+    }
+  }
+}
+
+// :host(ce-input[error]) {
+//   border-color: var(--ce-color-error);
+// }
+
+.ce-input {
+  display: grid;
+  grid-template-areas:
+    "prepend control append"
+    "a message b";
+  grid-template-columns: auto minmax(0, 1fr) max-content;
+  grid-template-rows: 1fr auto;
+  height: inherit;
+  border-radius: inherit;
+
+  .ce-form-control input {
+    color: inherit;
+
+    &::-ms-reveal,
+    &::-ms-clear,
+    &::-o-clear,
+    &::-webkit-toggle-password,
+    &::-moz-password-toggle,
+    &::-moz-ui-password {
+      -moz-appearance: none !important;
+      -webkit-appearance: none !important;
+      display: none !important;
+    }
+
+    &::-webkit-credentials-auto-fill-button {
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  &.ce-input-error {
+    color: var(--ce-color-error);
+
+    .ce-message {
+      color: var(--ce-color-error);
+    }
+
+    .ce-input-prepend,
+    .ce-input-prepend-inside,
+    .ce-input-append,
+    .ce-input-append-inside {
+      ::slotted(*) {
+        color: var(--ce-color-error) !important;
+      }
+    }
+  }
+
+  .ce-form-control {
+    border-radius: inherit;
+    font-size: inherit;
+    grid-area: control;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    transition: border 0.2s, border-color 0.2s, outline 0.2s, width 0.2s;
+
+    input {
+      font-size: inherit;
+      width: 100%;
+      background-color: transparent;
+      outline: none;
+      border: none;
+      padding-right: 0.25rem;
+      padding-block: 0;
+      line-height: 1.5;
+    }
+  }
+
+  .ce-message {
+    padding-inline: var(--ce-spacing-md);
+    grid-area: message;
+    font-size: var(--ce-font-sm);
+    line-height: normal;
+    padding-top: var(--ce-spacing-sm);
+    overflow: hidden;
+    min-height: calc(var(--ce-font-sm) + var(--ce-spacing-sm) + 0.25rem);
+    color: var(--ce-color-text-secondary);
+    position: absolute;
+    width: 100%;
+    top: 100%;
+  }
+
+  // &.is-active .ce-control,
+  // &:not(.is-disabled, &:focus-within):hover .ce-control {
+  //   border-color: fn.color(--form-item-color);
+  // }
+
+  &:focus-within .ce-input-label,
+  .ce-input-label.is-empty {
+    font-size: var(--ce-font-xs);
+    padding-left: var(--ce-spacing-xxs);
+    transform: translateY(-150%);
+
+    &:not(:empty)+input {
+      &::placeholder {
+        opacity: 1;
+      }
+    }
+  }
+
+  &:focus-within .ce-input-label {
+    font-size: var(--ce-font-xs);
+    color: fn.color(--ce-color-text-rgb);
+  }
+
+  .ce-input-label {
+    position: absolute;
+    padding-left: 0.5rem;
+    font-size: var(--ce-font-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: fn.color(--ce-color-placeholder-rgb);
+    transition: all 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    width: 100%;
+
+    &:not(&:empty)+input {
+      padding-top: 1.35rem;
+
+      &::placeholder {
+        transition: opacity 0.1s;
+        opacity: 0;
+      }
+    }
+  }
+
+  .ce-input-prepend,
+  .ce-input-prepend-inside {
+    @include mixins.round-left;
+    display: grid;
+    align-items: center;
+    word-break: keep-all;
+    cursor: text;
+  }
+
+  .ce-input-prepend {
+    grid-area: prepend;
+  }
+
+  .ce-input-append,
+  .ce-input-append-inside {
+    @include mixins.round-right;
+    display: grid;
+    align-items: center;
+    word-break: keep-all;
+  }
+
+  .ce-input-append {
+    grid-area: append;
+  }
+
+  .ce-input-floating {
+    border-radius: inherit;
+    // padding: 0.25rem;
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out;
+
+    ce-icon {
+      // transform-origin: 50% 50%;
+      transform: scale(0.3) !important;
+      transition: all 0.2s ease;
+      visibility: hidden;
+      // display: none;
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  &:focus-within {
+    .ce-input-floating.is-not-empty {
+      opacity: 1;
+      pointer-events: unset;
+    }
+  }
+
+  &:not(.is-readonly, .is-disabled) {
+    .ce-input-floating {
+      display: flex;
+      flex-direction: row;
+      // 必须显式居中：flex 默认 align-items:stretch 会把 ce-icon 拉伸到容器高度，
+      // 使其变成 16x24 的矩形，border-radius:50% 呈现为椭圆而非正圆
+      align-items: center;
+      justify-content: center;
+
+      ce-icon {
+        &.ce-input-close {
+          color: fn.color(--ce-color-placeholder-rgb);
+          visibility: visible;
+          border-radius: var(--ce-round-circle);
+          flex: 0 0 auto;
+        }
+      }
+    }
+
+    .ce-input-floating.is-not-empty {
+      opacity: 1;
+      pointer-events: unset;
+
+      ce-icon.ce-input-close {
+        transform: scale(1) !important;
+        font-weight: bolder;
+        // color: fn.color(--ce-color-error-rgb) !important;
+        border-radius: var(--ce-round-circle);
+
+        cursor: pointer;
+      }
+
+      &:hover {
+        ce-icon.ce-input-close {
+          background: #e8e8e8;
+          border-radius: inherit;
+          transform: scale(1.1) !important;
+        }
+      }
+    }
+  }
+}
+
+//size
+:host(ce-input[size="lg"]) {
+  padding-inline: var(--ce-spacing-md);
+  padding-block: var(--ce-spacing-sm);
+  font-size: var(--ce-font-lg);
+}
+
+:host(ce-input[size="md"]) {
+  padding-inline: var(--ce-spacing-sm);
+  padding-block: var(--ce-spacing-xs);
+  font-size: var(--ce-font-md);
+}
+
+:host(ce-input[size="sm"]) {
+  padding-inline: var(--ce-spacing-xs);
+  padding-block: var(--ce-spacing-xxs);
+  font-size: var(--ce-font-sm);
+}
+
+:host(ce-input[size="xs"]) {
+  padding-inline: var(--ce-spacing-xxs);
+  padding-block: var(--ce-spacing-xxs);
+  font-size: var(--ce-font-sm);
+
+  &::part(input) {
+    line-height: 1.25;
+  }
+}
+
+// Option A（标签输入 / 多选标签）：标签与输入框同处一个可换行的 flex 容器。
+// 通过 display:contents 把 prepend 里的标签提升到 .ce-input 的同一 flex 容器中，
+// 使标签与输入框真正按行流动：输入框只在没有 >=80px 的剩余空间时才换行。
+:host(ce-input.ce-input-tag) {
+  .ce-input {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ce-spacing-xs);
+    grid-template-areas: none;
+    grid-template-columns: none;
+    grid-template-rows: none;
+  }
+
+  // 把 slotted 的标签容器从布局树中“展开”，让其子节点（ce-tag）成为 .ce-input 的直接 flex 子项
+  .ce-input-prepend {
+    display: contents;
+  }
+
+  .ce-input-prepend ::slotted(.ce-input-tags) {
+    display: contents;
+  }
+
+  .ce-form-control {
+    // flex-basis 80px：只有剩余空间不足 80px 时才换行；flex-shrink 0 防止被压到小于 80px
+    flex: 1 0 80px;
+    min-width: 80px;
+  }
+
+  .ce-input-append {
+    flex: 0 0 auto;
+  }
+}

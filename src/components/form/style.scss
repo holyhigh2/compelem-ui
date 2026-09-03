@@ -1,47 +1,77 @@
-@import "../../css/_mixins.scss";
-@import "../../css/_functions.scss";
-@import "../../css/_override";
+@use "../../css/mixins";
+@use "../../css/functions" as fn;
+@use "../../css/_override";
 
 :host {
-  --form-item-color: var(--l-color-primary);
+  --form-item-color: var(--ce-color-primary-rgb);
+  transition:
+    border 0.1s,
+    border-color 0.2s,
+    outline 0.1s,
+    width 0.2s;
 }
 
-.c-form {
+:host([layout="inline"]) {
+  ::slotted(ce-form-item) {
+    margin-right: var(--ce-spacing-md);
+    display: inline-block;
+  }
+}
+
+:host([layout="vertical"]) {
+  ::slotted(ce-form-item) {
+    margin-bottom: 0.25rem;
+  }
+}
+
+:host([space="loose"]) {
+  min-height: calc(var(--input-height) + 8px);
+}
+
+:host([space="default"]) {
+  min-height: var(--input-height);
+}
+
+:host([space="compact"]) {
+  min-height: calc(var(--input-height) - 8px);
+}
+
+.ce-form {
   &-item {
-    margin-bottom: 1.5rem;
-    vertical-align: top;
-
-    .--form-item-label {
+    .ce-form-form-item-label {
       display: inline-block;
       font-size: 0.875rem;
     }
 
-    .--form-item-wrapper {
-      display: inline-block;
+    .ce-form-form-item-wrapper {
+      // display: inline-block;
     }
 
-    .--form-item-error-message {
+    .ce-form-form-item-error-message {
       display: inline-block;
-      margin-top: 0.15rem;
-      font-size: 0.875rem;
-      color: color(--l-color-error);
+      padding-inline: var(--ce-spacing-lg);
+      padding-top: var(--ce-spacing-sm);
+      font-size: var(--ce-font-xs);
+      color: fn.color(--ce-color-error-rgb);
     }
 
-    &.--layout-vertical {
-      .--form-item-label {
+    &.ce-form-layout-vertical {
+      .ce-form-form-item-label {
         display: block;
-        margin-bottom: 0.25rem;
       }
     }
 
-    &.--layout-inline {
-      margin-right: 1.5rem;
-      display: inline-block;
+    &.ce-form-layout-inline {
+      display: flex;
+      align-items: center;
+      width: 100%;
 
-      .--form-item-label {
-        vertical-align: top;
-        margin-right: 0.25rem;
-        margin-top: 0.5rem;
+      .ce-form-form-item-label {
+        margin-right: var(--ce-spacing-sm);
+      }
+
+      .ce-form-form-item-wrapper {
+        flex: 1;
       }
     }
   }
@@ -49,71 +79,28 @@
   &-control {
     position: relative;
     overflow: hidden;
-    box-sizing: border-box;
-    transition:
-      border 0.1s,
-      border-color 0.2s,
-      outline 0.1s,
-      width 0.2s;
 
-    &.__disabled {
-      cursor: not-allowed;
-
-      > input,
-      > textarea {
-        cursor: not-allowed;
-      }
+    &.is-active,
+    &:not(.is-disabled, &:focus-within):hover {
+      // border-color: fn.color(--ce-color-border-active-rgb);
+      border-color: fn.color(--form-item-color);
     }
 
-    &.__appearance {
-      &-default {
-        border: 1px solid color(--l-color-border);
-        box-shadow: 0 1px 2px color(--l-color-gray-100);
-        outline: 0px solid transparent;
-
-        &:focus-within {
-          border-color: transparent;
-          outline: 1px solid color(--form-item-color); //color(--l-color-border-active);
-        }
-      }
-
-      &-underline {
-        border-bottom: 1px solid color(--l-color-border);
-        border-radius: 0 !important;
-
-        &:focus-within {
-          border-color: color(--form-item-color);
-          // border-width: 2px;
-        }
-      }
-    }
-
-    &.__rounded {
-      border-radius: var(--l-border-radius-md);
-    }
-
-    &:not(.__disabled, &:focus-within):hover {
-      // border-color: color(--l-color-border-active);
-      border-color: color(--form-item-color);
-    }
-
-    > input,
-    > textarea {
+    >input,
+    >textarea {
       outline: none;
       border: none;
-      padding-top: 0.375rem;
-      padding-bottom: 0.375rem;
-      padding-left: 0.5rem;
+      // padding-left: 0.5rem;
       padding-right: 0.25rem;
-      line-height: 1.45;
+      // line-height: 1.45;
     }
 
-    .__round-left {
-      @include round-left;
+    .is-round-left {
+      @include mixins.round-left;
     }
 
-    .__round-right {
-      @include round-right;
+    .is-round-right {
+      @include mixins.round-right;
       padding-right: 0.5rem;
     }
   }

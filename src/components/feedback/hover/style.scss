@@ -1,0 +1,25 @@
+@use "../../../css/mixins";
+@use "../../../css/functions" as fn;
+
+.ce-empty {
+  > h3 {
+    margin: 0;
+    margin-bottom: var(--ce-spacing-md);
+    text-align: center;
+    font-size: var(--ce-font-xl);
+    @include mixins.text-lg;
+    letter-spacing: 1px;
+  }
+  > p {
+    margin: 0;
+    text-align: center;
+    @include mixins.text-sm;
+  }
+  .ce-hover-actions {
+    padding: var(--ce-spacing-lg);
+    text-align: center;
+    > ce-button {
+      margin: var(--ce-spacing-lg);
+    }
+  }
+}

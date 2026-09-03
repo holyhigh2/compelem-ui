@@ -1,0 +1,50 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
+@use "../../../css/utils";
+
+:host {
+  display: block;
+}
+:host([collapsed])::part(children) {
+  grid-template-rows: 0fr !important;
+}
+:host([collapsed])::part(title) {
+  width: 0 !important;
+  white-space: nowrap;
+}
+:host([collapsed])::part(append) {
+  width: 0 !important;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ce-list-group {
+  position: relative;
+  transition: all 0.3s;
+  > ce-list-item {
+    cursor: pointer;
+    ce-icon.ce-list-caret {
+      width: 1rem;
+      height: 1rem;
+
+      transform: rotateZ(-90deg) !important;
+      transition: transform 0.3s;
+    }
+  }
+  .ce-list-children,
+  slot {
+    position: relative;
+    display: grid;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition: grid-template-rows 0.3s ease;
+  }
+  &.is-expanded {
+    ce-icon.ce-list-caret {
+      transform: rotateZ(0deg) !important;
+    }
+
+    .ce-list-children {
+      grid-template-rows: 1fr;
+    }
+  }
+}

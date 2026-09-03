@@ -1,0 +1,14 @@
+:host {
+    --ce-ui-splittable-handle-color: var(--ce-color-primary);
+}
+
+//split
+.uii-splittable-handle {
+    opacity: 0.5;
+    transition: background 0.5s 0.3s;
+
+    &:hover,
+    &-active {
+        background-color: var(--ce-ui-splittable-handle-color);
+    }
+}

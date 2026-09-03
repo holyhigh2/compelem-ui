@@ -1,0 +1,43 @@
+/********************
+* component styles vars
+* @author holyhigh
+*********************/
+@layer compelem-components;
+
+@layer compelem-components {
+  :root {
+    //card
+    --ce-card-padding: 1rem;
+    --ce-card-gap: 0.625rem;
+    --ce-card-radius: var(--ce-round-md, 0.75rem);
+    --ce-card-bg: rgb(var(--ce-color-background-rgb, 255 255 255));
+    --ce-card-header-size: var(--ce-font-lg, 1.125rem);
+    --ce-card-subtitle-opacity: 0.6;
+    --ce-card-body-size: var(--ce-font-sm, 0.875rem);
+    --ce-card-footer-size: var(--ce-font-sm, 0.875rem);
+    //panel
+    --ce-panel-padding: 1rem;
+    --ce-panel-gap: 0.75rem;
+    --ce-panel-gap-expanded: 1rem;
+    --ce-panel-radius: var(--ce-round-md, 0.75rem);
+    --ce-panel-bg: rgb(var(--ce-color-background-rgb, 255 255 255));
+    --ce-panel-header-size: var(--ce-font-lg, 1.125rem);
+    --ce-panel-subtitle-opacity: 0.6;
+    --ce-panel-body-size: var(--ce-font-sm, 0.875rem);
+    --ce-panel-footer-size: var(--ce-font-sm, 0.875rem);
+    //icon
+    --ce-icon-unit: 1em;
+    //skeleton
+    --ce-skeleton-base: rgb(var(--ce-color-border-secondary-rgb, 229 231 235));
+    --ce-skeleton-highlight: rgb(var(--ce-color-background-rgb, 244 245 247));
+    --ce-skeleton-radius: var(--ce-round-md, 0.35rem);
+    --ce-skeleton-gap: 0.75rem;
+    --ce-skeleton-text-height: var(--ce-font-sm, 0.875rem);
+    --ce-skeleton-title-height: 1.25rem;
+    --ce-skeleton-avatar-size: 2.5rem;
+    --ce-skeleton-image-height: 6rem;
+    --ce-skeleton-button-width: 5rem;
+    --ce-skeleton-button-height: 2rem;
+    --ce-skeleton-duration: 1.4s;
+  }
+}

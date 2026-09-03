@@ -1,0 +1,44 @@
+@keyframes icon-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(359deg);
+  }
+}
+
+ce-icon {
+
+  display: inline-block;
+  vertical-align: middle;
+  color: inherit;
+  line-height: 0;
+
+  &[size="xs"] {
+    font-size: calc(var(--ce-icon-unit) * 0.75);
+  }
+
+  &[size="sm"] {
+    font-size: calc(var(--ce-icon-unit) * 1);
+  }
+
+  &[size="md"] {
+    font-size: calc(var(--ce-icon-unit) * 1.25);
+  }
+
+  &[size="lg"] {
+    font-size: calc(var(--ce-icon-unit) * 1.5);
+  }
+
+  &[size="xl"] {
+    font-size: calc(var(--ce-icon-unit) * 2);
+  }
+
+  >svg {
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+    display: block;
+  }
+}

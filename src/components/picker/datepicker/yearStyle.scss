@@ -1,0 +1,77 @@
+:host(ce-year-month-panel) {
+  display: block;
+  height: 230px;
+}
+
+.ce-year-month {
+  display: flex;
+  // column-gap: 0.5em;
+  height: inherit;
+}
+
+.ce-date-picker-month-cell {
+  margin: 0 auto;
+  padding: var(--ce-spacing-xs);
+}
+
+.ce-date-picker-month-cell .ce-date-picker-item {
+  min-width: 2em;
+  font-weight: lighter;
+}
+
+.ce-date-picker-year-container {
+  overflow: hidden;
+  min-height: 100%;
+
+  #vpillar {
+    width: 1px;
+    z-index: -1;
+    position: relative;
+  }
+
+  .ce-date-picker-v-wrapper {
+    display: flex;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    justify-items: center;
+    padding-right: 1rem;
+  }
+
+  .ce-date-picker-year-cell {
+    aspect-ratio: 1;
+    height: inherit;
+    padding: var(--ce-spacing-xs);
+  }
+}
+
+.ce-date-picker-month-cell .ce-date-picker-item,
+.ce-date-picker-year-cell .ce-date-picker-item {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  //   font-size: 0.875em;
+  word-break: keep-all;
+  font-weight: lighter;
+}
+
+.ce-date-picker-month-cell.selected .ce-date-picker-item,
+.ce-date-picker-year-cell.selected .ce-date-picker-item {
+  background: var(--ce-color-text-active);
+  color: #fff;
+  border-radius: 50%;
+}
+
+.ce-date-picker-month-cell:hover,
+.ce-date-picker-year-cell:hover {
+  background-color: rgb(var(--ce-color-text-rgb) / 0.1);
+  border-radius: var(--ce-round-circle);
+}
+
+.ce-date-picker-v-wrapper {
+  height: var(--ymp-row-height);
+}

@@ -1,0 +1,27 @@
+ce-heading {
+  display: inline-block;
+  &[level="6"] {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  &[level="5"] {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  &[level="4"] {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  &[level="3"] {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  &[level="2"] {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+  &[level="6"] {
+    font-size: 3rem;
+    line-height: 1rem;
+  }
+}

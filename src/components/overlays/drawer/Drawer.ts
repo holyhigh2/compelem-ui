@@ -1,7 +1,9 @@
-import { classes, CompElem, html, ifElse, ifTrue, prop, styles, tag, Template, watch } from "compelem";
+import { classes, CompElem, csscope, Csscope, emits, h, ifElse, ifTrue, prop, styles, tag, Template, watch } from "compelem";
 import { find, isEmpty } from "myfx";
 import { Close } from "../../../icons/icons";
-import style from "./style.scss";
+import { ensurePx } from "../../../utils/utils";
+import style from "./style.scss?tmpl";
+const STACK: Drawer[] = [];
 /**
  * 抽屉面板
  * @attrs
@@ -9,7 +11,6 @@ import style from "./style.scss";
  *  title {string} 标题
  *  round {boolean} 圆角，默认false
  *  backdrop {string} 遮罩背景，可选值 static/initial/none。默认initial
- *  appendToBody {boolean} 以body为容器，默认true。false时使用Modal父元素为容器
  *  esc {boolean} 按下ESC按键时关闭Modal，默认true
  *  showClose {boolean} 在头部显示关闭按钮，默认true
  *  width {string} 任何合法的css width值，默认280px
@@ -25,49 +26,33 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag("l-drawer")
+@emits('opened', 'closed', 'update:visible')
+@tag("ce-drawer")
 export class Drawer extends CompElem {
-  static stack: Drawer[] = [];
-  static {
-    document.addEventListener("keydown", function (e) {
-      if (e.key !== "Escape") return;
-      if (Drawer.stack.length < 1) return;
-      let visibleDialog = find(Drawer.stack, (d) => d.visible);
-      if (!visibleDialog) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (visibleDialog.esc) {
-        visibleDialog.close();
-      } else {
-        visibleDialog.renderRoot.classList.add("__shake");
-      }
-    });
-  }
   hook_click: any;
   //////////////////////////////////// props
   @prop width = '280px';
+  @prop height = '100%';
   @prop placement: string = 'right';
   @prop backdrop: string = "initial"; //static/none
   @prop esc = true;
   @prop round = false;
-  @prop appendToBody = true; //在body上时，使用fixed定位
   @prop showClose = true;
   @prop({ type: String }) title: string;
-  @prop({ type: Boolean, sync: true }) visible = false;
+  @prop({ type: Boolean, model: true }) visible = false;
 
   //-1:close, 1:open
   transiting = 0;
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style];
   }
 
   #timer: any;
 
   /////////////////////////////////// watches
-  @watch("visible", { immediate: true })
+  @watch("visible", { immediate: false })
   watchVisible(nv: boolean) {
     if (nv) {
       this.open();
@@ -83,36 +68,37 @@ export class Drawer extends CompElem {
   }
 
   render(): Template {
-    return html`
+    return h`
       <dialog
-        class="c-drawer ${classes({
-      __round: this.round,
-      '__no-backdrop': this.backdrop == 'none',
-      ["placement-" + this.placement]: true,
-    })}"
-        style="${styles({
-      width: this.width,
-      height: this.height
-    })}"
+        class="ce-drawer"
+        ${classes({
+      "ce-drawer-round": this.round,
+      "ce-drawer-no-backdrop": this.backdrop == 'none',
+      ["ce-drawer-placement-" + this.placement]: true,
+    })}
+        ${styles({
+      width: ensurePx(this.width),
+      height: ensurePx(this.height)
+    })}
         @transitionend.debounce="${this.onTransitionEnd}"
         @animationend="${this.onAnimationEnd}"
       >
-        <l-panel class="--wrapper" shadow="never">
+        <ce-panel class="ce-drawer-wrapper" shadow="never">
           <div slot="header">
-          ${ifElse(isEmpty(this.slots.header), () => html`<div xxx>${this.title}${ifTrue(
+          ${ifElse(isEmpty(this.slots.header), () => h`<div>${this.title}${ifTrue(
       this.showClose,
-      () => html`<l-icon
-                      class="--close c-btn-close"
+      () => h`<ce-icon
+                      class="ce-drawer-close ce-btn-close"
                       .svg="${Close}"
                       @click="${this.onClose}"
                       style="color:var(--color-gray-400)"
-                    ></l-icon></div>`
-    )}`, () => html`<slot name="title"></slot>`)}
+                    ></ce-icon></div>`
+    )}`, () => h`<slot name="title"></slot>`)}
             
           </div>
           <main><slot @slotchange="${this.onSlotChange}"></slot></main>
           <footer><slot name="footer"></slot></footer>
-        </l-panel>
+        </ce-panel>
       </dialog>
     `;
   }
@@ -120,10 +106,21 @@ export class Drawer extends CompElem {
   connectedCallback(): void {
     super.connectedCallback();
 
-    this.renderRoot.addEventListener("click", this.hook_click);
+    this.renderRoot?.addEventListener("click", this.hook_click);
   }
 
-  disconnectedCallback() { }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.renderRoot?.removeEventListener("click", this.hook_click);
+  }
+  mounted(): void {
+    if (this.visible) {
+      this.open();
+    } else {
+      this.close();
+    }
+  }
+
   //////////////////////////////////// methods
   open() {
     let dialog = <HTMLDialogElement>this.renderRoot;
@@ -135,16 +132,17 @@ export class Drawer extends CompElem {
     if (this.#timer) {
       clearTimeout(this.#timer)
     }
-    Drawer.stack.unshift(this);
+    STACK.unshift(this);
     this.#timer = setTimeout(() => {
       this.transiting = 1;
-      dialog.classList.add("__visible");
+      dialog.classList.add("ce-drawer-visible");
       this.#timer = null;
     }, 0);
   }
   close() {
     let dialog = <HTMLDialogElement>this.renderRoot;
-    dialog.classList.remove("__visible");
+    if (!dialog) return;
+    dialog.classList.remove("ce-drawer-visible");
     this.transiting = -1;
     if (this.#timer) {
       clearTimeout(this.#timer)
@@ -152,7 +150,7 @@ export class Drawer extends CompElem {
     this.#timer = setTimeout(() => {
       this.visible = false;
       dialog.close();
-      Drawer.stack.unshift(this);
+      STACK.unshift(this);
       this.#timer = null;
     }, 300);
   }
@@ -160,7 +158,7 @@ export class Drawer extends CompElem {
     let t = e.target;
     if (t === this.renderRoot) {
       if (this.backdrop === "static") {
-        this.renderRoot.classList.add("__shake");
+        this.renderRoot.classList.add("ce-drawer-shake");
       } else if (this.backdrop === "initial") {
         this.close();
       }
@@ -172,22 +170,38 @@ export class Drawer extends CompElem {
   onTransitionEnd(e: Event) {
     if (this.transiting > 0) {
       this.emit("opened");
-      if (this.renderRoot.scrollHeight > this.renderRoot.clientHeight) {
-        this.renderRoot.style.height = 'auto';
+      if (this.renderRoot!.scrollHeight > this.renderRoot!.clientHeight) {
+        this.renderRoot!.style.height = 'auto';
       }
     } else {
       this.emit("closed");
-      this.renderRoot.style.height = '';
+      this.renderRoot!.style.height = this.height ?? '';
     }
   }
   onAnimationEnd() {
-    this.renderRoot.classList.remove("__shake");
+    this.renderRoot?.classList.remove("ce-drawer-shake");
   }
   onSlotChange() {
-    if (this.renderRoot.scrollHeight > this.renderRoot.clientHeight) {
-      this.renderRoot.style.height = 'auto';
+    if (this.renderRoot!.scrollHeight > this.renderRoot!.clientHeight) {
+      this.renderRoot!.style.height = 'auto';
     } else {
-      this.renderRoot.style.height = '';
+      this.renderRoot!.style.height = this.height ?? '';
     }
   }
 }
+
+document.addEventListener("keydown", function (e) {
+  if (e.key !== "Escape") return;
+  if (STACK.length < 1) return;
+  let visibleDialog = find(STACK, (d) => d.visible);
+  if (!visibleDialog) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (visibleDialog.esc) {
+    visibleDialog.close();
+  } else {
+    visibleDialog.renderRoot?.classList.add("ce-drawer-shake");
+  }
+});

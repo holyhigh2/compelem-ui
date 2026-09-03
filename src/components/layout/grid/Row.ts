@@ -1,104 +1,105 @@
-import { CompElem, html, prop, styles, tag, Template } from "compelem";
-import { closest, debounce, each, filter, last, sum } from "myfx";
+import { CompElem, csscope, Csscope, prop, tag } from "compelem";
+import { closest, each, filter } from "myfx";
 import { Col } from "./Col";
 import { Grid } from "./Grid";
-import style from "./style.scss";
+import { styleSheet } from "./styleSheets";
+const COL_COUNT = 24
 /**
  * 格栅布局 - 行
  * 每一行分为24列
+ * @props
+ *  gap {string|number} 列间距，默认0。类型为数字时单位为px
  *
  * @slots
  *  default() Col
  *
  * @author holyhigh2
  */
-@tag('l-row')
-export class Row extends CompElem {
-  autoWidthFn: Function
+@tag('ce-row')
+export class Row extends CompElem<null> {
   grid: Grid
 
   /////////////////////////////////// props
-  @prop({ type: String }) gutter: string | number = '0'
+  @prop({ type: String }) gap: string | number = '0'
 
-  static get styles(): string[] {
-    return [style];
+  /////////////////////////////////// styles
+  get cssVars(): Record<string, string | number | undefined> {
+    return {
+      gridColGap: isNaN(this.gap as any) ? this.gap + '' : this.gap + 'px'
+    }
   }
+  @csscope(Csscope.HOST)
+  static get hostCss() {
+    return styleSheet;
+  }
+
   /////////////////////////////////// watches
+
+  /////////////////////////////////// computed
+
   //////////////////////////////////// lifecycles
   constructor() {
     super();
-
-    this.autoWidthFn = debounce(this.autoWidth, 10)
   }
 
-  render(): Template {
-    return html`<div part="row" class="c-grid-row" style="${styles({ columnGap: isNaN(this.gutter as any) ? this.gutter + '' : this.gutter + 'rem' })}"><slot @slotchange="${this.onSlotChange}"></slot></div>`;
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-
+  beforeMount(): void {
     this.grid = closest(this.parentComponent!, (node) => node instanceof Grid, "parentComponent")!
     if (this.grid && this.grid.fluid) {
-      this.renderRoot.style.height = '100%'
+      this.style.height = '100%'
     }
   }
 
-  disconnectedCallback() {
-  }
-  //////////////////////////////////// methods
-  onSlotChange(e: Event) {
-    let slot = e.currentTarget as HTMLSlotElement
-    let els = slot.assignedElements()
-    if (els.length < 1) return;
-
-    this.autoWidthFn(els);
-  }
-
-  autoWidth(els: Element[]) {
-    let declaredSpan = 0;
-    let noSpanCol = 0;
-    const cols = filter(els, el => el instanceof Col)
-    const spanAry: number[] = []
-    const offsetAry: number[] = []
-    each(cols, col => {
-      let colSpan = col.attributes.getNamedItem('span')
-      if (colSpan && colSpan.value) {
-        let cs = parseInt(colSpan.value)
-        spanAry.push(cs)
-        declaredSpan += cs
-      } else {
-        noSpanCol++
-        spanAry.push(-1)
-      }
-
-      let colOffset = col.attributes.getNamedItem('offset')
-      if (colOffset) {
-        let co = parseInt(colOffset.value)
-        offsetAry.push(co)
-      } else {
-        offsetAry.push(0)
-      }
+  mounted(): void {
+    this.nextTick(() => {
+      this.calcColWidth();
     })
-    //计算平均宽度
-    let avgSpan = (24 - declaredSpan - sum(...offsetAry)) / noSpanCol >> 0
-    let remainder = (24 - declaredSpan - sum(...offsetAry)) % noSpanCol
+  }
+  beforeDestroyed(): void {
+    each(this.children, (col: Col) => {
+      col.destroy()
+    })
+    this.grid = null as any
+  }
+
+  //////////////////////////////////// methods
+  calcColWidth() {
+    const bp = this.grid ? this.grid.dataset.bp! : Grid.getBP(this.offsetWidth)
 
     let lastColIndex = 1
-    each(cols, (col: Col, i: number) => {
-      let colSpan = spanAry[i]
-      if (colSpan < 0) colSpan = avgSpan
-      let colOffset = offsetAry[i]
+    const cols = filter<Col>(this.children, el => el instanceof Col) ?? []
+    let hasOffset = false
+    let spanSum = 0
+    let colSpanAry: Array<number[]> = []
+    let noSpanCount = 0
+    each(cols, (col: Col) => {
+      let span = col.getSpan(bp) ?? 0
+      let offset = col.offset ?? parseInt(col.getAttribute('offset') || '0')
+      if (offset > 0) hasOffset = true
+      spanSum += span
+      if (span < 1) {
+        noSpanCount++
+      }
 
-      lastColIndex += colOffset
-
-      col.style.gridColumn = `${lastColIndex} / ${colSpan + lastColIndex}`
-      lastColIndex = colSpan + lastColIndex
+      let startColIndex = lastColIndex + offset
+      let endColIndex = startColIndex + span
+      colSpanAry.push([startColIndex, endColIndex])
+      lastColIndex = endColIndex
     })
 
-    if (remainder > 0) {
-      let style = (last(cols) as Col).style
-      style.gridColumn = style.gridColumn.split('/')[0] + '/' + (avgSpan + remainder)
+    if (!hasOffset) {
+      let restSpan = COL_COUNT - spanSum
+      let avgSpan = restSpan / noSpanCount
+      cols.forEach(col => {
+        let span = col.getSpan(bp) ?? 0
+        col.style.setProperty('--grid-col-span', `span ${span || avgSpan}`)
+      })
+    } else {
+      colSpanAry.forEach((spanAry, i) => {
+        let col = cols[i]
+        let startColIndex = spanAry[0]
+        let endColIndex = spanAry[1]
+        col.style.setProperty('--grid-col-span', `${startColIndex} / ${endColIndex}`)
+      })
     }
   }
 }

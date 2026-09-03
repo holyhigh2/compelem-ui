@@ -1,35 +1,37 @@
-@import "../../../css/_functions.scss";
+@use "../../../css/functions" as fn;
 
 :host {
   display: inline-block;
   vertical-align: super;
-  --border-color: var(--l-color-border-active);
-  --color: var(--l-color-primary);
+  --border-color: var(--ce-color-border-active);
+  --color: var(--ce-color-primary);
 }
 
-.c-form-radio {
+.ce-form-radio {
   display: flex;
   align-items: center;
   cursor: pointer;
 
-  .label:not(:empty) {
+  .ce-form-radio-label:not(:empty) {
     flex: 1;
   }
-  .label {
-    l-card {
+
+  .ce-form-radio-label {
+    ce-card {
       &[checked] {
         border-width: 1px;
         border-style: solid;
-        border-color: color(--color);
+        border-color: var(--color);
       }
     }
-    .title {
-    }
-    .subtitle {
+
+    .ce-form-radio-title {}
+
+    .ce-form-radio-subtitle {
       font-size: 0.875rem;
       line-height: 1.25rem;
       margin: 0;
-      color: rgb(var(--l-color-text-secondary) / 1);
+      color: rgb(var(--ce-color-text-secondary-rgb) / 1);
       word-break: break-all;
 
       &:not(:empty) {
@@ -38,24 +40,21 @@
     }
   }
 
-  .box-container {
+  .ce-form-radio-box {
     position: relative;
     overflow: visible;
 
     margin-right: 0.5rem;
 
-    .box {
+    .ce-form-radio-box {
       width: 16px;
       height: 16px;
-      box-sizing: border-box;
-      border-radius: var(--l-border-radius-full);
+      border-radius: var(--ce-round-pill);
       display: flex;
       align-items: center;
       justify-content: center;
-      transition:
-        outline-width 0.1s,
-        outline-offset 0.2s;
-      outline: 1px solid color(--l-color-placeholder);
+      transition: outline-width 0.1s, outline-offset 0.2s;
+      outline: 1px solid fn.color(--ce-color-placeholder-rgb);
       outline-offset: -2px;
       outline-width: 1px;
 
@@ -64,7 +63,7 @@
         position: absolute;
         width: 100%;
         height: 100%;
-        border-radius: var(--l-border-radius-full);
+        border-radius: var(--ce-round-pill);
         transition: background-color 0.2s;
       }
 
@@ -72,15 +71,11 @@
         pointer-events: none;
         content: "";
         position: absolute;
-        background-color: rgb(var(--color) / 1);
-        border-radius: var(--l-border-radius-full);
+        background-color: var(--color);
+        border-radius: var(--ce-round-pill);
         width: 0rem;
         height: 0rem;
-        transition:
-          left 0.2s,
-          transform 0.2s,
-          width 0.2s ease,
-          height 0.2s ease;
+        transition: left 0.2s, transform 0.2s, width 0.2s ease, height 0.2s ease;
       }
     }
 
@@ -93,9 +88,13 @@
       top: -0.5rem;
       margin: 0;
       cursor: pointer;
+
+      &[readonly] {
+        pointer-events: none;
+      }
     }
 
-    input:checked ~ .box {
+    input:checked~.ce-form-radio-box {
       outline-offset: 0px;
 
       &::before {
@@ -105,24 +104,24 @@
       &::after {
         width: 0.5rem;
         height: 0.5rem;
-        border-color: color(--color);
+        border-color: var(--color);
       }
     }
   }
 
-  &.__disabled {
+  &.is-disabled {
     cursor: not-allowed;
 
-    .label {
-      color: color(--l-color-placeholder);
+    .ce-form-radio-label {
+      color: fn.color(--ce-color-placeholder-rgb);
     }
 
-    .box-container {
+    .ce-form-radio-box {
       input {
         cursor: not-allowed;
       }
 
-      .box {
+      .ce-form-radio-box {
         outline-width: 0 !important;
 
         &::before {
@@ -130,47 +129,52 @@
         }
 
         &:hover {
-          color: color(--l-color-placeholder) !important;
+          color: fn.color(--ce-color-placeholder-rgb) !important;
         }
       }
     }
   }
-  &.__reverse {
+
+  &.ce-form-radio-reverse {
     flex-direction: row-reverse;
   }
 
-  &:not(&.__disabled) {
-    .box-container input:checked ~ .box {
-      outline: 1px solid color(--border-color, 1);
+  &:not(&.is-disabled) {
+    .ce-form-radio-box input:checked~.ce-form-radio-box {
+      outline: 1px solid var(--border-color);
       border-color: transparent !important;
       outline-offset: 0px;
     }
 
-    .box-container input:not(input:checked):focus ~ .box {
-      // border-color: color(--border-color);
-      border-color: color(--border-color, 1);
+    .ce-form-radio-box input:not(input:checked):focus~.ce-form-radio-box {
+      // border-color: fn.color(--border-color);
+      border-color: var(--border-color);
     }
 
-    &:hover .box-container input:not(input:checked) ~ .box,
-    .box-container input:not(input:checked):hover ~ .box {
-      outline-color: color(--border-color);
-      // border-color: color(--border-color, .6);
-      // border: 2px solid color(--border-color, .6);
+    &:hover .ce-form-radio-box input:not(input:checked)~.ce-form-radio-box,
+    .ce-form-radio-box input:not(input:checked):hover~.ce-form-radio-box {
+      outline-color: var(--border-color);
+      // border-color: fn.color(--border-color, .6);
+      // border: 2px solid fn.color(--border-color, .6);
       // outline-width: 2px;
     }
   }
 }
-.c-form-radio-group {
-  ::slotted(l-radio) {
+
+.ce-form-radio-group {
+  ::slotted(ce-radio) {
     display: block;
   }
+
   ::slotted(*:not(:first-child)) {
     margin-top: 0.75rem;
   }
-  &.__inline {
-    ::slotted(l-radio) {
+
+  &.ce-form-radio-inline {
+    ::slotted(ce-radio) {
       display: inline-block;
     }
+
     ::slotted(*:not(:first-child)) {
       margin-top: 0;
       margin-left: 0.75rem;

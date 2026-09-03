@@ -1,58 +1,57 @@
-@import "../../css/_functions.scss";
+@use "../../css/functions" as fn;
 
-.c-link {
+ce-link {
   display: inline-block;
   position: relative;
   cursor: pointer;
-  vertical-align: middle;
   outline: none;
+  color: -webkit-link;
 
-  &.__underline:hover {
+  &[underline="always"] {
     text-decoration: underline;
     text-underline-offset: 3px;
   }
 
-  &.__disabled {
+  &[underline="hover"] {
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+
+  &[disabled] {
     cursor: not-allowed;
 
-    &.__default {
-      color: #c0c4cc;
+    &[type="info"] {
+      color: fn.color(--ce-color-info-light-rgb);
     }
 
-    &.__info {
-      color: color(--l-color-info-light);
+    &[type="success"] {
+      color: fn.color(--ce-color-success-light-rgb);
     }
 
-    &.__success {
-      color: color(--l-color-success-light);
+    &[type="warning"] {
+      color: fn.color(--ce-color-warning-light-rgb);
     }
 
-    &.__warning {
-      color: color(--l-color-warning-light);
-    }
-
-    &.__error {
-      color: color(--l-color-error-light);
+    &[type="error"] {
+      color: fn.color(--ce-color-error-light-rgb);
     }
   }
 
-  &.__default {
-    color: #666;
+  &[type="info"] {
+    color: fn.color(--ce-color-info-rgb);
   }
 
-  &.__info {
-    color: color(--l-color-info);
+  &[type="success"] {
+    color: fn.color(--ce-color-success-rgb);
   }
 
-  &.__success {
-    color: color(--l-color-success);
+  &[type="warning"] {
+    color: fn.color(--ce-color-warning-rgb);
   }
 
-  &.__warning {
-    color: color(--l-color-warning);
-  }
-
-  &.__error {
-    color: color(--l-color-error);
+  &[type="error"] {
+    color: fn.color(--ce-color-error-rgb);
   }
 }

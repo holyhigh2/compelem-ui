@@ -1,0 +1,51 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/utils";
+
+:host {
+  display: block;
+}
+
+.ce-toolbar {
+  display: flex;
+  gap: .25rem;
+  align-items: center;
+  position: relative;
+  padding: 0 var(--ce-spacing-sm);
+  justify-content: space-between;
+  height: inherit;
+  overflow: hidden;
+
+  .ce-toolbar-title {
+    flex: 1;
+    z-index: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ce-toolbar-prepend,
+  .is-left {
+    z-index: 1;
+    display: flex;
+    column-gap: var(--ce-spacing-sm);
+  }
+
+
+  .ce-toolbar-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+
+    ce-img {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .ce-toolbar-content {
+    display: flex;
+    align-items: center;
+  }
+}

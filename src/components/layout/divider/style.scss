@@ -1,34 +1,92 @@
-@import "../../../css/_functions.scss";
+@use "../../../css/functions" as fn;
 
-.c-divider {
+:host {
+  display: block;
+  --thickness: thin;
+  --inset: 4rem;
+  --color-divider: var(--ce-color-gray-200);
+}
+
+.ce-divider {
   display: flex;
+  height: 100%;
 
-  &.__vertical {
-    display: inline-block;
-    vertical-align: middle;
-    width: 1px;
-    height: 1em;
-    margin: 0 0.5rem;
+  &.ce-divider-inset-align {
+    &-start {
+      justify-content: flex-end;
+    }
+
+    &-center {
+      justify-content: center;
+    }
+
+    &-end {
+      justify-content: flex-start;
+    }
   }
 
-  &:not(&.__vertical) {
+  .ce-divider-content {
+    // flex: 1;
+    display: flex;
+    transition: all 0.3s;
     flex-direction: row;
     align-items: center;
 
-    .--inner-wrapper {
-      // padding: 0 .5rem;
+    .ce-divider-inner-wrapper {
+      padding: 0 0.5rem;
     }
+
+    width: calc(100% - var(--inset));
 
     &::before {
       content: "";
-      border-top: 1px solid color(--l-color-gray-200);
+      border-width: 0;
+      border-style: var(--border-style, solid);
+      border-top-width: var(--thickness, 1px);
       flex: 1;
+      border-color: var(--color-divider, var(--ce-color-gray-200));
+      transition: all 0.3s;
     }
 
     &::after {
       content: "";
-      border-top: 1px solid color(--l-color-gray-200);
+      border-width: 0;
+      border-style: var(--border-style, solid);
+      border-top-width: var(--thickness, 1px);
       flex: 1;
+      border-color: var(--color-divider, var(--ce-color-gray-200));
+      transition: all 0.3s;
+    }
+  }
+
+  &.is-vertical {
+    &.ce-divider-inset-align {
+      &-start {
+        align-items: flex-start;
+      }
+
+      &-center {
+        align-items: center;
+      }
+
+      &-end {
+        align-items: flex-end;
+      }
+    }
+
+    .ce-divider-content {
+      vertical-align: middle;
+      flex-direction: column;
+      height: calc(100% - var(--inset));
+      width: 100%;
+
+      &::before {
+        border-left-width: var(--thickness, 1px);
+      }
+
+      &::after {
+        border-left-width: var(--thickness, 1px);
+      }
     }
   }
 }

@@ -1,69 +1,77 @@
-@import "../../../css/_functions.scss";
+@use "../../../css/functions" as fn;
 
 :host {
   display: block;
 }
 
-.c-form-slider {
+.ce-form-slider {
   position: relative;
   display: grid;
   margin-inline: 0.5rem;
   grid-template-areas:
-    "leading control trailing"
+    "prepend control append"
     "a bottomtip b";
   grid-template-columns: max-content minmax(0, 1fr) max-content;
   grid-template-rows: auto auto;
 
-  &.__vertical {
+  &.is-vertical {
     grid-template-areas:
-      "leading a"
+      "prepend a"
       "control bottomtip"
-      "trailing b";
+      "append b";
   }
-  .leading {
-    grid-area: leading;
+  &.is-disabled {
+    cursor: not-allowed;
+    color: fn.color(--ce-color-placeholder-rgb);
+
+    .ce-form-slider-control {
+      pointer-events: none;
+    }
+
+    .ce-form-slider-thumb {
+      box-shadow: none;
+    }
+  }
+  .ce-form-slider-prepend {
+    grid-area: prepend;
     display: flex;
     align-items: center;
   }
-  .trailing {
-    grid-area: trailing;
+  .ce-form-slider-append {
+    grid-area: append;
     display: flex;
     align-items: center;
   }
 
-  .control {
+  .ce-form-slider-control {
     position: relative;
     grid-area: control;
     display: flex;
     align-items: center;
     min-height: 1rem;
     &:hover {
-      .thumb {
-        box-shadow:
-          1px 4px 2px -2px rgba(0, 0, 0, 0.3),
-          1px 3px 3px 0 rgba(0, 0, 0, 0.24),
-          1px 2px 5px 0 rgba(0, 0, 0, 0.22);
+      .ce-form-slider-thumb {
+        box-shadow: 1px 4px 2px -2px rgba(0, 0, 0, 0.3),
+          1px 3px 3px 0 rgba(0, 0, 0, 0.24), 1px 2px 5px 0 rgba(0, 0, 0, 0.22);
       }
     }
   }
-  &.__dragging {
-    .thumb {
-      box-shadow:
-        1px 4px 2px -2px rgba(0, 0, 0, 0.3),
-        1px 3px 3px 0 rgba(0, 0, 0, 0.24),
-        1px 2px 5px 0 rgba(0, 0, 0, 0.22) !important;
+  &.is-dragging {
+    .ce-form-slider-thumb {
+      box-shadow: 1px 4px 2px -2px rgba(0, 0, 0, 0.3),
+        1px 3px 3px 0 rgba(0, 0, 0, 0.24), 1px 2px 5px 0 rgba(0, 0, 0, 0.22) !important;
     }
   }
-  .tick {
+  .ce-form-slider-tick {
     position: absolute;
-    background-color: color(--l-color-text);
-    border-radius: var(--l-border-radius-full);
-    &.__filled {
+    background-color: fn.color(--ce-color-text-rgb);
+    border-radius: var(--ce-round-pill);
+    &.is-filled {
       background-color: #fff;
     }
   }
 
-  .track {
+  .ce-form-slider-track {
     position: absolute;
     left: 0;
     top: 50%;
@@ -71,10 +79,10 @@
     align-items: center;
     transform: translateY(-50%);
     width: 100%;
-    background-color: color(--l-color-border, 0.5);
+    background-color: fn.color(--ce-color-border-rgb, 0.5);
     transition: all 0.2s ease;
   }
-  .track-filled {
+  .ce-form-slider-track-filled {
     position: absolute;
     left: 0;
     top: 50%;
@@ -83,28 +91,22 @@
     background-color: currentColor;
     transition: background-color 0.2s ease;
   }
-  .thumb {
+  .ce-form-slider-thumb {
     position: relative;
     transform: translateX(-50%);
     background-color: currentColor;
-    transition:
-      background-color 0.3s ease,
-      box-shadow 0.3s,
-      border-radius 0.3s,
-      width 0.3s,
-      height 0.3s;
-    box-shadow:
-      0 3px 1px -2px rgba(0, 0, 0, 0.2),
-      0 2px 2px 0 rgba(0, 0, 0, 0.14),
-      0 1px 5px 0 rgba(0, 0, 0, 0.12);
+    transition: background-color 0.3s ease, box-shadow 0.3s, border-radius 0.3s,
+      width 0.3s, height 0.3s;
+    box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2),
+      0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
   }
 
-  .bottom-tip {
+  .ce-form-slider-bottom-tip {
     grid-area: bottomtip;
     position: relative;
     display: flex;
     // min-height: 1.5rem;
-    .mark {
+    .ce-form-slider-mark {
       position: absolute;
       font-size: 0.875rem;
       transform: translateX(-50%);

@@ -1,0 +1,118 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/utils";
+
+:host {
+  display: block;
+}
+
+.ce-board {
+  height: 100%;
+  position: relative;
+
+  .ce-board-bottom-sensor {
+    height: 1px;
+  }
+
+  .ce-board-card {
+    position: relative;
+    border-radius: var(--ce-round-pill);
+    padding-left: 0.5rem;
+
+    >div {
+      display: flex;
+      align-items: center;
+    }
+
+    width: 90%;
+
+    ce-tag {
+      min-width: max-content;
+    }
+  }
+
+  .ce-board-grid-container {
+    display: grid;
+
+    .is-empty {
+      grid-column: 1 / -1;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    &[no-margin] ce-list-item {
+      margin-top: 0;
+    }
+  }
+
+  .ce-board-card.changed::after {
+    content: "";
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(245, 47, 23, 0.3);
+    border-radius: var(--ce-round-sm);
+    top: 0;
+    left: 0px;
+    opacity: 1;
+    transform: scale(1);
+    transform-origin: center;
+    animation: fade 0.75s ease-out 2;
+  }
+
+  &.is-compacted {
+    ce-list-item {
+      display: inline-block;
+    }
+  }
+
+  &.ce-board-inline-label {
+    ce-list-item::part(content) {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  ce-list-item {
+    padding-inline: var(--ce-spacing-md);
+    margin-top: 0.5rem;
+  }
+
+  ce-list-item::part(subtitle) {
+    flex: 1;
+  }
+
+  ce-list-item::part(title) {
+    width: var(--board-list-item-title-width);
+  }
+
+  .ce-board-item-title {
+    font-size: 0.875rem;
+    opacity: 0.75;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  ce-progress-linear {
+    width: 90%;
+    // margin-top: 0.5rem;
+  }
+
+  .ce-board-percent {
+    white-space: nowrap;
+
+    b {
+      font-size: var(--ce-font-sm);
+    }
+  }
+}
+
+@keyframes fade {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}

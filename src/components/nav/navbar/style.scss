@@ -1,24 +1,24 @@
-@import "../../../css/_functions.scss";
+@use "../../../css/functions" as fn;
 
 :host {
   display: block;
   height: 4rem;
-  color: color(--l-color-gray-400);
+  color: fn.color(--ce-color-gray-400-rgb);
   --hover-bg-color: rgb(255, 255, 255, 0.1);
 }
 
-.c-navbar {
+.ce-navbar {
   height: 100%;
   padding: 0 1.5rem;
 
-  &.__border {
+  &.ce-navbar-border {
     border-bottom: 1px solid;
     border-color: #eaeaea;
 
-    .--container [part] {
+    .ce-navbar-container [part] {
       height: 100%;
 
-      .--items {
+      .ce-navbar-items {
         align-items: center;
         height: 100%;
 
@@ -30,34 +30,35 @@
         }
 
         ::slotted(.active) {
-          border-bottom: 2px solid color(--l-color-border-active) !important;
+          border-bottom: 2px solid fn.color(--ce-color-border-active-rgb) !important;
         }
 
         ::slotted(:not(.active):hover) {
-          border-bottom: 2px solid color(--l-color-border) !important;
+          border-bottom: 2px solid fn.color(--ce-color-border-rgb) !important;
         }
       }
     }
   }
 
-  .--container {
+  .ce-navbar-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 100%;
 
-    .--left-part {
+    .ce-navbar-left-part {
       display: flex;
       align-items: center;
 
-      .--brand {
+      .ce-navbar-brand {
         flex-shrink: 0;
       }
 
-      .--items {
+      .ce-navbar-items {
         align-items: baseline;
         display: flex;
         margin-left: 2.5rem;
+        white-space: nowrap;
 
         //匹配默认插槽
         ::slotted(*) {
@@ -67,7 +68,7 @@
           padding: 0.5rem 0.75rem;
           cursor: pointer;
           margin-left: 1rem;
-          border-radius: var(--l-border-radius-md);
+          border-radius: var(--ce-round-md);
         }
 
         ::slotted(:not(.active):hover) {
@@ -76,9 +77,10 @@
       }
     }
 
-    .--right-part {
+    .ce-navbar-right-part {
       display: flex;
       align-items: center;
+      white-space: nowrap;
     }
   }
 }

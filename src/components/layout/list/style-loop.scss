@@ -1,0 +1,34 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
+@use "../../../css/utils";
+
+:host(ce-loop-list) {
+  height: 100%;
+  --color: var(--ce-color-text);
+  display: block;
+  --list-collapsed-width: 56px;
+  --list-item-height: 32px;
+  transition: width 0.3s;
+  position: relative;
+}
+:host(ce-list) {
+  overflow: hidden;
+}
+
+.ce-list-loop {
+  width: 100%;
+  height: inherit;
+  overflow: hidden;
+  position: relative;
+
+  .ce-list-container {
+    height: 100%;
+    // overflow: hidden;
+  }
+
+  ce-list-item {
+    width: 100%;
+    position: absolute !important;
+    transition: transform 0.2s;
+  }
+}

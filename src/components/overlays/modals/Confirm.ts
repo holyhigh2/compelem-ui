@@ -1,4 +1,4 @@
-import { html, sync, tag, Template } from "compelem";
+import { css, csscope, Csscope, h, ifTrue, model, tag, Template } from "compelem";
 import { Modal } from "./Modal";
 /**
  * 确认框，用于外部调用
@@ -8,10 +8,11 @@ import { Modal } from "./Modal";
  *
  * @author holyhigh2
  */
-@tag("l-confirm")
+@tag("ce-confirm")
 export class Confirm extends Modal {
-  static get styles() {
-    return [`:host{position: fixed;}`]
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [css`:host{position: fixed;}`]
   }
   //////////////////////////////////// props
 
@@ -23,26 +24,23 @@ export class Confirm extends Modal {
   }
 
   render(): Template {
-    return html`
-      <l-dialog
-        class="c-confirm"
-        show-close="false"
-        backdrop="static"
+    return h`
+      <ce-dialog
+        class="ce-confirm"
+        backdrop="true"
         .esc="${(this.esc)}"
-        .visible="${sync(this.visible)}"
+        ${model(this.visible, 'visible')}
         .title="${(this._title)}"
       >
-        ${(this.message)}<slot></slot>
-          <l-button slot="footer" @click="${this.onConfirm}">${(this.confirmBtnText)}</l-button>
-          <l-button slot="footer" appearance="subtle" @click="${this.onCancel}">${(this.cancelBtnText)}</l-button>
-      </l-dialog>
+        <ce-card title="${this._title}" style="width:100%">
+          ${ifTrue(!!this.message, () => h`<div style="padding-block: 1rem;">${this.message}</div>`)}
+          <slot></slot>
+          <ce-button slot="actions" appearance="pale" @click="${this.onConfirmClick}">${(this.confirmBtnText)}</ce-button>
+          <ce-button slot="actions" style="margin-left:.5rem" color="text" appearance="subtle" @click="${this.onCancelClick}">${(this.cancelBtnText)}</ce-button>
+        </ce-card>
+      </ce-dialog>
     `;
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() { }
   //////////////////////////////////// methods
 }

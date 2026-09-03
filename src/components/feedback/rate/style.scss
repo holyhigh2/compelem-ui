@@ -1,0 +1,33 @@
+.ce-rate {
+  display: inline-flex;
+
+  &.ce-rate-before {
+    position: absolute;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+
+  svg path {
+    fill: var(--rate-svg-fill-color);
+  }
+
+  svg[active] path {
+    fill: var(--rate-svg-fill-active-color);
+  }
+
+  &.is-stroked {
+    path {
+      stroke-width: 1;
+      stroke: var(--rate-svg-stroke-color);
+    }
+
+    svg[active] path {
+      stroke: var(--rate-svg-stroke-active-color);
+    }
+  }
+
+  [part="icon"]:not(:last-child) {
+    padding-right: var(--rate-icon-padding-right);
+  }
+}

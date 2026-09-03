@@ -1,13 +1,116 @@
+@use "../../../css/_utils.scss";
+
 :host {
   display: block;
-  --color: #2196f3;
 }
 
-.c-tabs {
-  ::slotted(*) {
-    display: none;
+.ce-tabs {
+  display: flex;
+  align-items: center;
+
+  .ce-tabs-nav {
+    flex: 1;
+    overflow: hidden;
+
+    ce-nav {
+      transition: transform 0.3s;
+      width: max-content;
+    }
   }
-  ::slotted(.active) {
-    display: block;
+
+  .ce-tabs-slide {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--ce-spacing-sm);
+    opacity: 0.5;
+
+    * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      cursor: pointer;
+      opacity: 1;
+    }
+  }
+
+  .ce-tabs-extra {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--ce-spacing-sm);
+  }
+
+  &[vertical] {
+    .ce-tabs-slide {
+      display: none;
+    }
+
+    ce-nav {
+      width: 100%;
+      transform: none !important;
+    }
+  }
+}
+
+.ce-tab {
+  height: inherit;
+  padding-inline: var(--ce-spacing-lg);
+  text-overflow: ellipsis;
+  position: relative;
+
+  .ce-tabs-icon {
+    vertical-align: middle;
+    margin-right: var(--ce-spacing-xs);
+  }
+
+  .ce-tabs-close {
+    overflow: hidden;
+    width: 0;
+    margin-left: 0;
+    transition: all 0.3s;
+  }
+
+  &:hover {
+    .ce-tabs-close {
+      width: 1rem;
+      margin-left: var(--ce-spacing-xs);
+    }
+  }
+
+  &[space="loose"] {
+    padding-top: var(--ce-spacing-md);
+    padding-bottom: var(--ce-spacing-md);
+    min-height: calc(var(--tab-height) + 6px);
+  }
+
+  &[space="default"] {
+    padding-top: var(--ce-spacing-sm);
+    padding-bottom: var(--ce-spacing-sm);
+    min-height: var(--tab-height);
+  }
+
+  &[space="compact"] {
+    padding-top: var(--ce-spacing-xs);
+    padding-bottom: var(--ce-spacing-xs);
+    min-height: calc(var(--tab-height) - 6px);
+  }
+
+  &.ce-tabs-size-xs {
+    font-size: var(--ce-font-xs);
+    line-height: var(--ce-lineh-xs);
+  }
+
+  &.ce-tabs-size-sm {
+    font-size: var(--ce-font-nav);
+    line-height: var(--ce-lineh-md);
+  }
+
+  &.ce-tabs-size-md {
+    font-size: var(--ce-font-md);
+  }
+
+  &.ce-tabs-size-lg {
+    font-size: var(--ce-font-lg);
+    line-height: var(--ce-lineh-md);
   }
 }

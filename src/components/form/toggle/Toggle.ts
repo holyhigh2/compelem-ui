@@ -1,8 +1,9 @@
-import { classes, html, ifTrue, prop, query, state, styles, tag, Template, watch } from "compelem";
+import { classes, csscope, Csscope, emits, h, ifTrue, prop, query, state, styles, tag, Template, watch } from "compelem";
 import { isBoolean } from "myfx";
+
 import { FormControl } from "../FormControl";
-import formStyle from "../style.scss";
-import style from "./style.scss";
+import formStyle from "../style.scss?tmpl";
+import style from "./style.scss?tmpl";
 /**
  * 开关组件
  * @attrs
@@ -14,6 +15,8 @@ import style from "./style.scss";
  *  inset {boolean} 嵌入模式，默认true
  *  
  *  其他FormControl属性
+ * @models
+ *  value 默认绑定属性
  * @slots
  *  - 显示label内容
  *  active 激活时显示内容
@@ -23,32 +26,44 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag("l-toggle")
+@emits('change', 'update:value')
+@tag("ce-toggle")
 export class Toggle extends FormControl {
   changeDisplay(stateName: string, enabled: boolean): void {
     throw new Error("Method not implemented.");
   }
   //////////////////////////////////// props
-  @prop activeText = '&nbsp;';
+  @prop activeText = ' ';
   @prop inactiveText = ' ';
-  @prop activeValue = '';
-  @prop inactiveValue = '';
+  @prop activeValue = 'active';
+  @prop inactiveValue = 'inactive';
   @prop inset = true;
-  @prop({ type: [String, Boolean], sync: true }) value: boolean | string = '';
-  @prop({ type: Number }) width: number;
+  @prop({ type: [String, Boolean], model: true }) value: boolean | string = '';
 
+  @state __innerValue: typeof this.value
   @state checked = false;
 
-  static get styles(): string[] {
+  round = 'pill'
+
+  @csscope(Csscope.INNER)
+  static get css() {
     return [formStyle, style];
   }
+  get renderEl() {
+    return this.formContrl
+  }
+  @query('.ce-form-control')
+  formContrl: HTMLElement
   @query('input')
   input: HTMLInputElement;
   /////////////////////////////////// watches
   @watch('value', { immediate: true })
   function(nv: string | boolean) {
+    this.__innerValue = nv
     if (isBoolean(nv)) {
       this.checked = nv;
+    } else if (/(?:^true$)|(?:^false$)/.test(nv)) {
+      this.checked = nv === 'true' ? true : false
     } else {
       this.checked = this.activeValue == nv ? true : false;
     }
@@ -63,28 +78,28 @@ export class Toggle extends FormControl {
   }
 
   render(): Template {
-    return this.plaintext ? html`${this.checked ? this.activeText : this.inactiveText}` : html`
-      <label class="c-form-toggle ${classes({
-      __disabled: this.disabled
-    })}" >
-        <div class="c-form-control ${classes({ __inset: this.inset })}" style="${styles({
-      width: this.width + 'px',
+    return this.plaintext ? h`${this.checked ? this.activeText : this.inactiveText}` : h`
+      <label class="ce-form-toggle" ${classes({
+      "is-disabled": this.disabled
+    })}>
+        <div class="ce-form-control" ${classes({ "is-inset": this.inset })} ${styles({
+      width: '100%',
       overflow: 'visible'
-    })}">
-          <input type="checkbox" tabindex="0" ?disabled="${this.disabled}" ?checked="${this.checked}" @click="${this.onClick}" @change="${this.onChange}"/>
-          <div class="--track ${classes({ __disabled: this.disabled, __rounded: this.round, __readonly: this.readonly })}" >
-            ${ifTrue(this.inset, () => html`
-              <span class="active">
+    })}>
+          <input type="checkbox" tabindex="0" ?disabled="${this.disabled}" ?checked="${this.checked}" @click.stop="${this.onClick}" @change="${this.onChange}"/>
+          <div class="ce-form-toggle-track" ${classes({ "is-disabled": this.disabled, "is-rounded": this.round, "is-readonly": this.readonly })}>
+            ${ifTrue(this.inset, () => h`
+              <span class="is-active">
               ${this.activeText}
               <slot name="active"></slot>
             </span>
-            <span class="inactive">${this.inactiveText}<slot name="inactive"></slot></span>  
+            <span class="is-inactive">${this.inactiveText}<slot name="inactive"></slot></span>  
             `)}
           </div>
-          <div class="--thumb"></div>
+          <div class="ce-form-toggle-thumb"></div>
         </div>
         
-        <div class="label"><slot></slot></div>
+        <div class="ce-form-toggle-label"><slot></slot></div>
       </label>`;
   }
 
@@ -95,13 +110,19 @@ export class Toggle extends FormControl {
   }
   onChange(e: Event) {
     let t = e.target as HTMLInputElement
+
     let value = t.checked ? (this.activeValue || 'active') : (this.inactiveValue || 'inactive')
-    if (isBoolean(this.value)) {
-      this.value = t.checked
+    if (isBoolean(this.__innerValue)) {
+      if (this.__innerValue === t.checked) return
+      this.value = this.__innerValue = t.checked
     } else {
-      this.value = value
+      if (this.__innerValue == value) return
+      this.value = this.__innerValue = value
     }
 
-    this.emit('change', { value: value, checked: t.checked }, { event: e })
+    this.emit('change', { value: value, checked: t.checked }, e)
+  }
+  toggleCheck() {
+    this.checked = !this.checked
   }
 }

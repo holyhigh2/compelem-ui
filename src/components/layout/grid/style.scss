@@ -1,15 +1,33 @@
-:host {
-  display: block;
-  position: relative;
+ce-grid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+
+  >*:not(ce-row) {
+    display: none !important;
+  }
 }
-.c-grid {
-  &-grid {
-    display: grid;
-    width: 100%;
+
+ce-row {
+  position: relative;
+  height: 100%;
+
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+
+  >ce-col {
+    min-width: 0;
+    height: 100%;
+    text-align: left;
+    grid-column: var(--grid-col-span);
+
+    &:not(:last-child) {
+      margin-right: var(--grid-col-gap);
+    }
   }
 
-  &-row {
-    display: grid;
-    grid-template-columns: repeat(24, 1fr);
+  >*:not(ce-col) {
+    display: none !important;
   }
 }

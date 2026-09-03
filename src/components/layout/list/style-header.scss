@@ -1,0 +1,32 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
+@use "../../../css/utils";
+
+:host {
+  color: var(--ce-color-text-desc);
+  display: block;
+  @include mixins.text-sm;
+}
+
+.ce-list-header {
+  // display: flex;
+  // align-items: center;
+  text-indent: var(--list-header-inset);
+  padding-inline: var(--ce-spacing-md);
+  color: inherit;
+  font-size: inherit;
+
+  &[space="loose"] {
+    padding-top: var(--ce-spacing-md);
+    padding-bottom: var(--ce-spacing-md);
+    min-height: calc(var(--list-item-height) + 8px);
+  }
+  &[space="default"] {
+    padding-top: var(--ce-spacing-sm);
+    padding-bottom: var(--ce-spacing-sm);
+    min-height: var(--list-item-height);
+  }
+  &[space="compact"] {
+    min-height: calc(var(--list-item-height) - 8px);
+  }
+}

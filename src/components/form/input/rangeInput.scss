@@ -1,0 +1,30 @@
+@use "../../../css/mixins";
+@use "../../../css/functions" as fn;
+
+:host(ce-range-input) {
+  display: inline-block;
+  overflow: hidden;
+  --input-height: var(--ce-lineh-lg);
+}
+:host(ce-range-input[appearance=""][inside]),
+:host(ce-range-input[appearance="default"][inside]) {
+  border-width: thin;
+  border-style: solid;
+  border-color: fn.color(--ce-color-border-rgb);
+}
+
+:host(ce-range-input[appearance="underlined"][inside]) {
+  border: 0;
+  border-width: 0;
+  border-bottom: 1px solid fn.color(--ce-color-border-rgb);
+  border-radius: 0 !important;
+}
+::slotted(ce-input-number::part(input)) {
+  border: 0 !important;
+  border-width: 0 !important;
+}
+
+:host(ce-input) {
+  border: 0 !important;
+  border-width: 0 !important;
+}

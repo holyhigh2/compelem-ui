@@ -1,0 +1,105 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/utils";
+
+:host {
+  display: block;
+  max-width: 33vw;
+}
+
+.ce-notification {
+  position: relative;
+  padding: 1rem;
+  background-color: #fff;
+  transition: opacity 0.4s ease-in-out, box-shadow 0.3s,
+    padding 0.3s ease-in-out;
+
+  .ce-notification-main {
+    display: flex;
+    overflow: hidden;
+  }
+
+  &.ce-notification-closable {
+    display: grid;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition: opacity 0.4s ease-in-out, grid-template-rows 0.3s ease-in-out,
+      box-shadow 0.3s, padding 0.3s ease-in-out;
+
+    &.ce-notification-show {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      padding-top: 0.6rem;
+      padding-bottom: 0.6rem;
+    }
+  }
+
+  &.ce-notification-info {
+    .ce-notification-icon {
+      color: fn.color(--ce-color-blue-400-rgb);
+    }
+  }
+
+  &.ce-notification-success {
+    .ce-notification-icon {
+      color: fn.color(--ce-color-green-400-rgb);
+    }
+  }
+
+  &.ce-notification-warning {
+    .ce-notification-icon {
+      color: fn.color(--ce-color-yellow-400-rgb);
+    }
+  }
+
+  &.ce-notification-error {
+    .ce-notification-icon {
+      color: fn.color(--ce-color-red-400-rgb);
+    }
+  }
+
+  &-icon {
+    ce-icon {
+      display: inline-block;
+      width: 1.25rem;
+      height: 1.25rem;
+      background-size: contain;
+      margin-right: 0.5rem;
+    }
+  }
+
+  &-title {
+    margin: 0;
+    font-weight: 500;
+    font-size: var(--ce-font-md);
+    line-height: var(--ce-lineh-sm);
+    margin: 0;
+    color: fn.color(--ce-color-text-header-rgb);
+  }
+
+  &-descr {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin: 0;
+    margin-top: 0.25rem;
+    color: fn.color(--ce-color-text-secondary-rgb);
+    word-break: break-all;
+  }
+
+  &-content {
+    position: relative;
+    flex: 1;
+  }
+
+  &-close {
+    position: absolute;
+    right: 0.3rem;
+    top: 0.5rem;
+    color: #666;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+  }
+}

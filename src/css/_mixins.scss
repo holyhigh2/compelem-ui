@@ -1,24 +1,29 @@
 @mixin round-left {
-    border-top-left-radius: var(--l-border-radius);
-    border-bottom-left-radius: var(--l-border-radius);
+  border-top-left-radius: var(--ce-round-sm);
+  border-bottom-left-radius: var(--ce-round-sm);
 }
 
 @mixin round-right {
-    border-top-right-radius: var(--l-border-radius);
-    border-bottom-right-radius: var(--l-border-radius);
+  border-top-right-radius: var(--ce-round-sm);
+  border-bottom-right-radius: var(--ce-round-sm);
 }
 
 @mixin text-sm {
-    font-size: 0.875rem;
-    line-height: 1.25rem;
+  font-size: var(--ce-font-sm);
+  line-height: 1.25rem;
 }
 
 @mixin text-md {
-    font-size: 1rem;
-    line-height: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
 }
 
 @mixin text-lg {
-    font-size: 1.125rem;
-    line-height: 1.75rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+@mixin text-overflow {
+  text-overflow: ellipsis;
+  overflow: hidden;
 }

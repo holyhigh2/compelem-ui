@@ -1,59 +1,63 @@
-import { classes, CompElem, html, ifTrue, prop, query, state, tag, Template } from "compelem";
-import { closest, isArray, isEmpty } from "myfx";
+import { classes, CompElem, css, csscope, Csscope, h, ifTrue, prop, query, state, tag, Template } from "compelem";
+import { closest, get, isArray, isEmpty, isNil } from "myfx";
 import { Form } from "./Form";
 import { FormControl } from "./FormControl";
-import style from "./style.scss";
+import style from "./style.scss?tmpl";
 /**
  * 表单项
  * @attrs
  *  label {string} label内容
  *  prop {string} 属性名，用于关联校验规则
  *  required {boolean} 必填
+ *  validateOn {string} 触发验证的事件，默认change
  * @slots
- *
+ *  - 表单项内容
+ *  label 表单项title
  * @author holyhigh2
  */
-@tag("l-form-item")
+@tag("ce-form-item")
 export class FormItem extends CompElem {
   //////////////////////////////////// props
   @prop label: string = '';
   @prop prop: string = '';
-  @prop({ type: Boolean, sync: true }) required = false;
-  @prop rule: Record<string, any> | Record<string, any>[];
+  @prop({ type: Boolean, model: true }) required = false;
+  @prop({ type: [Object, Array] }) rule: Record<string, any> | Record<string, any>[];
+  @prop validateOn = 'change'
 
   form: Form
   control: FormControl
 
-  @state errorMsg = ''
   @state layout = 'vertical';
 
-  @query('.--form-item-error-message')
+  @query('.ce-form-form-item-error-message')
   msgSpan: HTMLElement
 
-  static get styles(): string[] {
-    return [style];
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [style, css`
+      :host{
+        margin-bottom: 1.5rem;
+        vertical-align: top;
+        display: block;
+      }  
+    `];
   }
   /////////////////////////////////// watches
   //////////////////////////////////// lifecycles
-  constructor() {
-    super();
-  }
 
   render(): Template {
-    return html`
-      <div class="c-form-item ${classes({
+    return h`
+      <div class="ce-form-item" ${classes({
       ['--layout-' + this.layout]: true
-    })}">
-        ${ifTrue(!!this.label, () => html`
-          <label part="label" for="${this.prop}" class="--form-item-label">
-            ${ifTrue(this.required, () => html`<b style="color:red">*</b>`)}
+    })}>
+        ${ifTrue(!!this.label || !isEmpty(this.slots.label), () => h`
+          <label part="label" for="${this.prop}" class="ce-form-form-item-label">
+            ${ifTrue(this.required, () => h`<b style="color:red">*</b>`)}
             ${this.label}
+            <slot name="label"></slot>
           </label>
         `)}
-        <div class="--form-item-wrapper"><slot></slot></div>
-        <span class="--form-item-error-message">
-          ${this.errorMsg}
-        </span>
+        <div class="ce-form-form-item-wrapper"><slot></slot></div>
       </div>
     `;
   }
@@ -67,8 +71,14 @@ export class FormItem extends CompElem {
       this.layout = this.form.layout
     }
   }
+  mounted(): void {
+    let that = this
+    this.control && this.control.addEventListener(this.validateOn, e => {
+      let rule = get<Record<string, any> | Record<string, any>[]>(this.form.rules, that.prop)
+      that._validate(rule)
+    })
+  }
 
-  disconnectedCallback() { }
   //////////////////////////////////// methods
   //如果错误返回 {name,rule} 信息
   async _validate(rule: Record<string, any> | Record<string, any>[]) {
@@ -84,7 +94,6 @@ export class FormItem extends CompElem {
     if (this.required) {
       rules.push({ required: true })
     }
-    this.errorMsg = ''
 
     //1. 获取control值
     let value = this.control.value;
@@ -98,21 +107,35 @@ export class FormItem extends CompElem {
           throw { name: this.prop, rule: r }
         }
       } else if (r.required) {
-        if (!value || value.length < 1 || isEmpty(value)) {
+        if (isNil(value) || value.length < 1 || isEmpty(value + '')) {
           this._showErrorMessage(this.prop, r.message)
           throw { name: this.prop, rule: r }
+        } else {
+          this._resetValidation()
         }
       } else {
         //类型标识调用校验器
       }
     }
   }
+  _resetValidation() {
+    this.control.toggleAttribute('error', false)
+    this.control.error = false;
+  }
+  _reset() {
+    this.control.value = ''
+  }
   _showErrorMessage(prop: string, msg: string) {
+    let errorMsg = ''
     if (msg) {
-      this.errorMsg = msg
+      errorMsg = msg
     } else {
-      this.errorMsg = prop + ' is required.'
+      errorMsg = prop + ' is required.'
     }
+    this.control.toggleAttribute('error', true)
+    this.control.toggleAttribute('error-message', true)
+    this.control.error = true;
+    this.control.errorMessage = errorMsg;
   }
   changeDisplay(stateName: string, enabled: boolean) {
 

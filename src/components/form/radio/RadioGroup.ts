@@ -1,7 +1,7 @@
-import { classes, html, prop, tag, Template, watch } from "compelem";
+import { classes, css, csscope, Csscope, emits, h, prop, tag, Template, watch } from "compelem";
 import { FormControl } from "../FormControl";
 import { Radio } from './Radio';
-import style from "./style.scss";
+import style from "./style.scss?tmpl";
 /**
  * 复选框组
  * @attrs
@@ -15,23 +15,26 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag("l-radio-group")
+@emits('update:value')
+@tag("ce-radio-group")
 export class RadioGroup extends FormControl {
   changeDisplay(stateName: string, enabled: boolean): void {
     throw new Error("Method not implemented.");
   }
   radioList: Set<Radio> = new Set
   //////////////////////////////////// props
-  @prop({ type: String, sync: true }) value: string = '';
+  @prop({ type: String, model: true }) value: string = '';
   @prop reverse = false;
   @prop inline = false;
 
-  static get styles(): string[] {
-    return [style, `:host{
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [style, css`:host{
       display: inline-block;
       vertical-align: super;
     }`];
   }
+
   /////////////////////////////////// watches
   @watch('reverse')
   function(v: boolean) {
@@ -48,44 +51,28 @@ export class RadioGroup extends FormControl {
   }
 
   render(): Template {
-    return this.plaintext ? html`${this.value}` : html`
-      <div class="c-form-radio-group ${classes({ __inline: this.inline })}">
-        <slot .node-filter="${{
-        type: Radio
-      }}"></slot>
+    return this.plaintext ? h`${this.value}` : h`
+      <div class="ce-form-radio-group" ${classes({ "ce-form-radio-inline": this.inline })}>
+        <slot></slot>
       </div>`;
   }
 
   mounted(): void {
-
-  }
-  slotchange(slot: HTMLSlotElement, name: string): void {
-    let eles = slot.assignedElements({ flatten: true })
-
-    let v = this.value;
-    const that = this;
-    eles.forEach((el, i) => {
-      if (!(el instanceof Radio)) {
-        return;
-      }
-      // el.setAttribute('reverse','true')
-      this.radioList.add(el)
-      if (el.getAttribute('value') === v) {
-        el.toggleCheck(true);
-      }
-      el.addEventListener('change', (e: CustomEvent) => {
-        that.onCheckChange(e)
-      })
-    })
   }
   //////////////////////////////////// methods
+  _addChild(radio: Radio) {
+    let v = this.value;
+    if (radio.getAttribute('value') === v) {
+      radio.toggleCheck(true);
+    }
 
+    this.radioList.add(radio)
+  }
   onClick(e: Event) {
     if (this.readonly)
       e.preventDefault();
   }
-  onCheckChange(e: CustomEvent) {
-    let { value, checked, target } = e.detail;
+  onCheckChange(value: string, target: Radio) {
 
     this.radioList.forEach(radio => {
       if (radio === target) {
@@ -94,5 +81,8 @@ export class RadioGroup extends FormControl {
         radio.toggleCheck(false);
       }
     })
+  }
+  clear(): void {
+
   }
 }

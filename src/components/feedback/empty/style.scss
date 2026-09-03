@@ -1,23 +1,25 @@
-@import "../../../css/_mixins.scss";
-@import "../../../css/_functions.scss";
+@use "../../../css/mixins";
+@use "../../../css/functions" as fn;
 
-.c-empty {
+.ce-empty {
   > h3 {
     margin: 0;
-    margin-bottom: var(--l-margin-sm);
+    margin-bottom: var(--ce-spacing-md);
     text-align: center;
-    @include text-md;
+    font-size: var(--ce-font-xl);
+    @include mixins.text-lg;
+    letter-spacing: 1px;
   }
   > p {
     margin: 0;
     text-align: center;
-    color: color(--l-color-text-secondary);
-    @include text-sm;
+    @include mixins.text-sm;
   }
-  .actions {
+  .ce-empty-actions {
+    padding: var(--ce-spacing-lg);
     text-align: center;
-    > l-button {
-      margin: var(--l-margin-lg);
+    > ce-button {
+      margin: var(--ce-spacing-lg);
     }
   }
 }

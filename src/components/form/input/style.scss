@@ -1,194 +1,330 @@
-@import "../../../css/_mixins.scss";
-@import "../../../css/_functions.scss";
+@use "../../../css/mixins";
+@use "../../../css/functions" as fn;
 
-:host {
-  display: inline-block;
+:host(ce-input-time),
+:host(ce-input-mask),
+:host(ce-input) {
+  display: block;
+  // display: inline-block;
 }
 
-.c-form {
-  &-input {
-    display: flex;
-    align-items: center;
+.ce-input-floating-icon {
+  .ce-input-floating {
+    border-radius: inherit;
+    // padding: 0.25rem;
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out;
 
-    > input,
-    > textarea {
-      width: 100%;
-      background-color: transparent;
+    ce-icon {
+      // transform-origin: 50% 50%;
+      transform: scale(0.3) !important;
+      transition: all 0.2s ease;
+      visibility: hidden;
+      // display: none;
+      display: flex;
+      align-items: center;
     }
+  }
 
-    textarea {
-      resize: vertical;
+  &:focus-within {
+    .ce-input-floating.is-not-empty {
+      opacity: 1;
+      pointer-events: unset;
     }
+  }
 
-    &.__appearance-underline {
-      > input,
-      .--label {
-        padding-left: 0;
-        padding-bottom: 0;
-      }
+  &:not(.is-readonly, .is-disabled) {
+    .ce-input-floating {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
 
-      .--label {
-        transform: translateY(-20%);
-      }
-    }
-
-    &:focus-within .--label,
-    .--label.__empty {
-      font-size: 0.795rem;
-      top: 0;
-      transform: translateY(0);
-
-      &:not(:empty) + input {
-        &::placeholder {
-          opacity: 1;
+      ce-icon {
+        &.ce-input-close {
+          color: fn.color(--ce-color-placeholder-rgb);
+          visibility: visible;
+          // height: 100%;
+          // display: flex;
         }
       }
     }
 
-    &:focus-within .--label {
-      color: color(--l-color-text);
-    }
+    .ce-input-floating.is-not-empty {
+      opacity: 1;
+      pointer-events: unset;
 
-    .--label {
-      position: absolute;
-      padding-left: 0.5rem;
-      font-size: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: color(--l-color-placeholder);
-      transition: all 0.2s;
-      pointer-events: none;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      width: 100%;
-
-      &:not(&:empty) + input {
-        padding-top: 1.35rem;
-
-        &::placeholder {
-          transition: opacity 0.1s;
-          opacity: 0;
-        }
-      }
-    }
-
-    .--leading {
-      line-height: 1.45;
-      @include round-left;
-
-      word-break: keep-all;
-      background: color(--l-color-gray-100);
-      cursor: text;
-    }
-
-    .--trailing {
-      line-height: 1.45;
-      @include round-right;
-
-      word-break: keep-all;
-      background: color(--l-color-gray-100);
-    }
-
-    &.__inside .--trailing {
-      background: none;
-    }
-
-    .--floating {
-      display: none;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease-out;
-
-      l-icon {
-        border: 1px solid transparent;
-        border-radius: var(--l-border-radius-md);
-        transform-origin: 50% 50%;
-        transform: scale(1.1) !important;
-        background-color: #fff;
-        transition: all 0.2s ease;
-        visibility: hidden;
-        // display: none;
-        display: flex;
-
-        &:hover {
-          transform: scale(1.3) !important;
-          font-weight: bolder;
-          color: color(--l-color-error) !important;
-          cursor: pointer;
-        }
-      }
-    }
-
-    &:focus-within.__clearable {
-      .--floating.__not-empty {
-        opacity: 1;
-        pointer-events: unset;
-      }
-    }
-
-    &:not(.__readonly, .__disabled).__clearable {
-      .--floating {
-        display: block;
-
-        l-icon {
-          &.--close {
-            color: color(--l-color-placeholder);
-            visibility: visible;
-            // display: flex;
-          }
-        }
+      ce-icon.ce-input-close {
+        transform: scale(1) !important;
+        font-weight: bolder;
+        // color: fn.color(--ce-color-error-rgb) !important;
+        border-radius: var(--ce-round-circle);
+        // margin: 0.25rem;
+        cursor: pointer;
       }
 
       &:hover {
-        .--floating.__not-empty {
-          opacity: 1;
-          pointer-events: unset;
+        ce-icon.ce-input-close {
+          background: #e8e8e8;
+          border-radius: var(--round-size);
+          transform: scale(1.1) !important;
         }
       }
     }
   }
+}
 
+.c {
   &-input-number {
-    .--control {
+    .ce-input-control {
       width: 1.25rem;
       text-align: center;
       overflow: hidden;
-      @include round-right;
+      @include mixins.round-right;
       user-select: none;
       display: grid;
 
-      l-icon {
+      grid-template-rows: 1fr 1fr;
+
+      ce-icon {
+        height: 0.9em;
         cursor: pointer;
-        color: color(--l-color-placeholder) !important;
+        color: fn.color(--ce-color-placeholder-rgb) !important;
         display: flex;
         justify-content: center;
         align-items: center;
-        border-left: 1px solid color(--l-color-border-secondary);
+        border-left: 1px solid fn.color(--ce-color-border-secondary-rgb);
+        width: inherit;
+        overflow: hidden;
 
         &:hover {
-          background-color: color(--l-color-gray-200);
-          color: color(--l-color-text) !important;
+          background-color: fn.color(--ce-color-gray-200-rgb);
+          color: fn.color(--ce-color-text-rgb) !important;
         }
 
         &:active {
-          background-color: color(--l-color-gray-300);
+          background-color: fn.color(--ce-color-gray-300-rgb);
         }
 
         &:first-child {
-          border-bottom: 1px solid color(--l-color-border-secondary);
-          height: 0.9em;
+          border-bottom: 1px solid fn.color(--ce-color-border-secondary-rgb);
         }
       }
     }
 
-    &.__disabled .--control l-icon {
+    &.is-disabled .ce-input-control ce-icon {
       cursor: not-allowed;
-      background-color: color(--l-color-disabled);
+      background-color: fn.color(--ce-color-disabled-rgb);
 
       &:hover {
-        color: color(--l-color-placeholder) !important;
+        color: fn.color(--ce-color-placeholder-rgb) !important;
       }
     }
   }
+
+  &-input-time {
+    width: 7rem;
+  }
+
+  &-input-tag {
+    .ce-input-floating {
+      border-radius: var(--round-size, var(--ce-round-md));
+    }
+
+    .ce-input-close {
+      color: rgb(var(--ce-color-placeholder-rgb) / 1);
+      visibility: visible;
+    }
+
+    // .ce-input-tags 的 display:contents 通过 inline style + ce-input ::slotted 设置，
+    // 因为 slotted 元素无法被 InputTag shadow DOM 内的普通后代选择器命中。
+  }
+}
+
+// 历史 c->ce 重命名遗留：上方 .c{} 内的 &-input-date 产出 .c-input-date（与真实
+// ce-input-date 不匹配，规则失效），故图标颜色在此用正确类名 .ce-input-date 声明。
+// ce-input-date 内置日历图标渲染在 ce-input-mask(.ce-input-date) 的 shadow 内，
+// 颜色须与 ce-input-date-range 的 slot 图标（.ce-range-input ce-icon.ce-input-calendar）一致：placeholder 灰。
+.ce-input-date {
+  .ce-input-calendar {
+    color: rgb(var(--ce-color-placeholder-rgb) / 1);
+    cursor: pointer;
+    transition: color .2s;
+
+    &:hover {
+      color: inherit;
+    }
+  }
+}
+
+//以下三个组件模板中的类名为 ce- 前缀（历史 c->ce 重命名），
+//必须与模板一致才能命中；勿放回上方 .c{} 嵌套内
+.ce-input-otp {
+  display: inline-flex;
+
+  ce-input::part(input) {
+    text-align: center;
+  }
+}
+
+.ce-range-input {
+  display: flex;
+  align-items: center;
+
+  ce-icon.ce-input-calendar {
+    margin-right: var(--ce-spacing-xs);
+    color: rgb(var(--ce-color-placeholder-rgb) / 1);
+  }
+
+  .ce-form-control {
+    display: inline-flex;
+    align-items: center;
+
+    .ce-input-separator {
+      margin-inline: var(--ce-spacing-xs);
+    }
+  }
+
+  // 范围级错误提示，对齐 .ce-input 里的 .ce-message：绝对定位到宿主下方。
+  // 宿主默认 overflow:hidden（圆角裁剪需要），错误态必须放开，否则提示被裁掉
+  .ce-message {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    padding-inline: var(--ce-spacing-md);
+    padding-top: var(--ce-spacing-sm);
+    font-size: var(--ce-font-sm);
+    line-height: normal;
+    color: var(--ce-color-error);
+    pointer-events: none;
+  }
+
+  &.ce-input-error {
+    color: var(--ce-color-error);
+  }
+}
+
+.ce-input-color {
+  height: 100%;
+  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAGUlEQVR42mM48xsC//6CQAYyBGAMmAQZAgDOmXfBdgh5yQAAAABJRU5ErkJggg==) 0% 70% repeat;
+
+  .ce-input-color-block {
+    height: 100%;
+
+    //模板切换的类名是 ce-input-none-color
+    &.ce-input-none-color {
+      background-color: transparent !important;
+      background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><line x1="0" y1="100%" x2="100%" y2="0" stroke="red" stroke-width="2"/></svg>');
+    }
+  }
+}
+
+// input range
+:host(ce-input-date-range),
+:host(ce-input-number-range),
+:host(ce-input-time-range) {
+  display: inline-block;
+  overflow: hidden;
+  --input-height: var(--ce-lineh-lg);
+}
+
+// 范围校验失败：放开 overflow（圆角裁剪会切掉下方的错误提示）并标红边框。
+// 用 class 而非 [error] 属性 —— compelem 的 prop 事后赋值不反射 attribute
+:host(ce-input-date-range.ce-range-error),
+:host(ce-input-number-range.ce-range-error),
+:host(ce-input-time-range.ce-range-error) {
+  overflow: visible;
+  border-color: var(--ce-color-error) !important;
+}
+
+:host(ce-input-number-range[appearance=""]),
+:host(ce-input-number-range[appearance="default"]),
+:host(ce-input-date-range[appearance=""]),
+:host(ce-input-date-range[appearance="default"]),
+:host(ce-input-time-range[appearance=""]),
+:host(ce-input-time-range[appearance="default"]) {
+  border-width: thin;
+  border-style: solid;
+  border-color: fn.color(--ce-color-border-rgb);
+}
+
+:host(ce-input-number-range[appearance="underlined"]),
+:host(ce-input-date-range[appearance="underlined"]),
+:host(ce-input-time-range[appearance="underlined"]) {
+  border: 0;
+  border-width: 0;
+  border-bottom: 1px solid fn.color(--ce-color-border-rgb);
+  border-radius: 0 !important;
+}
+
+// dual 模式：去掉宿主外框，两个子输入框各自独立圆角边框，中间保留 separator（默认 ~）
+:host(ce-input-number-range[dual]),
+:host(ce-input-date-range[dual]),
+:host(ce-input-time-range[dual]) {
+  border: 0 !important;
+  overflow: visible;
+}
+
+.ce-range-input.ce-range-dual .ce-form-control {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.ce-range-input.ce-range-dual .ce-form-control > ce-input-number,
+.ce-range-input.ce-range-dual .ce-form-control > ce-input-date,
+.ce-range-input.ce-range-dual .ce-form-control > ce-input-time {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.ce-range-input.ce-range-dual ce-input-number::part(input),
+.ce-range-input.ce-range-dual ce-input-date::part(input),
+.ce-range-input.ce-range-dual ce-input-time::part(input) {
+  border: thin solid fn.color(--ce-color-border-rgb) !important;
+  border-radius: var(--round-size, var(--ce-round-md));
+}
+
+.ce-range-input.ce-range-dual ce-input-number:focus-within::part(input),
+.ce-range-input.ce-range-dual ce-input-date:focus-within::part(input),
+.ce-range-input.ce-range-dual ce-input-time:focus-within::part(input) {
+  border-color: fn.color(--form-item-color);
+}
+
+::slotted(ce-input-date::part(input)),
+::slotted(ce-input-number::part(input)) {
+  border: 0 !important;
+  border-width: 0 !important;
+}
+
+:host(ce-input) {
+  border: 0 !important;
+  border-width: 0 !important;
+}
+
+:host(ce-input-color) {
+  display: block;
+  border: 2px solid #fff;
+  outline: 1px solid #333;
+  margin: 1px;
+  border-radius: var(--ce-round-sm);
+}
+
+//size
+:host(ce-input-color[size="lg"]) {
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+:host(ce-input-color[size="md"]) {
+  height: 2.125rem;
+  width: 2.125rem;
+
+}
+
+:host(ce-input-color[size="sm"]) {
+  height: 1.5rem;
+  width: 1.5rem;
 }

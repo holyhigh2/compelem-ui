@@ -1,0 +1,187 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
+
+:host {
+  --overlay-opacity: 0.3;
+}
+
+/* Dialog 内容面板：内容节点会被移动到 body 级容器中，
+   因此该样式依赖 Overlay 的 GLOBAL 注入才能命中 */
+.ce-dialog-surface {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--ce-round-lg);
+  background: var(--ce-card-bg);
+  overflow: hidden;
+}
+
+.ce-overlay {
+  border-radius: inherit;
+  left: 0;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+
+  &.ce-overlay-visible {
+    opacity: 1;
+    z-index: var(--ce-z-index-overlay) !important;
+
+    .ce-overlay-content {
+      opacity: 1;
+      transform: scale(1) !important;
+    }
+
+    .ce-overlay-backdrop {
+      pointer-events: auto;
+    }
+  }
+
+  &.ce-overlay-contained {
+    position: absolute;
+
+    .ce-overlay-backdrop {
+      position: absolute;
+    }
+  }
+
+  .ce-overlay-backdrop {
+    pointer-events: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    background-color: var(--color-overlay);
+    transition:
+      opacity 0.2s,
+      color 0.3s;
+  }
+
+  .ce-overlay-content {
+    pointer-events: none;
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+
+    &.is-center {
+      top: 50%;
+      left: 50%;
+    }
+
+    opacity: 0;
+    // transform: scale(1);
+    //todo 这里需要独立到动画组件
+
+    transition: transform 0.2s cubic-bezier(0.62, 1.36, 0.9, 1.1),
+    opacity 0.2s,
+    width 0.2s;
+
+    >* {
+      pointer-events: all;
+    }
+  }
+
+  &.ce-overlay-placement-right {
+    .ce-overlay-content {
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    &.is-start {
+      .ce-overlay-content {
+        align-items: flex-start;
+      }
+    }
+
+    &.is-end {
+      .ce-overlay-content {
+        align-items: flex-end;
+      }
+    }
+  }
+
+  &.ce-overlay-placement-left {
+    .ce-overlay-content {
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    &.is-start {
+      .ce-overlay-content {
+        align-items: flex-start;
+      }
+    }
+
+    &.is-end {
+      .ce-overlay-content {
+        align-items: flex-end;
+      }
+    }
+  }
+
+  &.ce-overlay-placement-top {
+    .ce-overlay-content {
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    &.is-start {
+      .ce-overlay-content {
+        justify-content: flex-start;
+      }
+    }
+
+    &.is-end {
+      .ce-overlay-content {
+        justify-content: flex-end;
+      }
+    }
+  }
+
+  &.ce-overlay-placement-bottom {
+    .ce-overlay-content {
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    &.is-start {
+      .ce-overlay-content {
+        justify-content: flex-start;
+      }
+    }
+
+    &.is-end {
+      .ce-overlay-content {
+        justify-content: flex-end;
+      }
+    }
+  }
+
+  &.ce-overlay-shake {
+    animation-duration: 0.125s;
+    animation-timing-function: cubic-bezier(0.17, 1.26, 1, 0.96);
+    animation-name: ani-shake;
+  }
+}
+
+@keyframes ani-shake {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.0375);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}

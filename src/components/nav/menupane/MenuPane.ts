@@ -1,5 +1,5 @@
-import { classes, CompElem, html, prop, state, tag, Template, watch } from "compelem";
-import myfx, {
+import { classes, CompElem, csscope, Csscope, emits, h, prop, state, tag, Template, watch } from "compelem";
+import {
   capitalize,
   clone,
   closest,
@@ -13,12 +13,13 @@ import myfx, {
   isObject,
   join,
   map,
+  reduce,
   split,
   trim
 } from "myfx";
 import { getBox } from "uiik";
-import { CaretRight, Check } from "../../../icons/icons";
-import style from "./style.scss";
+import { Check } from "../../../icons/icons";
+import style from "./style.scss?tmpl";
 const enum CheckMode {
   RADIO = "radio",
   CHECKBOX = "checkbox",
@@ -40,6 +41,7 @@ const EDGE = 20
  *  disabled,
  *  icon, //图标HTML内容
  *  iconClass, //图标样式类
+ *  iconSvg,//内置svg图标名
  *  hotKey:['ctrl','shift','n'],
  *  children, //children是数组时显示子菜单
  *  separate, //显示子菜单时，父菜单是否可以点击
@@ -57,7 +59,8 @@ const EDGE = 20
  *
  * @author holyhigh2
  */
-@tag('l-menu-pane')
+@emits('select')
+@tag('ce-menu-pane')
 export class MenuPane extends CompElem {
   #expandedMap: Record<string, HTMLElement> = {};
   #timer_expand: any;
@@ -74,7 +77,8 @@ export class MenuPane extends CompElem {
 
   @state itemList: Array<any>;
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style];
   }
 
@@ -88,24 +92,15 @@ export class MenuPane extends CompElem {
   }
   //////////////////////////////////// lifecycles
   render(): Template {
-    return html`
-    <ul class="c-menu-pane ${classes({ __rounded: this.round })}" @click="${this.onClick}" @mousedown="${this.onMouseDown}" @mouseleave="${this.onMouseLeave}">
+    return h`
+    <ul class="ce-menu-pane" ${classes({ "is-rounded": this.round })} @contextmenu.stop.prevent @click="${this.onClick}" @mousedown="${this.onMouseDown}" @mouseleave="${this.onMouseLeave}">
     </ul>
     `;
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-
-    this.renderRoot.oncontextmenu = (e: Event) => {
-      e.stopPropagation();
-      e.preventDefault();
-      return false;
-    };
-
-
+  mounted(): void {
     each(this.#customIds, (nodes: HTMLCollection, id: string) => {
-      let placeholder = this.renderRoot.querySelector('b[id="' + id + '"]');
+      let placeholder = this.renderRoot!.querySelector('b[id="' + id + '"]');
       let fragment = document.createDocumentFragment();
       fragment.append(...nodes)
       placeholder?.parentElement?.replaceChild(fragment, placeholder)
@@ -115,12 +110,9 @@ export class MenuPane extends CompElem {
     this._bindChildren();
   }
 
-  disconnectedCallback() {
-    this.renderRoot.oncontextmenu = null;
-  }
   //////////////////////////////////// methods
   _bindChildren() {
-    let childrenLi = this.renderRoot.querySelectorAll<HTMLElement>("li.c-menu-pane-item");
+    let childrenLi = this.renderRoot!.querySelectorAll<HTMLElement>("li.ce-menu-pane-item");
     const that = this;
     each<HTMLElement>(childrenLi, (li) => {
       li.onmouseenter = function (e: MouseEvent) {
@@ -143,14 +135,12 @@ export class MenuPane extends CompElem {
           item = get(item.children, p);
         });
         if (item.disabled) return;
-        let ev = new CustomEvent("hover", {
-          detail: {
-            item,
-            index: li?.dataset.index,
-            el: li,
-          },
-        });
-        that.dispatchEvent(ev);
+        that.emit('hover', {
+          target: li,
+          item,
+          index: li?.dataset.index,
+          el: li,
+        })
 
         //hide children
         let level = t.dataset.level!;
@@ -158,9 +148,8 @@ export class MenuPane extends CompElem {
         if (expandedLi != t) {
           if (expandedLi && !that.#timer_hide) {
             that.#timer_hide = setTimeout(() => {
-              expandedLi.classList.remove("__expanded");
-              let subMenus = expandedLi.querySelectorAll(
-                ".c-menu-pane.__sub"
+              expandedLi.classList.remove("is-expanded");
+              let subMenus = expandedLi.querySelectorAll(".ce-menu-pane.ce-menu-pane-sub"
               );
               each(subMenus, (sm: HTMLElement) => {
                 sm.style.left = "-9999px";
@@ -184,8 +173,7 @@ export class MenuPane extends CompElem {
       };
       let isSeparated = li.classList.contains("__separated");
       if (isSeparated) {
-        let childrenBtn = li.querySelector(
-          ":scope>.c-menu-pane-item-wrapper>.c-menu-pane-item-children"
+        let childrenBtn = li.querySelector(":scope>.ce-menu-pane-item-wrapper>.ce-menu-pane-item-children"
         ) as HTMLElement;
         childrenBtn.onmouseenter = function (e: MouseEvent) {
           let t = e.target as HTMLElement;
@@ -196,16 +184,16 @@ export class MenuPane extends CompElem {
   }
   _expandChildren(li: HTMLElement) {
     this.#timer_expand = setTimeout(() => {
-      if (li.classList.contains('__disabled')) return;
+      if (li.classList.contains('is-disabled')) return;
 
-      li.classList.add("__expanded");
+      li.classList.add("is-expanded");
 
       let box = getBox(
-        li.querySelector(":scope>.c-menu-pane-item-wrapper")!,
+        li.querySelector(":scope>.ce-menu-pane-item-wrapper")!,
         document.documentElement
       );
 
-      let subMenu = li.querySelector(":scope>.c-menu-pane") as HTMLElement;
+      let subMenu = li.querySelector(":scope>.ce-menu-pane") as HTMLElement;
       if (!subMenu) return;
 
       let level = li.dataset.level!;
@@ -252,9 +240,9 @@ export class MenuPane extends CompElem {
       "parentNode"
     );
 
-    if (this.renderRoot.contains(t)) {
-      let disabled = li?.classList.contains("__disabled");
-      let hasChildren = li?.classList.contains("__children");
+    if (this.renderRoot!.contains(t)) {
+      let disabled = li?.classList.contains("is-disabled");
+      let hasChildren = li?.classList.contains("ce-menu-pane-item-children");
       let custom = li?.classList.contains("__custom");
       let separated = li?.classList.contains("__separated");
       let checkMode = li?.dataset.checkMode;
@@ -279,9 +267,9 @@ export class MenuPane extends CompElem {
         );
         each<HTMLElement>(radios!, (r) => {
           //1. 修改dom
-          let checkable = r.querySelector(".c-menu-pane-item-checkable");
+          let checkable = r.querySelector(".ce-menu-pane-item-checkable");
           if (checkable) {
-            checkable.innerHTML = r === li ? '<span class="c-dot"></span>' : "";
+            checkable.innerHTML = r === li ? '<span class="ce-dot"></span>' : "";
           }
           //2. 修改数据
           let rDataPath = split(r?.dataset.path, "-");
@@ -293,7 +281,7 @@ export class MenuPane extends CompElem {
         });
       } else if (checkMode === CheckMode.CHECKBOX) {
         //1. 修改dom
-        let checkable = li?.querySelector(".c-menu-pane-item-checkable");
+        let checkable = li?.querySelector(".ce-menu-pane-item-checkable");
         if (checkable) {
           checkable.innerHTML = item.checked ? "" : Check().strings[0];
         }
@@ -301,24 +289,23 @@ export class MenuPane extends CompElem {
         item.checked = !item.checked;
       }
 
-      let ev = new CustomEvent("select", {
-        detail: {
-          item,
-          index: li?.dataset.index,
-          el: li,
-        },
-      });
-      this.dispatchEvent(ev);
+      this.emit('select', {
+        target: li,
+        item,
+        index: li?.dataset.index,
+        el: li,
+      })
     }
   }
   setItems(items: Array<any>) {
+    if (!this.renderRoot) return
     //todo 修改html， 临时处理方案。后续完善依赖绑定后实现自动
     //修改html会导致 radio/checkbox时重复动画
     this.renderRoot.innerHTML = this.renderItems(items);
     this.itemList = concat(items)
 
     each(this.#customIds, (nodes: HTMLCollection, id: string) => {
-      let placeholder = this.renderRoot.querySelector('b[id="' + id + '"]');
+      let placeholder = this.renderRoot!.querySelector('b[id="' + id + '"]');
       let fragment = document.createDocumentFragment();
       fragment.append(...nodes)
       placeholder?.parentElement?.replaceChild(fragment, placeholder)
@@ -328,10 +315,9 @@ export class MenuPane extends CompElem {
     this._bindChildren();
   }
   setIcon(index: string | number, iconClass: string) {
-    let li = this.renderRoot.querySelector(`li[data-index="${index}"]`);
+    let li = this.renderRoot!.querySelector(`li[data-index="${index}"]`);
     if (li) {
-      li.querySelector(
-        ".c-menu-pane-item-icon"
+      li.querySelector(".ce-menu-pane-item-icon"
       )!.innerHTML = `<i class=" ${iconClass}"></i>`;
     }
   }
@@ -346,138 +332,135 @@ export class MenuPane extends CompElem {
     let hasCheckable = false;
     let hasIcon = false;
     let that = this;
-    let innerHTML = myfx
-      .chain(items)
-      .map((item, i) => {
-        let rs = item as any;
-        if (isObject(rs)) {
-          rs = clone(rs);
-        } else if (!isNil(rs)) {
-          rs = { text: item, value: item };
+    const tmpItems = map(items, (item, i) => {
+      let rs = item as any;
+      if (isObject(rs)) {
+        rs = clone(rs);
+      } else if (!isNil(rs)) {
+        rs = { text: item, value: item };
+      }
+
+      if (rs) {
+        rs.hotKey = isArray(rs.hotKey)
+          ? join(
+            map(rs.hotKey, (k) => capitalize(k)),
+            " + "
+          )
+          : "";
+        if (rs.hotKey.length > maxHotKeyLength) {
+          maxHotKeyLength = rs.hotKey.length;
         }
-
-        if (rs) {
-          rs.hotKey = isArray(rs.hotKey)
-            ? join(
-              map(rs.hotKey, (k) => capitalize(k)),
-              " + "
-            )
-            : "";
-          if (rs.hotKey.length > maxHotKeyLength) {
-            maxHotKeyLength = rs.hotKey.length;
-          }
-          if (isArray(rs.children)) {
-            hasChildren = true;
-            rs.childrenHTML = this.renderItems(
-              rs.children,
-              level + 1,
-              concat(path, i)
-            );
-          }
-          if (rs.icon || rs.iconClass) {
-            hasIcon = true;
-          }
-          if (rs.checkMode === "radio" || rs.checkMode === "checkbox") {
-            hasCheckable = true;
-            let groupName = trim(rs.checkGroup);
-            if (rs.checkMode === "radio") {
-              let groupList = this.#radioGroupMap[groupName];
-              if (!groupList) {
-                groupList = this.#radioGroupMap[groupName] = [];
-              }
-              if (rs.checked) {
-                this.#radioCheckedMap[groupName] = rs;
-              }
-
-              groupList.push(rs);
-            } else {
-              let groupList = this.#checkboxGroupMap[groupName];
-              if (!groupList) {
-                groupList = this.#checkboxGroupMap[groupName] = [];
-              }
-              groupList.push(rs);
+        if (isArray(rs.children)) {
+          hasChildren = true;
+          rs.childrenHTML = this.renderItems(
+            rs.children,
+            level + 1,
+            concat(path, i)
+          );
+        }
+        if (rs.icon || rs.iconClass || rs.iconSvg) {
+          hasIcon = true;
+        }
+        if (rs.checkMode === "radio" || rs.checkMode === "checkbox") {
+          hasCheckable = true;
+          let groupName = trim(rs.checkGroup);
+          if (rs.checkMode === "radio") {
+            let groupList = this.#radioGroupMap[groupName];
+            if (!groupList) {
+              groupList = this.#radioGroupMap[groupName] = [];
             }
+            if (rs.checked) {
+              this.#radioCheckedMap[groupName] = rs;
+            }
+
+            groupList.push(rs);
+          } else {
+            let groupList = this.#checkboxGroupMap[groupName];
+            if (!groupList) {
+              groupList = this.#checkboxGroupMap[groupName] = [];
+            }
+            groupList.push(rs);
           }
         }
-        return rs || null;
-      })
-      .reduce((acc, v: any, i: string) => {
-        if (!v) {
-          addDivider = true;
-          return acc;
-        }
+      }
+      return rs || null;
+    })
+    let innerHTML = reduce(tmpItems, (acc, v: any, i: string) => {
+      if (!v) {
+        addDivider = true;
+        return acc;
+      }
 
-        let text = v.text;
-        if (isFunction(text)) {
-          text = text();
-        }
+      let text = v.text;
+      if (isFunction(text)) {
+        text = text();
+      }
 
-        let checkIcon = "";
-        let mode = v.checkMode === "radio" || v.checkMode === "checkbox" ? v.checkMode : "";
-        if (v.checkMode === "radio") {
+      let checkIcon = "";
+      let mode = v.checkMode === "radio" || v.checkMode === "checkbox" ? v.checkMode : "";
+      if (v.checkMode === "radio") {
 
-          checkIcon =
-            this.#radioCheckedMap[v.checkGroup] === v ? '<span class="c-dot"></span>' : "";
-        } else if (v.checkMode === "checkbox") {
-          checkIcon = v.checked ? Check().strings[0] : "";
-        }
+        checkIcon =
+          this.#radioCheckedMap[v.checkGroup] === v ? '<span class="ce-dot"></span>' : "";
+      } else if (v.checkMode === "checkbox") {
+        checkIcon = v.checked ? Check().strings[0] : "";
+      }
 
-        let checkMode = hasCheckable && !v.custom
-          ? `<span class="c-menu-pane-item-checkable">${checkIcon}</span>`
+      let checkMode = hasCheckable && !v.custom
+        ? `<span class="ce-menu-pane-item-checkable">${checkIcon}</span>`
+        : "";
+      let hotKey = v.custom
+        ? ""
+        : `<span class="ce-menu-pane-item-hotkey" style="--len:${maxHotKeyLength}">${v.hotKey}</span>`;
+      let children =
+        hasChildren && !v.custom
+          ? `<span class="ce-menu-pane-item-children">${v.childrenHTML ? `<ce-icon svg="c-svg-caret-right" size="sm"></ce-icon>` : ""
+          }</span>`
           : "";
-        let hotKey = v.custom
-          ? ""
-          : `<span class="c-menu-pane-item-hotkey" style="--len:${maxHotKeyLength}">${v.hotKey}</span>`;
-        let children =
-          hasChildren && !v.custom
-            ? `<span class="c-menu-pane-item-children">${v.childrenHTML ? CaretRight().getHTML() : ""
-            }</span>`
-            : "";
-        let subMenu = v.childrenHTML
-          ? `<ul class="c-menu-pane __sub ${this.round ? "__rounded" : ""
-          }" style="left:-9999px;background: var(--menu-bg2);">${v.childrenHTML
-          }</ul>`
-          : "";
-        let selectableParent = v.separate && children;
-        let icon = hasIcon ? `<span class="c-menu-pane-item-icon">
+      let subMenu = v.childrenHTML
+        ? `<ul class="ce-menu-pane ce-menu-pane-sub ${this.round ? "__rounded" : ""
+        }" style="left:-9999px;background: var(--menu-bg2);">${v.childrenHTML
+        }</ul>`
+        : "";
+      let selectableParent = v.separate && children;
+      let icon = hasIcon ? `<span class="ce-menu-pane-item-icon">
         ` +
-          (v.iconClass ? `<i class="${v.iconClass}"></i>` : "") +
-          (v.icon || "") +
-          `</span>` : '';
+        (v.iconClass ? `<i class="${v.iconClass}"></i>` : "") + (v.iconSvg ? `<ce-icon svg="${v.iconSvg}" size="sm"></ce-icon>` : '') +
+        (v.icon || "") +
+        `</span>` : '';
 
-        acc +=
-          `
+      acc +=
+        `
       <li data-path="${join(
-            concat(path, i),
-            "-"
-          )}" data-level="${level}" data-index="${i}" ${mode ? 'data-check-mode="' + mode + '"' : ""
-          } data-check-group="${v.checkGroup}" class="c-menu-pane-item ${v.childrenHTML ? "__children" : ""
-          } ${v.custom ? "__custom" : ""} ${addDivider ? "__divider" : ""} ${v.disabled ? "__disabled" : ""
-          } ${selectableParent ? "__separated" : ""}" >
-        <span class="c-menu-pane-item-wrapper">
-          <button class="c-menu-pane-item-button">
+          concat(path, i),
+          "-"
+        )}" data-level="${level}" data-index="${i}" ${mode ? 'data-check-mode="' + mode + '"' : ""
+        } data-check-group="${v.checkGroup}" class="ce-menu-pane-item ${v.childrenHTML ? "ce-menu-pane-item-children" : ""
+        } ${v.custom ? "__custom" : ""} ${addDivider ? "ce-menu-pane-divider" : ""} ${v.disabled ? "is-disabled" : ""
+        } ${selectableParent ? "__separated" : ""}" >
+        <span class="ce-menu-pane-item-wrapper">
+          <button class="ce-menu-pane-item-button">
             ${checkMode} 
             ${icon}
-            <span class="c-menu-pane-item-text">${v.custom ? that.__getCustomHTML(v.custom) : text
-          }</span>
+            <span class="ce-menu-pane-item-text">${v.custom ? that.__getCustomHTML(v.custom) : text
+        }</span>
             ${hotKey} 
           </button>
           ${children}
         </span>
         ${subMenu}
       </li>`;
-        addDivider = false;
-        return acc;
-      }, "")
-      .value();
+      addDivider = false;
+      return acc;
+    }, "");
     return innerHTML;
   }
   __getCustomHTML(tmpl: Function) {
     return tmpl()
   }
   open(left: number, top: number) {
-    let w = this.renderRoot.scrollWidth;
-    let h = this.renderRoot.scrollHeight;
+    let w = this.renderRoot!.scrollWidth;
+    let h = this.renderRoot!.scrollHeight;
     let x = left;
     let y = top;
     let pos = window.getComputedStyle(this).position
@@ -503,8 +486,8 @@ export class MenuPane extends CompElem {
         y = maxH - h
         if (y < 0) {
           y = EDGE;
-          this.renderRoot.style.maxHeight = `${maxH}px`;
-          this.renderRoot.style.overflowY = `auto`
+          this.renderRoot!.style.maxHeight = `${maxH}px`;
+          this.renderRoot!.style.overflowY = `auto`
         }
         y += (op?.scrollTop || 0);
       }
@@ -524,8 +507,8 @@ export class MenuPane extends CompElem {
   close() {
     this.style.left = `-9999px`
     each(this.#expandedMap, (li) => {
-      li.classList.remove("__expanded");
-      let subMenu = li.querySelector(":scope>.c-menu-pane") as HTMLElement;
+      li.classList.remove("is-expanded");
+      let subMenu = li.querySelector(":scope>.ce-menu-pane") as HTMLElement;
       if (subMenu) {
         subMenu.style.left = "-9999px";
         subMenu.style.display = "none";

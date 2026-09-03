@@ -1,4 +1,4 @@
-import { html, sync, tag, Template } from "compelem";
+import { css, csscope, Csscope, h, ifTrue, model, tag, Template } from "compelem";
 import { Modal } from "./Modal";
 /**
  * 警告框，用于外部调用
@@ -8,10 +8,11 @@ import { Modal } from "./Modal";
  *
  * @author holyhigh2
  */
-@tag("l-alert")
+@tag("ce-alert")
 export class Alert extends Modal {
-  static get styles() {
-    return [`:host{position: fixed;}`]
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [css`:host{position: fixed;}`]
   }
   //////////////////////////////////// props
 
@@ -24,25 +25,22 @@ export class Alert extends Modal {
   }
 
   render(): Template {
-    return html`
-      <l-dialog
-        class="c-alert"
+    return h`
+      <ce-dialog
+        class="ce-alert"
         show-close="false"
-        backdrop="static"
+        backdrop="true"
         .esc="${this.esc}"
-        .visible="${sync(this.visible)}"
-        .title="${this._title}"
+        ${model(this.visible, 'visible')}
       >
-        ${this.message}<slot></slot>
-        <l-button slot="footer" @click="${this.onConfirm}">${this.confirmBtnText}</l-button>
-      </l-dialog>
+        <ce-card title="${this._title}" style="width:100%">
+          ${ifTrue(!!this.message, () => h`<div style="padding-block: 1rem;">${this.message}</div>`)}
+          <slot></slot>
+          <ce-button slot="actions" appearance="pale" @click="${this.onConfirmClick}">${(this.confirmBtnText)}</ce-button>
+        </ce-card>
+      </ce-dialog>
     `;
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() { }
   //////////////////////////////////// methods
 }

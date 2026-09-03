@@ -1,0 +1,174 @@
+/**
+* 外观风格
+*/
+:host {
+  position: relative;
+}
+
+.ce-appearance-overlay,
+.ce-appearance-underlay {
+  pointer-events: none;
+  position: absolute;
+  background-color: transparent;
+  background: transparent;
+  transition: all 0.35s;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  height: 100%;
+  width: 100%;
+}
+
+:host([appearance][disabled]) {
+  cursor: not-allowed !important;
+  opacity: 0.25;
+}
+
+:host([appearance][active]) {
+  &::part(__overlay) {
+    background-color: currentColor;
+    opacity: calc(var(--ce-opacity-overlay) * 2);
+  }
+}
+
+[appearance][hoverable][active]:not([disabled], [loading]):hover::part(__overlay),
+[appearance][hoverable][active]:not([disabled], [loading]):focus::part(__overlay) {
+  opacity: calc(var(--ce-opacity-overlay) * 2.75);
+}
+
+:host([pill]) {
+  border-radius: var(--ce-round-pill) !important;
+}
+
+///////////////////////////////////////////////// 通用外观
+:host([appearance="flat"]) {
+  color: #fff;
+  border: 0;
+  background-color: var(--color, var(--ce-color-info));
+}
+
+:host([appearance="flat"][active]) {
+  background-color: var(--active-color, var(--color, var(--ce-color-info)));
+}
+
+[appearance="flat"][hoverable][active]:hover::part(__overlay) {
+  opacity: calc(var(--ce-opacity-overlay) + var(--ce-opacity-hover));
+}
+
+:host([appearance="outlined"]) {
+  color: var(--ce-color-text);
+  border: 1px solid var(--ce-color-border);
+  transition: color .2s, border .2s;
+}
+
+:host([appearance="outlined"][active]) {
+  border: 1px solid var(--active-color, var(--color, var(--ce-color-info)));
+}
+
+[appearance="outlined"]:not([disabled], [loading]):hover {
+  color: var(--color, var(--ce-color-border));
+  border: 1px solid var(--color, var(--ce-color-text));
+}
+
+// [appearance="outlined"][hoverable]:not([disabled], [loading]):hover::part(
+//     __underlay
+//   ),
+// [appearance="outlined"][hoverable]:not([disabled], [loading]):focus::part(
+//     __underlay
+//   ) {
+//   background: var(--color, var(--ce-color-text));
+//   opacity: var(--ce-opacity-underlay);
+// }
+:host([appearance="pale"]) {
+  color: var(--color, var(--ce-color-text));
+  border: 0;
+}
+
+:host([appearance="pale"][active]) {
+  color: var(--active-color, var(--color, var(--ce-color-primary)));
+}
+
+[appearance="pale"][hoverable]:not([disabled], [loading]):hover::part(__overlay),
+[appearance="pale"][hoverable]:not([disabled], [loading]):focus::part(__overlay) {
+  background: var(--color, var(--ce-color-text));
+  opacity: var(--ce-opacity-overlay);
+}
+
+:host([appearance="subtle"]) {
+  border: 0;
+}
+
+:host([appearance="subtle-invert"]) {
+  border: 0;
+}
+
+:host([appearance="text"]) {
+  border: 0;
+  opacity: 0.9;
+}
+
+[appearance="subtle-invert"][hoverable]:not([disabled], [loading]) {
+
+  &:hover::part(__underlay),
+  &:focus::part(__underlay),
+  &:hover::part(__overlay),
+  &:focus::part(__overlay) {
+    background: transparent;
+    opacity: 0;
+  }
+}
+
+[appearance="text"][hoverable]:not([disabled], [loading]):hover,
+[appearance="text"][hoverable]:not([disabled], [loading]):focus {
+  opacity: 1;
+}
+
+[appearance="flat"][hoverable]:not([disabled], [loading]):hover::part(__overlay),
+[appearance="flat"][hoverable]:not([disabled], [loading]):focus::part(__overlay) {
+  background: #fff;
+  opacity: 0.1;
+}
+
+[appearance="subtle"][hoverable]:not([disabled], [loading]):hover::part(__underlay),
+[appearance="subtle"][hoverable]:not([disabled], [loading]):focus::part(__underlay) {
+  background: var(--color, var(--ce-color-text));
+  opacity: var(--ce-opacity-underlay);
+}
+
+///////////////////////////////////////////////// 阴影
+:host([appearance][shadowed=""]) {
+  box-shadow: var(--shadow-size, var(--ce-shadow-sm));
+}
+
+[appearance][shadowed="hover"]:not([disabled], [loading]):hover,
+[appearance][shadowed="focus"]:not([disabled], [loading]):focus-within,
+[appearance][shadowed="both"]:not([disabled], [loading]):hover,
+[appearance][shadowed="both"]:not([disabled], [loading]):focus-within {
+  box-shadow: var(--shadow-size2, var(--shadow-size, var(--ce-shadow-sm)));
+}
+
+///////////////////////////////////////////////// 边框
+:host([appearance][bordered=""]) {
+  border-width: thin;
+  border-style: solid;
+  border-width: var(--border-size, var(--ce-border-md));
+}
+
+[appearance][bordered="hover"]:not([disabled], [loading]):hover,
+[appearance][bordered="focus"]:not([disabled], [loading]):focus-within,
+[appearance][bordered="both"]:not([disabled], [loading]):hover,
+[appearance][bordered="both"]:not([disabled], [loading]):focus-within {
+  border-width: var(--border-size2, var(--border-size, var(--ce-border-md)));
+}
+
+///////////////////////////////////////////////// 圆角
+[appearance][rounded=""] {
+  border-radius: var(--round-size, var(--ce-round-md));
+}
+
+[appearance][rounded="hover"]:not([disabled], [loading]):hover,
+[appearance][rounded="focus"]:not([disabled], [loading]):focus-within,
+[appearance][rounded="both"]:not([disabled], [loading]):hover,
+[appearance][rounded="both"]:not([disabled], [loading]):focus-within {
+  border-radius: var(--round-size2, var(--round-size, var(--ce-round-md)));
+}

@@ -1,0 +1,140 @@
+@use "../../../css/functions" as fn;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.ce-skeleton {
+  width: 100%;
+}
+
+.ce-skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ce-skeleton-gap, 0.75rem);
+}
+
+.ce-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ce-skeleton-gap, 0.75rem);
+  min-height: var(--ce-skeleton-text-height, 0.875rem);
+
+  &.ce-skeleton-table {
+    display: grid;
+    grid-template-columns: repeat(var(--ce-skeleton-columns, 4), 1fr);
+  }
+}
+
+//////////////////////////////////// base item
+.ce-skeleton-item {
+  flex: 0 1 auto;
+  min-height: var(--ce-skeleton-text-height, 0.875rem);
+  background: linear-gradient(90deg,
+      var(--ce-skeleton-base, #e5e7eb) 25%,
+      var(--ce-skeleton-highlight, #f4f5f7) 37%,
+      var(--ce-skeleton-base, #e5e7eb) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--ce-skeleton-radius, 0.35rem);
+  animation: skeleton-wave var(--ce-skeleton-duration, 1.4s) ease infinite;
+}
+
+//////////////////////////////////// variants
+.ce-skeleton-item.ce-skeleton-title {
+  height: var(--ce-skeleton-title-height, 1.25rem);
+  min-height: var(--ce-skeleton-title-height, 1.25rem);
+}
+
+.ce-skeleton-item.ce-skeleton-text {
+  height: var(--ce-skeleton-text-height, 0.875rem);
+}
+
+.ce-skeleton-item.ce-skeleton-avatar {
+  width: var(--ce-skeleton-avatar-size, 2.5rem);
+  height: var(--ce-skeleton-avatar-size, 2.5rem);
+  min-height: var(--ce-skeleton-avatar-size, 2.5rem);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ce-skeleton-item.ce-skeleton-image {
+  height: var(--ce-skeleton-image-height, 6rem);
+  min-height: var(--ce-skeleton-image-height, 6rem);
+  flex: 1 1 auto;
+}
+
+.ce-skeleton-item.ce-skeleton-button {
+  width: var(--ce-skeleton-button-width, 5rem);
+  height: var(--ce-skeleton-button-height, 2rem);
+  min-height: var(--ce-skeleton-button-height, 2rem);
+  flex: 0 0 auto;
+}
+
+.ce-skeleton-item.ce-skeleton-divider {
+  height: 1px;
+  min-height: 1px;
+  flex: 1 1 auto;
+}
+
+.ce-skeleton-item.ce-skeleton-cell {
+  height: var(--ce-skeleton-text-height, 0.875rem);
+}
+
+//////////////////////////////////// width modifiers
+.ce-skeleton-item.ce-skeleton-w-40 {
+  width: 40%;
+  flex: 0 0 40%;
+}
+
+.ce-skeleton-item.ce-skeleton-w-60 {
+  width: 60%;
+  flex: 0 0 60%;
+}
+
+.ce-skeleton-item.ce-skeleton-w-70 {
+  width: 70%;
+  flex: 0 0 70%;
+}
+
+.ce-skeleton-item.ce-skeleton-grow {
+  flex: 1 1 auto;
+}
+
+//////////////////////////////////// animations
+.ce-skeleton-anim-pulse .ce-skeleton-item {
+  background: var(--ce-skeleton-base, #e5e7eb);
+  animation: skeleton-pulse var(--ce-skeleton-duration, 1.4s) ease-in-out infinite;
+}
+
+.ce-skeleton-anim-none .ce-skeleton-item {
+  animation: none;
+}
+
+.ce-skeleton-slot {
+  width: 100%;
+}
+
+@keyframes skeleton-wave {
+  // background-size:400% -> 渐变周期=4倍容器宽(W)。
+  // 位移差 133.33% 换算 offset 差 = (W-4W)*(-133.33%) = 4W = 恰好1个周期 -> 首尾图案一致、循环无缝。
+  // （原 100% -> -100% 位移 6W = 1.5 周期，循环点高光位置突变产生跳变）
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -33.33% 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}

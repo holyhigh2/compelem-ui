@@ -1,10 +1,9 @@
-@import "../../css/_functions.scss";
-
-.c-accordion {
+ce-accordion {
   position: relative;
+  display: flex;
+  flex-direction: column;
 
-  ::slotted(l-accordion-item:not(:last-child)) {
+  > ce-accordion-item {
     display: block;
-    border-bottom: 1px solid color(--l-color-border-secondary);
   }
 }

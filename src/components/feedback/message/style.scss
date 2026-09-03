@@ -1,0 +1,189 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/utils";
+
+:host {
+  display: block;
+  max-width: 50vw;
+  overflow: hidden;
+}
+
+.ce-message {
+  position: relative;
+  flex-direction: row;
+  padding: 0.6rem 1rem;
+  padding-right: 2rem;
+
+  .ce-message-main {
+    display: flex;
+    overflow: hidden;
+  }
+
+  &.ce-message-bordered {
+    border-style: solid;
+    border-width: 0;
+    border-left-width: 4px;
+  }
+
+  &.ce-message-closable &-close {
+    display: block;
+  }
+
+  &.ce-message-closable {
+    display: grid;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition:
+      opacity 0.4s ease-in-out,
+      grid-template-rows 0.3s ease-in-out,
+      box-shadow 0.3s,
+      padding 0.3s ease-in-out;
+
+    &.ce-message-show {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      padding-top: 0.6rem;
+      padding-bottom: 0.6rem;
+    }
+  }
+
+  &.ce-message-info {
+    --color: var(--ce-color-info);
+    background-color: fn.color(--ce-color-blue-50-rgb);
+    .ce-message-icon {
+      color: fn.color(--ce-color-blue-400-rgb);
+    }
+
+    .ce-message-close {
+      color: fn.color(--ce-color-blue-500-rgb);
+    }
+
+    .ce-message-title {
+      color: fn.color(--ce-color-info-rgb);
+    }
+
+    .ce-message-descr {
+      color: fn.color(--ce-color-info-rgb);
+    }
+
+    &.ce-message-bordered {
+      border-color: fn.color(--ce-color-blue-400-rgb);
+    }
+  }
+
+  &.ce-message-success {
+    background-color: fn.color(--ce-color-green-50-rgb);
+
+    .ce-message-icon {
+      color: fn.color(--ce-color-green-400-rgb);
+    }
+
+    .ce-message-close {
+      color: fn.color(--ce-color-green-500-rgb);
+    }
+
+    .ce-message-title {
+      color: fn.color(--ce-color-green-800-rgb);
+    }
+
+    .ce-message-descr {
+      color: fn.color(--ce-color-green-700-rgb);
+    }
+
+    &.ce-message-bordered {
+      border-color: fn.color(--ce-color-green-400-rgb);
+    }
+  }
+
+  &.ce-message-warning {
+    background-color: fn.color(--ce-color-yellow-50-rgb);
+
+    .ce-message-icon {
+      color: fn.color(--ce-color-yellow-400-rgb);
+    }
+
+    .ce-message-close {
+      color: fn.color(--ce-color-yellow-500-rgb);
+    }
+
+    .ce-message-title {
+      color: fn.color(--ce-color-yellow-800-rgb);
+    }
+
+    .ce-message-descr {
+      color: fn.color(--ce-color-yellow-700-rgb);
+    }
+
+    &.ce-message-bordered {
+      border-color: fn.color(--ce-color-yellow-400-rgb);
+    }
+  }
+
+  &.ce-message-error {
+    background-color: fn.color(--ce-color-red-50-rgb);
+
+    .ce-message-icon {
+      color: fn.color(--ce-color-red-400-rgb);
+    }
+
+    .ce-message-close {
+      color: fn.color(--ce-color-red-500-rgb);
+    }
+
+    .ce-message-title {
+      color: fn.color(--ce-color-red-800-rgb);
+    }
+
+    .ce-message-descr {
+      color: fn.color(--ce-color-red-700-rgb);
+    }
+
+    &.ce-message-bordered {
+      border-color: fn.color(--ce-color-red-400-rgb);
+    }
+  }
+
+  &-icon {
+    ce-icon {
+      display: inline-block;
+      width: 1.25rem;
+      height: 1.25rem;
+      background-size: contain;
+      margin-right: 0.5rem;
+    }
+  }
+
+  &-title {
+    margin: 0;
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  &-descr {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &-content {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  &-close {
+    display: none;
+    position: absolute;
+    right: 0.3rem;
+    top: 0.5rem;
+    color: #666;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+  }
+}

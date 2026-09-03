@@ -1,45 +1,40 @@
-@import "../../../css/_functions.scss";
-@import "../../../css/_mixins.scss";
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
 
 :host {
-  position: fixed;
 }
 
-.c-dialog {
+.ce-dialog {
   padding: 0;
   border: none;
   outline: none;
   overflow: visible;
   position: fixed;
-  border-radius: var(--l-border-radius-lg);
+  border-radius: var(--ce-round-lg);
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
-  box-shadow:
-    rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-    rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-    rgba(0, 0, 0, 0.1) 0px 20px 25px -5px,
-    rgba(0, 0, 0, 0.1) 0px 8px 10px -6px;
+  box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+    rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px;
 
-  box-shadow: var(--l-shadow-lg);
+  box-shadow: var(--ce-shadow-lg);
 
   opacity: 0;
   transform: scale(0.5);
-  transition:
-    transform 0.2s cubic-bezier(0.62, 1.36, 0.9, 1.1),
-    opacity 0.2s,
+  transition: transform 0.2s cubic-bezier(0.62, 1.36, 0.9, 1.1), opacity 0.2s,
     width 0.2s;
 
   &::backdrop {
     opacity: 0;
     transition: opacity 0.2s;
+    background-color: rgba(0, 0, 0, 0.25);
   }
 
-  &.__visible {
+  &.ce-dialog-visible {
     opacity: 1;
     transform: scale(1);
 
-    &.__no-backdrop[open] {
+    &.ce-dialog-no-backdrop[open] {
       top: 50%;
       transform: translateY(-50%);
     }
@@ -49,89 +44,21 @@
     }
   }
 
-  .--wrapper {
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    // padding: 1.35rem;
-    height: 100%;
-
-    > header {
-      position: relative;
-      padding-right: 1.5rem;
-
-      .--title {
-        color: color(--l-color-text);
-        margin: 0;
-        font-weight: 600;
-        @include text-md;
-        margin: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .--close {
-        position: absolute;
-        font-size: 1.35rem;
-        right: -0.25rem;
-        top: -0.25rem;
-        cursor: pointer;
-
-        &:hover {
-          color: color(--l-color-error) !important;
-        }
-      }
-    }
-
-    > main {
-      padding-bottom: 1rem;
-      flex: 1;
-
-      // margin-top: .5rem;
-      overflow: auto;
-      word-break: break-all;
-    }
-
-    > footer {
-      text-align: right;
-    }
-  }
-
-  &.__shake {
-    animation-duration: 0.3s;
-    animation-timing-function: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  &.ce-dialog-shake {
+    animation-duration: 0.125s;
+    animation-timing-function: cubic-bezier(0.17, 1.26, 1, 0.96);
     animation-name: ani-shake;
-  }
-
-  slot[name="footer"]::slotted(l-button) {
-    margin-left: 0.5rem;
   }
 }
 
 @keyframes ani-shake {
   0% {
-    transform: translateX(5px);
+    transform: scale(1);
   }
-
-  20% {
-    transform: translateX(-5px);
+  50% {
+    transform: scale(1.0375);
   }
-
-  40% {
-    transform: translateX(5px);
-  }
-
-  60% {
-    transform: translateX(-5px);
-  }
-
-  80% {
-    transform: translateX(5px);
-  }
-
   100% {
-    transform: translateX(0px);
+    transform: scale(1);
   }
 }

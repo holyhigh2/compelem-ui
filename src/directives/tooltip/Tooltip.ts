@@ -1,5 +1,5 @@
-import { directive, Directive, DirectiveUpdateTag, EnterPoint, EnterPointType } from "compelem";
-import { isEqual } from "myfx";
+import { CompElem, directive, EnterPointType } from "compelem";
+import { clone, isEqual } from "myfx";
 import { Tooltip } from "../../components/overlays/tooltip/Tooltip";
 
 interface TooltipOption {
@@ -7,41 +7,40 @@ interface TooltipOption {
   placement?: string,
   alwaysShow?: boolean,
   disabled?: boolean
+  arrow?: boolean
+  dragFollow?: boolean
 }
+const TooltipMap = new WeakMap()
+const ToolOptionMap = new WeakMap()
 /**
  * 提示信息指令
  * 与<tooltip>组件相比，指令不会将目标元素包裹到自定义标签中，不会影响目标元素样式结构等
  * @author holyhigh2
  */
-class TooltipD extends Directive {
-  update(nodes: Node[], newArgs: TooltipOption[], oldArgs: TooltipOption[]): DirectiveUpdateTag {
-    if (!isEqual(newArgs[0], oldArgs[0])) {
-      this.tooltip.updateContent(newArgs[0].content + '')
-      if (newArgs[0].disabled != oldArgs[0].disabled) {
-        this.tooltip._setParentProps({ disabled: newArgs[0].disabled })
+export const tooltip = directive((function TooltipD(option?: TooltipOption) {
+  return (pointNode: Node, [option]: any[], oldArgs: any[], { renderComponent }: { renderComponent: CompElem }) => {
+    let node = pointNode
+    let oldOpt = ToolOptionMap.get(node)
+    ToolOptionMap.set(node, clone(option))
+
+    if (oldArgs && oldArgs[0].content) {
+      if (!isEqual(option, oldOpt)) {
+        let tooltip = TooltipMap.get(node)
+        tooltip.updateContent(option.content + '')
+        if (option.disabled != oldOpt.disabled) {
+          tooltip.updateProps({ disabled: option.disabled })
+        }
+        if (option.alwaysShow != oldOpt.alwaysShow) {
+          tooltip.updateAlwasy(option.alwaysShow!)
+        }
       }
-      if (newArgs[0].alwaysShow != oldArgs[0].alwaysShow) {
-        this.tooltip.updateAlwasy(newArgs[0].alwaysShow!)
-      }
+      return
     }
-    return DirectiveUpdateTag.NONE
-  }
-  tooltip: Tooltip
-  static get scopes(): EnterPointType[] {
-    return [EnterPointType.TAG]
-  }
-  constructor(point: EnterPoint) {
-    super();
-    this.point = point
-  }
-  render(option?: TooltipOption) {
-    if (!this.tooltip) {
-      let tooltip = this.tooltip = new Tooltip({ content: option?.content, placement: option?.placement, alwaysShow: option?.alwaysShow, disabled: option?.disabled })
+    if (option.content && !TooltipMap.has(node)) {
+      let tooltip = new Tooltip({ content: option?.content, placement: option?.placement, alwaysShow: option?.alwaysShow, disabled: option?.disabled, arrow: option?.arrow, dragFollow: option?.dragFollow })
+      TooltipMap.set(node, tooltip)
       document.body.appendChild(tooltip)
-      tooltip._bindTarget(this.point.startNode)
+      tooltip._bindTarget(node as HTMLElement)
     }
-
-  }
-
-}
-export const tooltip = directive<Parameters<typeof TooltipD.prototype.render>>(TooltipD);
+  };
+}) as any, [EnterPointType.TAG])

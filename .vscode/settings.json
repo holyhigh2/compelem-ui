@@ -1,0 +1,8 @@
+{
+  "editor.scrollbar.ignoreHorizontalScrollbarInContentHeight": false,
+  "npm.exclude": [
+    "**/dist",
+    "**/dist-*"
+  ],
+  "liveServer.settings.port": 5501
+}

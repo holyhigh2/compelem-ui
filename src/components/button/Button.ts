@@ -1,122 +1,142 @@
-import { classes, CompElem, html, prop, query, show, styles, tag, Template, watch } from "compelem";
+import { appearanceStyleSheet } from "@/css/styleSheets";
+import { classes, csscope, Csscope, h, ifElse, ifTrue, prop, query, show, state, styles, tag, Template, watch } from "compelem";
+import { isBlank, isEmpty } from "myfx";
+import { AppearanceElem } from "../../base/Appearance";
 import { ripples } from "../../directives/ripples/Ripples";
-import { getRGBColorValue } from "../../utils";
-import style from "./btn.scss";
+import { IActivatable } from "../../interfaces/IActivatable";
+import style from "./btn.scss?tmpl";
 /**
  * 按钮
  * @attrs
- *  appearance {string} 按钮外观。default 透明背景有边框; primary 无边框有背景；secondary 无背景有边框；link 文字按钮；subtle 默认仅显示文字
+ *  appearance {string} 按钮外观
  *  color {string} 按钮颜色，任意颜色及类型颜色包括：info/success/warning/error/text，默认info
  *  round {boolean} 是否圆角，默认true
  *  disabled {boolean} 是否禁用
- *  circle {boolean} 是否原型按钮，默认false
- *  pill {boolean} 是否药丸型按钮，默认false
- *  flat {boolean} 是否扁平化外观（仅appearance=primary时生效），默认true
  *  block {boolean} 是否块级元素，默认false
  *  loading {boolean} 是否加载状态
  *  active {boolean} 是否激活状态
  *  type {string} button类型，默认button
  *  width {string} 宽度，默认auto
  *  size {string} 尺寸可选 lg/md/sm，默认md
- *  innerStyle {string} 内部元素样式
+ *  iconSize {string} 同size，用于定义icon大小。为空时使用size
+ *  icon {string} 图标名称，支持 c-svg-xx
+ *  append-icon {string} 图标名称，支持 c-svg-xx
+ *  stacked {boolean} 堆叠模式，默认false
+ *  value {string} 用于在ButtonGroup中选中时的唯一值，如果未设置则使用 'button_'+按钮在group中的序号
+ *  circle {boolean} 是否圆形按钮，默认false
  *
  * @slots
  *  default() 链接内容
+ * @parts
+ *  root 根元素
+ *  icon 前置图标
+ *  text 按钮文本
  *
  * @author holyhigh2
  */
-@tag("l-button")
-export class Button extends CompElem {
+@tag("ce-button")
+export class Button extends AppearanceElem implements IActivatable {
   __primitiveWidth: string
   //////////////////////////////////// props
-  @prop size = "md"; //lg, md, sm
-  @prop({ type: String }) appearance = "primary"; //default, primary, secondary, link, subtle
-  @prop({ type: String }) color: string = '';
-  @prop round = true;
-  @prop disabled = false;
-  @prop circle = false;
-  @prop pill = false;
-  @prop flat = true;
+  @prop({ type: Boolean }) active: boolean = false;
   @prop block = false;
-  @prop active = false;
-  @prop({ type: Boolean }) loading = false;
+  @prop circle = false;
   @prop type = "button";
-  @prop width = "auto";
-  @prop innerStyle = "";
+  @prop icon = "";
+  @prop appendIcon = "";
+  @prop iconSize = '';
+  @prop({ type: [Boolean, String] }) ripple: boolean | string = true;
+  @prop stacked = false
+  @prop({ type: String }) value: string
+
+  //override 属性
+  appearance = 'flat'
+  hoverable = true
+  rounded = true
+
+  @state showLoading = false
 
   @query('slot')
   slotEl: HTMLSlotElement;
-  @query('l-icon')
-  iconEl: HTMLElement;
+  @query('ce-progress-circular')
+  progress: HTMLElement
 
   //////////////////////////////////// styles
-  static get styles(): Array<string | CSSStyleSheet> {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style];
   }
+  @csscope(Csscope.HOST)
+  static get host() {
+    return appearanceStyleSheet
+  }
   /////////////////////////////////// watches
-  @watch('block', { immediate: true })
-  watchBlock(v: boolean) {
-    this.style.display = v ? 'block' : 'inline-block'
-  }
-  @watch("color", { immediate: true })
-  watch(nv: any, ov: any, sourceName: string) {
-    if (!nv) return;
-
-    let c = nv;
-    switch (nv) {
-      case 'info': case 'success': case 'warning': case 'error': case 'text':
-        c = `var(--l-color-${nv})`
-        break;
-      default:
-        c = getRGBColorValue(c)
+  @watch('loading', { immediate: true })
+  function(nv: boolean) {
+    if (nv) {
+      setTimeout(() => {
+        if (this.progress) this.progress.style.display = 'inline-block'
+        this.showLoading = true
+      }, 20);
+    } else {
+      this.showLoading = false
+      setTimeout(() => {
+        if (this.progress) this.progress.style.display = 'none'
+      }, 500);
     }
-
-    this.style.setProperty('--color', c)
-  }
-  @watch("width", { immediate: true })
-  watchWidth(nv: any, ov: any, sourceName: string) {
-    this.style.width = this.width;
   }
   //////////////////////////////////// lifecycles
-
   render(): Template {
-    return html`
+    return h`
       <button
-        style="${styles(this.innerStyle)}"
-        part="button"
+        part="root"
         type="${this.type}"
-        ${ripples({ disabled: this.disabled || this.loading, color: 'red' })}
-        class="c-button ${classes({
-      __round: this.round,
-      __circle: this.circle,
-      __block: this.block,
-      __disabled: this.disabled,
-      __loading: this.loading,
-      __active: this.active,
-      __pill: this.pill,
-      __flat: this.flat,
-      ["__size-" + this.size]: true,
-      ["__appearance-" + (this.appearance || 'default')]: true,
-    })}"
+        class="ce-button"
+        ${classes({
+      "ce-button-stacked": this.stacked
+    })}
+        ${styles({ opacity: this.loading ? '0' : '1' })}
         ?disabled="${this.disabled}"
-        @click="${this.onClick}"
+        ${ripples({ disabled: this.disabled || !this.ripple, refer: () => this })}
       >
-        <slot @slotchange="${this.onSlotChange}"></slot>
-        <l-progress-circular class="loading" ${show(this.loading)} r="9" width="3" indeterminate="true"></l-progress-circular>
+        <slot name="prepend"></slot>
+        ${ifTrue(!isBlank(this.icon), () => h`
+          <ce-icon
+            part="icon"
+            svg="${this.icon}"
+            size="${this.iconSize || this.size}"
+          >
+          </ce-icon>
+        `)}
+        <span part="text" class="ce-button-text" ${show(!isEmpty(this.slots.default))} @blur>
+          <slot></slot>
+        </span>
+        
+        ${ifTrue(!isBlank(this.appendIcon), () => h`
+          <ce-icon
+            svg="${this.appendIcon}"
+            size="${this.iconSize || this.size}"
+          >
+          </ce-icon>
+        `)}
+        <slot name="append"></slot>
       </button>
+      <div class="is-loading" ${classes({ "ce-button-show": this.showLoading })}>
+        ${ifElse(isEmpty(this.slots.loader),
+      () => h`
+          <div class="ce-button-default">
+            <ce-progress-circular class="ce-button-progress" r="9" width="3" .indeterminate="${this.loading}"></ce-progress-circular>
+          </div>
+        `,
+      () => h`<slot name="loader"></slot>`)}
+      </div>
+      ${super.render()}
     `;
   }
 
-  //////////////////////////////////// methods
-  onSlotChange(e: Event) {
-    let slot = e.target as HTMLSlotElement;
-    this.__primitiveWidth = this.offsetWidth + "px";
+  beforeDestroyed(): void {
+    (this.renderRoot?.querySelector('ce-progress-circular') as any)?.destroy()
   }
-  onClick(e: MouseEvent) {
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    if (this.loading) return;
 
-    this.emit('click', {}, { event: e, bubbles: true })
-  }
+  //////////////////////////////////// methods
 }

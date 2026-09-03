@@ -1,136 +1,202 @@
-import { bind, classes, createRef, html, ifElse, ifTrue, prop, query, QueryCache, show, state, tag, Template, watch } from "compelem";
+import { classes, createRef, css, csscope, Csscope, emits, h, ifTrue, prop, query, QueryCache, show, state, tag, Template, watch } from "compelem";
 import { isBlank, isNil } from "myfx";
+
 import { Close } from "../../../icons/icons";
-import { Popup } from "../../overlays/popup/Popup";
-import { FormControl } from "../FormControl";
-import formStyle from "../style.scss";
-import style from "./style.scss";
+import { formStyleSheet } from "../styleSheets";
+import { BaseInput } from "./BaseInput";
+import style from "./input.scss?tmpl";
 /**
- * 输入框
- * @attrs
+ * 单行输入框，内容包括
+ * 前缀 控制区 后缀
+ *      消息
+ * @props
+ *  value {string|number} 默认值
  *  showPassword {boolean} 显示密码图标，默认false
- *  textarea {boolean} 显示为文本域，默认false
  *  autoselect {boolean} 获得焦点时自动选中文本，默认false
  *  clearable {boolean} 显示清除按钮，默认false
- *  inside {boolean} 是否取消插槽区背景色，默认false
+ *  inside {boolean} 前后插槽是否抱在控制区内，默认false
  *  type {string} 输入框原生类型，默认text
- *  datalist {array} 可选数据列表，选中时内容会被填充到输入框中
- *  label {string} 显示输入提示
- *  required {boolean} 当值为true且label属性不为空时，显示星号
+ *  label {string} 显示输入标签
+ *  required {boolean} 当label属性不为空时显示星号
+ *  placeholder {string} 占位符
+ *  active {boolean} 是否激活状态，激活状态会应用focus相同样式，通常用在嵌套组件中
+ *  error {boolean} 错误状态，会应用错误样式
+ *  errorMessage {string} 错误信息，错误状态时显示的信息，如果为空则显示hint
+ *  hint {string} 提示信息
+ *  hideHint {boolean} 隐藏提示框，默认false
+ *  maxlength {string|number} 最大输入字符数
+ *  minlength {string|number} 最小输入字符数
+ * @models
+ *  value 默认绑定属性，input事件触发变更
+ *  changeValue change事件绑定属性，change事件触发变更。如果绑定该属性，可通过value属性设置默认值
  * @slots
- *  leading
- *  trailing
+ *  prepend
+ *  append
  * @events
  *  focus
  *  blur
  *  input
+ *  clear
+ * @parts
+ *  input 输入元素
+ *  control formControl元素
+ *  close 关闭图标
  *
  * @author holyhigh2
  */
-@tag("l-input")
-export class Input extends FormControl {
+@emits('update:*', 'focus', 'blur', 'input', 'change', 'clear', 'keyup', 'keydown')
+@tag("ce-input")
+export class Input extends BaseInput {
   changeDisplay(stateName: string, enabled: boolean): void {
     throw new Error("Method not implemented.");
   }
   inputRef = createRef<HTMLInputElement>()
   //////////////////////////////////// props
+  hoverable = true
+  rounded = true
   @prop showPassword = false;
-  @prop textarea = false;
-  @prop clearable = false;
   @prop inside = false;
   @prop autoselect = false;
-  @prop required = false;
-  @prop label = '';
-  @prop({ type: Array }) datalist: Array<string>;
+  @prop active = false
   @prop type = 'text'
-  @prop({ type: [String, Number], sync: true })
-  get value() {
-    return this.__innerValue ?? ''
-  }
-  set value(v: any) {
-    this.__innerValue = v
-    if (isNil(v)) {
-      this.__innerValue = '';
-    }
-    this.emit('update:value', { value: this.__innerValue })
-  }
-  @state __innerValue: string = '';
+  @prop({ type: [String, Number], model: true }) value = ''
+  @prop({ type: [String, Number] }) changeValue = ''
 
+  @state({ prop: 'value' }) __innerValue: string = '';
   @state hasLeft = false;
   @state hasRight = false;
 
-  static get styles(): string[] {
-    return [formStyle, style];
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [formStyleSheet, style];
   }
 
-  @query('.--floating')
+  @csscope(Csscope.HOST)
+  static get hostCss() {
+    return css`
+      ce-input:focus-within {
+        outline: none;
+        border-color: rgb(var(--form-item-color));
+      }
+      ce-input[active],
+      ce-input:not([disabled], ce-input:focus-within):hover{
+        border-color: rgb(var(--form-item-color));
+      }
+      ce-input[appearance="underlined"]::after {
+        content: "";
+        border-bottom: 1px solid rgb(var(--form-item-color));
+        position: absolute;
+        width: 0%;
+        left: 50%;
+        bottom: 0;
+        transition:all .2s;
+      }
+      ce-input[appearance="underlined"]:focus-within::after{
+        width: 100%;
+        left: 0%;
+      }
+    `
+  }
+
+  get renderEl() {
+    return this.controlEl
+  }
+
+  @query('.ce-input-floating')
   floatingBox: HTMLElement;
-  @query('.--trailing')
+  @query('.ce-input-append')
   trailingBox: HTMLElement;
-  @query('l-popup', QueryCache.ONCE)
-  list: Popup;
+  @query('.ce-control', QueryCache.ONCE)
+  controlEl: HTMLElement
+  @query('input')
+  input!: HTMLInputElement
+  @query('.ce-message')
+  msgEl!: HTMLElement
 
   /////////////////////////////////// watches
-  @watch('value')
+  @watch(['value', 'changeValue'])
   watchValue(nv: any) {
-    this.inputRef.current.value = nv;
+    if (isNil(nv)) {
+      nv = ''
+    }
+    if (nv != this.__innerValue) {
+      this.__innerValue = nv
+    }
+  }
+  @watch('appearance')
+  watchAppearance(nv: string) {
+    this.bordered = nv == 'underlined' ? false : true
+  }
+  @watch(['hideHint', 'errorMessage'], { immediate: true })
+  watchMessage(nv: any) {
+    if (!this.hideHint && !isBlank(this.errorMessage)) {
+      this.nextTick(() => {
+        this.style.marginBottom = this.msgEl.offsetHeight + 'px'
+      })
+    } else {
+      this.style.marginBottom = '0px'
+    }
   }
   //////////////////////////////////// lifecycles
+  beforeMount(): void {
 
+  }
+  mounted(): void {
+    // if (this.__innerValue !== this.inputRef.current?.value) {
+    //   this.inputRef.current!.value = this.__innerValue
+    // }
+  }
   render(): Template {
-    return this.plaintext ? html`${this.__innerValue}` : html`
-      <div class="c-form-control c-form-input ${classes({
-      __disabled: this.disabled,
-      __inside: this.inside,
-      __clearable: this.clearable,
-      __rounded: this.round,
-      __readonly: this.readonly,
-      ["__appearance-" + this.appearance]: true,
-    })}">
-        ${ifElse(
-      this.textarea,
-      () => html`<textarea ${bind(this.attrs)}></textarea>`,
-      () => html`<span class="--leading ${classes({ '__not-empty': this.hasLeft })}" ><slot name="leading" @slotchange="${this.onPrependChange}"></slot></span>
-            ${ifTrue(!isBlank(this.label), () => html`
-            <label class="--label ${classes({ __empty: !!this.value })}">
-              <b style="color:red;vertical-align: text-top;margin-right: 3px;" ${show(this.required)}>*</b>${this.label}
-            </label>
-            `)}                
-            <input 
-            class="${classes({ '__round-left': !this.hasLeft, '__round-right': !this.hasRight })}" 
-            ref="${this.inputRef}" 
-            type="${this.showPassword ? 'password' : this.type}" 
-            value="${this.__innerValue}" 
-            @input="${this.onInput}"  @change="${this.onChange}" @focus="${this.onFocus}" @blur="${this.onBlur}"
-            ?readonly="${this.readonly}" ?disabled="${this.disabled}"
-            ${bind(this.attrs)} />
-            <span class="--floating ${classes({ '__not-empty': !!this.value })}">
-              <l-icon class="--close" .svg="${Close}" @click="${this.onClear}"></l-icon>
+    return h`
+      <div class="ce-input" ${classes({
+      "ce-input-error": this.error
+    })}>
+      ${ifTrue(!this.inside, () => h`
+        <span class="ce-input-prepend">
+          <slot name="prepend" @slotchange="${this.onPrependChange}"></slot>
+        </span>
+      `)}
+        
+        <div part="control" class="ce-form-control" ?activated="${this.active}" ?disabled="${this.disabled}">
+          ${ifTrue(this.inside, () => h`
+            <span class="ce-input-prepend-inside"><slot name="prepend" @slotchange="${this.onPrependChange}"></slot></span>
+          `)}
+          
+          ${ifTrue(!isBlank(this.label), () => h`
+          <label class="ce-input-label" ${classes({ "is-empty": !!this.__innerValue })}>
+            <b style="color:red;vertical-align:middle;margin-right: 3px;" ${show(this.required)}>*</b>${this.label}
+          </label>
+          `)}
+          <input part="input" autocomplete="one-time-code"
+          ${classes({ "is-round-left": !this.hasLeft, "is-round-right": !this.hasRight })} 
+          ref="${this.inputRef}" value="${this.__innerValue}"
+          placeholder="${this.placeholder}"
+          type="${this.showPassword ? 'password' : this.type}" 
+          @input="${this.onInput}"  @change="${this.onChange}" @focus="${this.onFocus}" @blur="${this.onBlur}" 
+          @keyup="${this.onKeyup}" @keydown="${this.onKeydown}"
+          ?readonly="${this.readonly}" ?disabled="${this.disabled}" maxlength="${this.maxlength}" minlength="${this.minlength}"/>
+          ${ifTrue(this.clearable, () => h`
+            <span part="close" class="ce-input-floating" ${classes({ "is-not-empty": !!this.__innerValue })}>
+              <ce-icon class="ce-input-close" .svg="${Close}" @mousedown.stop @click.prevent="${this.onClear}"></ce-icon>
             </span>
-            <span class="--trailing ${classes({ '__not-empty': this.hasRight })}" >
-              <slot name="trailing" @slotchange="${this.onAppendChange}"></slot>
-            </span>
-            `
-    )
-      }
-</div>
+          `)}
+          ${ifTrue(this.inside, () => h`
+            <span class="ce-input-append-inside"><slot name="append" @slotchange="${this.onAppendChange}"></slot></span>
+          `)}
+        </div>
+        ${ifTrue(!this.inside, () => h`
+            <span class="ce-input-append"><slot name="append" @slotchange="${this.onAppendChange}"></slot></span>
+          `)}
+        <div class="ce-message" ${show(!this.hideHint && !isBlank(this.errorMessage))}>
+          ${this.error ? (this.errorMessage ?? this.hint) : this.hint}
+        </div>
+      </div>
   `;
   }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() { }
   //////////////////////////////////// methods
   setValue(value: string) {
     this.value = value;
-    this.inputRef.current.value = value;
-  }
-  //保持焦点
-  onMousedown(e: Event) {
-    e.preventDefault();
-    this.inputRef.current.focus();
+    this.inputRef.current!.value = value;
   }
   onAppendChange(e: Event) {
     let t = e.target as HTMLSlotElement;
@@ -150,12 +216,24 @@ export class Input extends FormControl {
     this.clear()
     this.emit('clear', { value: '' })
   }
+  onKeyup(e: KeyboardEvent) {
+    e.stopPropagation();
+    let t = e.currentTarget as HTMLInputElement
+    let selectionText = t.value.substring(t.selectionStart || 0, t.selectionEnd || 0)
+    this.emit('keyup', { value: t.value, selectionText, selectionStart: t.selectionStart, selectionEnd: t.selectionEnd }, e)
+  }
+  onKeydown(e: KeyboardEvent) {
+    e.stopPropagation();
+    let t = e.currentTarget as HTMLInputElement
+    let selectionText = t.value.substring(t.selectionStart || 0, t.selectionEnd || 0)
+    this.emit('keydown', { value: t.value, selectionText, selectionStart: t.selectionStart, selectionEnd: t.selectionEnd }, e)
+  }
   onInput(e: InputEvent) {
     let input = e.target as HTMLInputElement
-    this.value = input.value
 
     e.stopPropagation();
-    this.emit('input', { value: input.value }, { event: e })
+    this.emit('input', { value: input.value }, e)
+    this.emit('update:value', { value: input.value })
   }
   onFocus(e: Event) {
     let input = e.target as HTMLInputElement
@@ -164,24 +242,36 @@ export class Input extends FormControl {
       input.select()
     }
 
-    this.emit('focus', { value: input.value }, { event: e })
+    this.emit('focus', { value: input.value }, e)
   }
   onBlur(e: Event) {
-    e.stopPropagation();
-    this.emit('blur', { value: this.inputRef.current.value }, { event: e })
+    e.stopImmediatePropagation();
+    e.preventDefault()
+    this.emit('blur', { value: this.inputRef.current?.value }, e)
+
   }
   onChange(e: Event) {
     e.stopPropagation();
-    this.emit('change', { value: this.inputRef.current.value }, { event: e })
+    this.__innerValue = this.inputRef.current?.value ?? '';
+    this.emit('change', { value: this.inputRef.current?.value }, e)
+    this.emit('update:changeValue', { value: this.inputRef.current?.value })
   }
-
   clear() {
-    this.value = '';
+    this.input.value = this.__innerValue = '';
+    this.emit('update:value', { value: this.__innerValue })
+    this.emit('update:changeValue', { value: this.__innerValue })
   }
   focus() {
-    this.inputRef.current.focus()
+    this.inputRef.current?.focus()
   }
   blur() {
-    this.inputRef.current.blur()
+    this.inputRef.current?.blur()
+  }
+  /**
+   * 用于外部框架调用
+   * @returns 
+   */
+  getInput() {
+    return this.inputRef.current?.value
   }
 }

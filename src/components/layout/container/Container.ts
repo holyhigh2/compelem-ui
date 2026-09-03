@@ -1,7 +1,5 @@
-import { CompElem, html, state, tag, Template } from "compelem";
+import { CompElem, css, csscope, Csscope, state, tag } from "compelem";
 import { some } from "myfx";
-import { Aside } from "./Aside";
-import style from "./container.scss";
 /**
  * 布局容器 - 容器
  *
@@ -11,36 +9,33 @@ import style from "./container.scss";
  *
  * @author holyhigh2
  */
-@tag('l-container')
-export class Container extends CompElem {
+@tag('ce-container')
+export class Container extends CompElem<null> {
   @state hasAside = false
 
-  static get styles(): string[] {
-    return [style];
+  @csscope(Csscope.HOST)
+  static get hostCss() {
+    return css`
+      ce-container{
+        display: flex;
+        flex: 1;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+      }
+    `;
   }
   /////////////////////////////////// watches
   //////////////////////////////////// lifecycles
-
-  render(): Template {
-    return html`<slot @slotchange="${this.onSlotChange}"></slot>`;
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() {
-  }
-  //////////////////////////////////// methods
-  onSlotChange(e: Event) {
-    let slot = e.currentTarget as HTMLSlotElement
-    let els = slot.assignedElements()
-
-    let hasAside = some(els, el => el instanceof Aside);
+  mounted(): void {
+    let els = this.children
+    let hasAside = some(els, el => el.tagName === 'CE-ASIDE');
     if (hasAside) {
       this.style.flexDirection = 'row'
     } else {
       this.style.flexDirection = 'column'
     }
   }
+
+  //////////////////////////////////// methods
 }

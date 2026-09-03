@@ -1,9 +1,10 @@
-import { isBlank, isDefined, isEmpty } from 'myfx';
+import { closest, isBlank, isDefined, isEmpty } from 'myfx';
 
-import { bind, classes, html, prop, query, state, styles, tag, Template, watch } from "compelem";
+import { Csscope, Template, bind, classes, csscope, emits, h, prop, query, show, state, styles, tag, watch } from 'compelem';
 import { FormControl } from '../FormControl';
-import formStyle from "../style.scss";
-import style from "./style.scss";
+import { formStyleSheet } from '../styleSheets';
+import { CheckboxGroup } from './CheckboxGroup';
+import style from "./style.scss?tmpl";
 /**
  * 复选框
  * @attrs
@@ -17,7 +18,8 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag("l-checkbox")
+@emits('change', 'update:checked')
+@tag("ce-checkbox")
 export class Checkbox extends FormControl {
   changeDisplay(stateName: string, enabled: boolean): void {
     throw new Error("Method not implemented.");
@@ -25,67 +27,104 @@ export class Checkbox extends FormControl {
   //////////////////////////////////// props
   @prop indeterminate = false;
   @prop({ type: String }) value = '';
-  @prop({ type: Boolean, sync: true }) checked = false;
+  @prop({ type: Boolean, model: true }) checked = false;
+
+  @state({ prop: 'checked' }) __checked = false
   @state label = '';
+  @state({ prop: 'indeterminate' }) __indeterminate = false
 
   @query('input')
   input: HTMLInputElement;
 
-  static get styles(): string[] {
-    return [formStyle, style];
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [formStyleSheet, style];
   }
   /////////////////////////////////// watches
   @watch('checked')
   function(nv: boolean) {
-    this.input.checked = this.checked
+    this.__checked = this.checked
+  }
+  @watch('__checked')
+  watchChecked(nv: boolean) {
+    this.input.checked = nv
   }
   //////////////////////////////////// lifecycles
-  constructor() {
-    super();
-  }
 
   render(): Template {
-    return this.plaintext ? html`${this.checked ? this.value : ''}` : html`
-      <label class="c-form-checkbox ${classes({
-      __disabled: this.disabled,
-      __indeterminate: this.indeterminate
-    })}" >
-        <div class="box-container">
-          <input type="checkbox" tabindex="0" name="${this.name}" ${bind(this.attrs)} value="${this.value || this.label}" ?checked="${this.checked}" @click="${this.onClick}" @change="${this.onChange}" ?readonly="${this.readonly}" ?disabled="${this.disabled}"/>
-          <div class="box c-form-control ${classes({ __disabled: this.disabled, __rounded: this.round, __readonly: this.readonly })}"></div>
+    return h`
+      <span ${show(this.plaintext)}>${this.checked ? this.value : ''}</span>
+      <label
+        class="ce-form-checkbox"
+        ${classes({
+      "is-disabled": this.disabled,
+      "is-indeterminate": this.__indeterminate
+    })}
+      >
+        <div class="ce-form-checkbox-container">
+          <input
+            type="checkbox"
+            @click.stop
+            tabindex="0"
+            name="${this.name}"
+            ${bind(this.attrs)}
+            value="${this.value || this.label}"
+            ?checked="${this.__checked}"
+            @change.stop="${this.onChange}"
+            ?readonly="${this.readonly}"
+            ?disabled="${this.disabled}"
+          />
+          <div
+            class="ce-form-checkbox-box ce-form-control"
+            ${classes({ "is-disabled": this.disabled, "is-rounded": this.round, "is-readonly": this.readonly })}
+          >
+          </div>
         </div>
-        <div class="label" style="${styles({
+        <div
+          class="ce-form-checkbox-label"
+          ${styles({
       'margin-left': isEmpty(this.slots.default) ? '0' : '0.5rem'
-    })}">
+    })}
+        >
           <slot></slot>
         </div>
-      </label>`;
+      </label>
+    `;
   }
-
+  #checkboxGroup: CheckboxGroup
   mounted(): void {
+    let checkboxGroup = closest<CheckboxGroup>(this, node => node instanceof CheckboxGroup, 'parentComponent')
+    if (checkboxGroup) {
+      checkboxGroup._addChild(this)
+      this.#checkboxGroup = checkboxGroup
+    }
+
     if (isBlank(this.value) && !isEmpty(this.slots.default)) {
       this.label = this.slots.default[0].textContent!
     }
   }
   //////////////////////////////////// methods
-  onClick(e: Event) {
-    if (this.readonly)
-      e.preventDefault();
-  }
   onChange(e: Event) {
     let t = e.target as HTMLInputElement
 
-    this.checked = t.checked
-    this.emit('change', { value: t.value, checked: t.checked }, { event: e })
+    this.__checked = this.checked = t.checked
+    this.emit('change', { value: t.value, checked: t.checked }, e)
   }
   toggleCheck(checked?: boolean) {
-    if (this.checked === checked) return;
+    if (this.__checked === checked) return;
 
     if (isDefined(checked)) {
-      this.checked = checked!
+      this.__checked = this.checked = checked!
     } else {
-      this.checked = !this.checked
+      this.__checked = this.checked = !this.__checked
     }
-    this.emit('change', { value: this.input.value, checked: this.checked })
+    this.emit('change', { value: this.input.value, checked: this.__checked })
+    if (this.#checkboxGroup) this.#checkboxGroup.onCheckChange(this.input.value, this.checked)
+  }
+  setIndeterminate(value: boolean) {
+    this.__indeterminate = value
+  }
+  isChecked() {
+    return this.__checked
   }
 }

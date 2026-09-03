@@ -1,137 +1,221 @@
+@use "./component.scss";
+
 /********************
 * base styles
 * @author holyhigh
 *********************/
+// ── 颜色双轨制设计 ──────────────────────────────────────────────
+// palette 源头只存「空格分隔的 RGB 通道值」，由 @each 派生双轨变量：
+//   --ce-color-<name>-rgb  通道值，供透明叠加：rgb(var(--ce-color-x-rgb) / <alpha>)
+//   --ce-color-<name>      完整色（rgb(...)），供直接使用：color: var(--ce-color-x)；
+//                          JS getComputedStyle 读到的也是标准颜色字符串，可直接给 canvas/SVG
+// 语义别名（primary/text/border...）同样双轨跟随，链条只定义一次。
+$ce-palette: (
+  "blue-50": 239 246 255,
+  "blue-100": 219 234 254,
+  "blue-200": 191 219 254,
+  "blue-300": 147 197 253,
+  "blue-400": 96 165 250,
+  "blue-500": 59 130 246,
+  "blue-600": 37 99 235,
+  "blue-700": 29 78 216,
+  "blue-800": 30 64 175,
+  "red-50": 254 242 242,
+  "red-100": 254 226 226,
+  "red-200": 254 202 202,
+  "red-300": 252 165 165,
+  "red-400": 248 113 113,
+  "red-500": 239 68 68,
+  "red-600": 220 38 38,
+  "red-700": 185 28 28,
+  "red-800": 153 27 27,
+  "red-900": 127 29 29,
+  "yellow-50": 254 252 232,
+  "yellow-100": 254 249 195,
+  "yellow-200": 254 240 138,
+  "yellow-300": 253 224 71,
+  "yellow-400": 250 204 21,
+  "yellow-500": 234 179 8,
+  "yellow-600": 202 138 4,
+  "yellow-700": 161 98 7,
+  "yellow-800": 133 77 14,
+  "yellow-900": 113 63 18,
+  "green-50": 240 253 244,
+  "green-100": 220 252 231,
+  "green-200": 187 247 208,
+  "green-300": 134 239 172,
+  "green-400": 74 222 128,
+  "green-500": 34 197 94,
+  "green-600": 22 163 74,
+  "green-700": 21 128 61,
+  "green-800": 22 101 52,
+  "green-900": 20 83 45,
+  "gray-50": 249 250 251,
+  "gray-100": 243 244 246,
+  "gray-200": 229 231 235,
+  "gray-300": 209 213 219,
+  "gray-400": 156 163 175,
+  "gray-500": 107 114 128,
+  "gray-600": 75 85 99,
+  "gray-700": 55 65 81,
+  "gray-800": 31 41 55,
+  "gray-900": 17 24 39,
+  "gray-950": 3 7 18,
+  "sky-50": 240 249 255,
+  "sky-100": 224 242 254,
+  "sky-200": 186 230 253,
+  "sky-300": 125 211 252,
+  "sky-400": 56 189 248,
+  "sky-500": 14 165 233,
+  "info": 33 150 243,
+  "success": 76 175 80,
+  "warning": 255 179 0,
+  "error": 244 67 54,
+  "background": 255 255 255,
+  "success-light": 237 250 225,
+  "warning-light": 255 249 230
+);
+
 :root {
-  --l-index-base: 1000;
+  --ce-index-base: 1000;
 
-  --l-color-blue-50: 239 246 255;
-  --l-color-blue-100: 219 234 254;
-  --l-color-blue-200: 191 219 254;
-  --l-color-blue-300: 147 197 253;
-  --l-color-blue-400: 96 165 250;
-  --l-color-blue-500: 59 130 246;
-  --l-color-blue-600: 37 99 235;
-  --l-color-blue-700: 29 78 216;
-  --l-color-blue-800: 30 64 175;
+  // ① 源头派生：通道值 + 完整色双轨
+  @each $name, $rgb in $ce-palette {
+    --ce-color-#{$name}-rgb: #{$rgb};
+    --ce-color-#{$name}: rgb(var(--ce-color-#{$name}-rgb));
+  }
 
-  --l-color-red-50: 254 242 242;
-  --l-color-red-100: 254 226 226;
-  --l-color-red-200: 254 202 202;
-  --l-color-red-300: 252 165 165;
-  --l-color-red-400: 248 113 113;
-  --l-color-red-500: 239 68 68;
-  --l-color-red-600: 220 38 38;
-  --l-color-red-700: 185 28 28;
-  --l-color-red-800: 153 27 27;
-  --l-color-red-900: 127 29 29;
-
-  --l-color-yellow-50: 254 252 232;
-  --l-color-yellow-100: 254 249 195;
-  --l-color-yellow-200: 254 240 138;
-  --l-color-yellow-300: 253 224 71;
-  --l-color-yellow-400: 250 204 21;
-  --l-color-yellow-500: 234 179 8;
-  --l-color-yellow-600: 202 138 4;
-  --l-color-yellow-700: 161 98 7;
-  --l-color-yellow-800: 133 77 14;
-  --l-color-yellow-900: 113 63 18;
-
-  --l-color-green-50: 240 253 244;
-  --l-color-green-100: 220 252 231;
-  --l-color-green-200: 187 247 208;
-  --l-color-green-300: 134 239 172;
-  --l-color-green-400: 74 222 128;
-  --l-color-green-500: 34 197 94;
-  --l-color-green-600: 22 163 74;
-  --l-color-green-700: 21 128 61;
-  --l-color-green-800: 22 101 52;
-  --l-color-green-900: 20 83 45;
-
-  --l-color-gray-50: 249 250 251;
-  --l-color-gray-100: 243 244 246;
-  --l-color-gray-200: 229 231 235;
-  --l-color-gray-300: 209 213 219;
-  --l-color-gray-400: 156 163 175;
-  --l-color-gray-500: 107 114 128;
-  --l-color-gray-600: 75 85 99;
-  --l-color-gray-700: 55 65 81;
-  --l-color-gray-800: 31 41 55;
-  --l-color-gray-900: 17 24 39;
-  --l-color-gray-950: 3 7 18;
-
-  --l-color-sky-50: 240 249 255;
-  --l-color-sky-100: 224 242 254;
-  --l-color-sky-200: 186 230 253;
-  --l-color-sky-300: 125 211 252;
-  --l-color-sky-400: 56 189 248;
-  --l-color-sky-500: 14 165 233;
-
-  --l-color-primary: var(--l-color-info);
-
-  --l-color-text: var(--l-color-gray-700);
-  --l-color-text-header: var(--l-color-gray-900);
-  --l-color-text-secondary: var(--l-color-gray-500);
-  --l-color-text-active: var(--l-color-sky-500);
-  --l-color-text-desc: var(--l-color-gray-400);
-
-  --l-color-info: 33 150 243;
-  --l-color-success: 76 175 80;
-  --l-color-warning: 255 179 0;
-  --l-color-error: 244 67 54;
-  --l-color-disabled: var(--l-color-gray-50);
-  --l-color-placeholder: var(--l-color-gray-400);
-
-  --l-color-border: var(--l-color-gray-300);
-  --l-color-border-secondary: var(--l-color-gray-200);
-  --l-color-border-active: var(--l-color-blue-400);
-
-  --l-color-info-light: var(--l-color-blue-50);
-  --l-color-success-light: #edfae1;
-  --l-color-warning-light: #fff9e6;
-  --l-color-error-light: var(--l-color-red-50);
-
-  --l-color-background: #fff;
+  // ② 语义别名双轨（完整色链 + 通道值链）
+  --ce-color-primary: var(--ce-color-info);
+  --ce-color-primary-rgb: var(--ce-color-info-rgb);
+  --ce-color-text: var(--ce-color-gray-700);
+  --ce-color-text-rgb: var(--ce-color-gray-700-rgb);
+  --ce-color-text-header: var(--ce-color-gray-900);
+  --ce-color-text-header-rgb: var(--ce-color-gray-900-rgb);
+  --ce-color-text-secondary: var(--ce-color-gray-600);
+  --ce-color-text-secondary-rgb: var(--ce-color-gray-600-rgb);
+  --ce-color-text-active: var(--ce-color-sky-500);
+  --ce-color-text-active-rgb: var(--ce-color-sky-500-rgb);
+  --ce-color-text-desc: var(--ce-color-gray-400);
+  --ce-color-text-desc-rgb: var(--ce-color-gray-400-rgb);
+  --ce-color-disabled: var(--ce-color-gray-50);
+  --ce-color-disabled-rgb: var(--ce-color-gray-50-rgb);
+  --ce-color-placeholder: var(--ce-color-gray-400);
+  --ce-color-placeholder-rgb: var(--ce-color-gray-400-rgb);
+  --ce-color-border: var(--ce-color-gray-300);
+  --ce-color-border-rgb: var(--ce-color-gray-300-rgb);
+  --ce-color-border-secondary: var(--ce-color-gray-200);
+  --ce-color-border-secondary-rgb: var(--ce-color-gray-200-rgb);
+  --ce-color-border-tertiary: var(--ce-color-gray-100);
+  --ce-color-border-tertiary-rgb: var(--ce-color-gray-100-rgb);
+  --ce-color-border-active: var(--ce-color-blue-400);
+  --ce-color-border-active-rgb: var(--ce-color-blue-400-rgb);
+  --ce-color-info-light: var(--ce-color-blue-50);
+  --ce-color-info-light-rgb: var(--ce-color-blue-50-rgb);
+  --ce-color-error-light: var(--ce-color-red-50);
+  --ce-color-error-light-rgb: var(--ce-color-red-50-rgb);
 
   //border
-  --l-border-radius: 0.2rem;
-  --l-border-radius-md: 0.35rem;
-  --l-border-radius-lg: 0.5rem;
-  --l-border-radius-full: 9999px;
+  --ce-round-xs: 0.0625rem;
+  --ce-round-sm: 0.2rem;
+  --ce-round-md: 0.35rem;
+  --ce-round-lg: 0.5rem;
+  --ce-round-xl: 0.75rem;
+  --ce-round-pill: 9999px;
+  --ce-round-circle: 50%;
+
+  --ce-border-sm: 1px;
+  --ce-border-md: 2px;
+  --ce-border-lg: 4px;
+  --ce-border-xl: 8px;
 
   //text
-  --l-font-xs: 0.75rem;
-  --l-font-sm: 0.875rem;
-  --l-font-md: 1rem;
-  --l-font-lg: 1.125rem;
-  --l-lineh-xs: 1rem;
-  --l-lineh-sm: 1.25rem;
-  --l-lineh-md: 1.5rem;
-  --l-lineh-lg: 1.75rem;
+  //fontsize
+  // 0.75rem xs 输入框/按钮/
+  // 0.875 sm/md 菜单项/表单内容
+  --ce-font-nav: 0.8125rem;
+  --ce-font-xxs: 0.5rem;
+  --ce-font-xs: 0.75rem;
+  --ce-font-sm: 0.875rem;
+  --ce-font-md: 1rem;
+  --ce-font-lg: 1.125rem;
+  --ce-font-xl: 1.25rem;
+  --ce-lineh-xs: 1;
+  --ce-lineh-sm: 1.25;
+  --ce-lineh-md: 1.5;
+  --ce-lineh-lg: 1.75;
+
+  --ce-font-xxs-em: 0.5em;
+  --ce-font-xs-em: 0.75em;
+  --ce-font-sm-em: 0.875em;
+  --ce-font-md-em: 1em;
+  --ce-font-lg-em: 1.125em;
+  --ce-font-xl-em: 1.25em;
+  --ce-lineh-xs-em: 1em;
+  --ce-lineh-sm-em: 1.25em;
+  --ce-lineh-md-em: 1.5em;
+  --ce-lineh-lg-em: 1.75em;
 
   //shadow
-  --l-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --l-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1),
-    0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --l-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --ce-shadow-color: 0 0 0;
+  /**
+  * ambient
+  * penumbra
+  * umbra 
+  */
+  --ce-shadow-xs: rgb(var(--ce-shadow-color, 0 0 0) / 0.08) 0px 0px 0px 1px,
+  rgb(var(--ce-shadow-color, 0 0 0) / 0.08) 0px 2px 10px 0px,
+  rgb(var(--ce-shadow-color, 0 0 0) / 0.08) 0px 1px 4px -2px;
+  --ce-shadow-sm: 0 2px 4px -2px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  0 4px 5px 0 rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
+  0 1px 10px 0 rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
+  --ce-shadow-md: 0 5px 5px -3px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  0 8px 10px 1px rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
+  0 3px 14px 2px rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
+  --ce-shadow-lg: 0 8px 10px -5px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  0 16px 24px 2px rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
+  0 6px 30px 5px rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
+  --ce-shadow-xl: 0 11px 15px -7px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  0 24px 38px 3px rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
+  0 9px 46px 8px rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
 
-  --l-field-label-scale: 0.75em;
+  --ce-shadow-pane: 0 0 0 1px rgba(255, 255, 255, 0.08),
+  0 2px 2px rgba(0, 0, 0, 0.03),
+  0 4px 4px rgba(0, 0, 0, 0.04),
+  0 10px 8px rgba(0, 0, 0, 0.05),
+  0 15px 15px rgba(0, 0, 0, 0.06),
+  0 30px 30px rgba(0, 0, 0, 0.07),
+  0 70px 65px rgba(0, 0, 0, 0.09);
+
+  --ce-field-label-scale: 0.75em;
 
   //margin
-  --l-margin-xs: 0.25rem;
-  --l-margin-sm: 0.5rem;
-  --l-margin-md: 0.75rem;
-  --l-margin-lg: 1rem;
-
   //paddings
   // 0.375 菜单项（下拉/导航/弹出/list/输入框md（需要-1px）/树节点）上下边距
   // 0.125 小型卡片内边距，如弹出菜单项间距及容器间距
   // 1 左侧导航面板内边距
+  --ce-spacing-xxs: 0.125rem;
+  --ce-spacing-xs: 0.25rem;
+  --ce-spacing-sm: 0.375rem;
+  --ce-spacing-md: 0.5rem;
+  --ce-spacing-lg: 0.75rem;
+  --ce-spacing-xl: 1rem;
 
-  //fontsize
-  // 0.75rem xs 输入框/按钮/
-  // 0.875 sm/md 菜单项/表单内容
+  //透明度（原 --appearance-*，收编至统一前缀）
+  --ce-opacity-underlay: 0.1;
+  --ce-opacity-overlay: 0.1;
+  --ce-opacity-hover: 0.05;
 
-  --l-spacing-slim: 1rem;
+  //zindex
+  --ce-z-index-notice: 999;
+  --ce-z-index-overlay: 2000;
+
+  //ui（原 --uii-*，收编至统一前缀）
+  --ce-ui-handle-width: 3px;
+
+  // 鼠标浮动显示底层背景色时可用
+  // ._appearance__underlay {
+  //   opacity: 0.035;
+  //   background-color: currentColor;
+  // }
 }

@@ -1,0 +1,129 @@
+.ce-toast-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--ce-z-index-notice);
+  .ce-toast-con {
+    position: fixed;
+
+    &.ce-toast-top-left {
+      left: 0;
+      top: 0;
+
+      ce-message,
+      ce-notification {
+        margin-top: 0;
+        margin-left: 0;
+        transform: translateY(-50%);
+
+        &.ce-toast-toasted {
+          margin-top: var(--ce-spacing-md);
+          margin-left: var(--ce-spacing-md);
+          transform: translateY(0);
+        }
+      }
+    }
+
+    &.ce-toast-top-center {
+      left: 50%;
+      top: 0;
+
+      ce-message,
+      ce-notification {
+        margin-top: 0;
+        transform: translateX(-50%) translateY(-50%);
+
+        &.ce-toast-toasted {
+          margin-top: var(--ce-spacing-md);
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+    }
+
+    &.ce-toast-top-right {
+      right: 0;
+      top: 0;
+
+      ce-message,
+      ce-notification {
+        margin-top: 0;
+        margin-right: 0;
+        transform: translateY(-50%);
+
+        &.ce-toast-toasted {
+          margin-top: var(--ce-spacing-md);
+          margin-right: var(--ce-spacing-md);
+          transform: translateY(0);
+        }
+      }
+    }
+
+    &.ce-toast-bottom-left {
+      left: 0;
+      bottom: 0;
+
+      ce-message,
+      ce-notification {
+        margin-bottom: 0;
+        margin-left: 0;
+        transform: translateY(50%);
+
+        &.ce-toast-toasted {
+          margin-bottom: var(--ce-spacing-md);
+          margin-left: var(--ce-spacing-md);
+          transform: translateY(0);
+        }
+      }
+    }
+
+    &.ce-toast-bottom-center {
+      left: 50%;
+      bottom: 0;
+
+      ce-message,
+      ce-notification {
+        margin-bottom: 0;
+        transform: translateX(-50%) translateY(50%);
+
+        &.ce-toast-toasted {
+          margin-bottom: var(--ce-spacing-md);
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+    }
+
+    &.ce-toast-bottom-right {
+      right: 0;
+      bottom: 0;
+
+      ce-message,
+      ce-notification {
+        margin-bottom: 0;
+        margin-right: 0;
+        transform: translateY(50%);
+
+        &.ce-toast-toasted {
+          margin-bottom: var(--ce-spacing-md);
+          margin-right: var(--ce-spacing-md);
+          transform: translateY(0);
+        }
+      }
+    }
+
+    ce-message,
+    ce-notification {
+      display: block;
+      opacity: 0;
+      position: relative;
+      transition:
+        opacity 0.2s ease-out,
+        transform 0.2s ease-out,
+        margin 0.2s ease-out;
+
+      &.ce-toast-toasted {
+        opacity: 1;
+        z-index: 9999;
+      }
+    }
+  }
+}

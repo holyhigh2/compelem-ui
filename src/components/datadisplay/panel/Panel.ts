@@ -1,76 +1,101 @@
-import { classes, CompElem, computed, html, ifElse, ifTrue, prop, show, state, styles, tag, Template } from "compelem";
+import { classes, csscope, Csscope, h, ifElse, ifTrue, prop, state, tag, Template } from "compelem";
 import { isEmpty } from "myfx";
+import { AppearanceElem } from "../../../base/Appearance";
 import { ChevronDown } from "../../../icons/icons";
-import style from "./style.scss";
+import style from "./style.scss?tmpl";
 /**
  * 面板组件
  * @attrs
- *  header {string} 标题信息
- *  shadow {string} 显示阴影，always / hover / never，默认 always
+ *  title {string} 标题信息
  *  collapsible {boolean} 是否可折叠，默认false
- *  body-style {string|object} 面板body样式
- *  defaultExpanded {boolean} 默认展开，默认true
- *  border {boolean} 是否边框，默认false
+ *  bodyStyle {string|object} 面板body样式
+ *  defaultExpanded {boolean} 是否默认展开，collapsible为false时无效。默认true
+ *  bordered {boolean} 是否边框，默认false
  *  closable {boolean} 是否显示关闭按钮，默认false
+ *  flush {boolean} title内容齐平外框
  * @events
  *  close 点击关闭按钮时触发
- *
+ * @parts
+ *  header 顶部区域
+ *  body 内容区域
+ *  card 所有卡片元素
  * @slots
- *  default() 面板内容
- *  header 头部内容
+ *  - 内容区域
+ *  title 标题区域
  *
  * @author holyhigh2
  */
-@tag('l-panel')
-export class Panel extends CompElem {
+@tag('ce-panel')
+export class Panel extends AppearanceElem {
 
   //////////////////////////////////// props
-  @prop header: string = '';
-  @prop shadow = 'always';
-  @prop border = false;
+  @prop title: string = '';
   @prop collapsible = false;
   @prop defaultExpanded = true;
   @prop({ type: [String, Object] }) bodyStyle = '';
+  @prop flush = false
 
   @state({ prop: 'defaultExpanded' }) expanded = false;
 
-  static get styles(): string[] {
-    return [style];
-  }
+  shadowed = true
 
-  @computed
-  get hasHeader() {
-    return !isEmpty(this.slots.header) || !!this.header
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [style];
   }
   /////////////////////////////////// watches
   //////////////////////////////////// lifecycles
   render(): Template {
-    return html`
-    <div class="c-panel ${classes({
+    return h`
+      <div
+        class="ce-panel"
+        ${classes({
       ['__shadow-' + this.shadow]: this.shadow !== 'none',
-      __collapsible: this.collapsible,
-      __hidden: !this.expanded
-    })}">
-      <header class="--header" ?visible="${this.hasHeader}" ${show(this.hasHeader)}>
-        ${ifElse(this.collapsible,
-      () => html`<l-button appearance="subtle" block width="100%" @click="${this.toggleExpanded}"><h3>
-        <slot name="header" .expanded="${this.expanded}"></slot>
-        ${ifTrue(isEmpty(this.slots.header), () => html`<span style="flex:1;text-align: left;">${this.header}</span> <l-icon class="--arrow" .svg="${ChevronDown}"></l-icon>`)} 
-      </h3></l-button>`,
-      () => html`<h3>${this.header} <slot name="header" .expanded="${this.expanded}"></slot></h3>`
+      "ce-panel-collapsible": this.collapsible,
+      "ce-panel-contracted": !this.expanded,
+      "ce-panel-flush": this.flush
+    })}
+      >
+        <header part="header" class="ce-panel-header">
+          ${ifElse(this.collapsible,
+      () => h`
+              <ce-button
+                appearance="subtle"
+                .ripple="${false}"
+                .hoverable="${!this.readonly}"
+                ?readonly="${this.readonly}"
+                block
+                width="100%"
+                @click="${this.toggleExpanded}"
+              >
+                <h3>
+                  <slot name="title"></slot>
+                  ${ifTrue(isEmpty(this.slots.title), () => h`
+                    <span style="flex:1;text-align: left;">${this.title}</span>
+                    ${ifTrue(!this.readonly, () => h`<ce-icon class="ce-panel-arrow" .svg="${ChevronDown}"></ce-icon>`)}
+                  `)}
+                </h3>
+              </ce-button>
+            `,
+      () => h`
+              <h3>
+                ${this.title} <slot name="title"></slot>
+              </h3>
+            `
     )}
-      </header>
-      <main>
-        <div class="--body" style="${styles(this.bodyStyle)}">
-          <slot .expanded="${this.expanded}"></slot>
-        </div>
-      </main>
-    </div>
+        </header>
+        <main part="body">
+          <div class="ce-panel-body">
+            <slot></slot>
+          </div>
+        </main>
+      </div>
     `;
   }
 
   //////////////////////////////////// methods
   toggleExpanded() {
+    if (this.readonly) return
     this.expanded = !this.expanded
   }
 }

@@ -1,0 +1,47 @@
+:host {
+  pointer-events: none;
+  resize: var(--portal-widget-resizable);
+}
+.ce-portal-editor-widget {
+  height: inherit;
+  .ce-portal-editor-content {
+    pointer-events: auto;
+    height: 100%;
+    &.is-editable {
+      pointer-events: none;
+      * {
+        pointer-events: none;
+      }
+    }
+  }
+
+  .ce-portal-editor-resize {
+    pointer-events: auto;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 10px;
+    height: 10px;
+  }
+  .ce-portal-editor-close {
+    pointer-events: auto;
+    position: absolute;
+    right: 0.5rem;
+    top: 0.5rem;
+  }
+  .ce-portal-editor-config {
+    pointer-events: auto;
+    position: absolute;
+    right: 3.5rem;
+    top: 0.5rem;
+  }
+}
+
+//uii --------------------
+.uii-draggable-handle {
+  pointer-events: auto;
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+  cursor: move;
+}

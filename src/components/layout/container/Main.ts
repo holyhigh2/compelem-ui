@@ -1,37 +1,25 @@
-import { CompElem, html, tag, Template } from "compelem";
+import { CompElem, css, csscope, Csscope, tag } from "compelem";
 /**
  * 布局容器 - 主体内容
  *
  * @author holyhigh2
  */
-@tag('l-main')
-export class Main extends CompElem {
+@tag('ce-main')
+export class Main extends CompElem<null> {
 
-  static get styles(): string[] {
-    return [`
-      :host {
+  @csscope(Csscope.HOST)
+  static get hostCss() {
+    return css`
+      ce-main{
         display: block;
         flex: 1;
         overflow: hidden;
       }
-    `];
+    `;
   }
   /////////////////////////////////// watches
   //////////////////////////////////// lifecycles
-  constructor() {
-    super();
-  }
 
-  render(): Template {
-    return html`<slot></slot>`;
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() {
-  }
   //////////////////////////////////// methods
 
 }

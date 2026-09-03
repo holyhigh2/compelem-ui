@@ -1,10 +1,10 @@
-import { classes, computed, forEach, html, ifTrue, prop, query, queryAll, state, styles, tag, Template, watch } from "compelem";
+import { classes, computed, csscope, Csscope, emits, forEach, h, ifTrue, prop, query, queryAll, state, styles, tag, Template, watch } from "compelem";
 import { find, flatMap, isEmpty, map, range, toFixed } from "myfx";
 import { tooltip } from "../../../directives/tooltip/Tooltip";
-import { getOpacityColor } from "../../../utils";
+import { getOpacityColor } from "../../../utils/color";
 import { FormControl } from "../FormControl";
-import formStyle from "../style.scss";
-import style from "./style.scss";
+import formStyle from "../style.scss?tmpl";
+import style from "./style.scss?tmpl";
 /**
  * 滑杆组件
  * @attrs
@@ -27,8 +27,8 @@ import style from "./style.scss";
  *  
  *  其他FormControl属性
  * @slots
- *  leading
- *  trailing
+ *  prepend
+ *  append
  *  thumb
  * 
  * @events
@@ -36,7 +36,8 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag("l-slider")
+@emits('update:value')
+@tag("ce-slider")
 export class Slider extends FormControl {
   changeDisplay(stateName: string, enabled: boolean): void {
     throw new Error("Method not implemented.");
@@ -53,7 +54,7 @@ export class Slider extends FormControl {
   @prop min = 0;
   @prop max = 100;
   @prop({
-    type: Number, isValid(value: any, props: Record<string, any>) {
+    type: Number, isValid(value: any, props?: Record<string, any>) {
       return value >= 0;
     }
   }) step = 0;
@@ -69,15 +70,16 @@ export class Slider extends FormControl {
   private lastLeft = 0;
   private interval = 0;
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [formStyle, style];
   }
 
-  @query('.track')
+  @query('.ce-form-slider-track')
   trackEl: HTMLElement
-  @query('.track-filled')
+  @query('.ce-form-slider-track-filled')
   trackFilledEl: HTMLElement
-  @query('.thumb')
+  @query('.ce-form-slider-thumb')
   thumbEl: HTMLElement
   @queryAll('.track .tick')
   allTicks: HTMLElement[]
@@ -121,75 +123,107 @@ export class Slider extends FormControl {
 
   //////////////////////////////////// lifecycles
   render(): Template {
-    return this.plaintext ? html`${this.checked ? this.activeText : this.inactiveText}` : html`
-      <div class="c-form-slider ${classes({
-      __disabled: this.disabled,
-      __vertical: this.vertical
-    })}" style="${styles({
+    return this.plaintext ? h`${this.value}` : h`
+      <div
+        class="ce-form-slider"
+        ${classes({
+      "is-disabled": this.disabled,
+      "is-vertical": this.vertical
+    })}
+        ${styles({
       color: this.color,
       cursor: this.hideThumb ? '' : 'pointer'
-    })}">
-        <div class="leading" style="${styles({
-      'margin-inline-end': this.slots.leading ? '1rem' : ''
-    })}">
-          <slot name="leading"></slot>
+    })}
+      >
+        <div
+          class="ce-form-slider-prepend"
+          ${styles({
+      'margin-inline-end': this.slots.prepend ? '1rem' : ''
+    })}
+        >
+          <slot name="prepend"></slot>
         </div>
-        <div class="control" @mousedown="${this.onMousedown}">
-          <div class="track" style="${styles({
+        <div class="ce-form-slider-control" @mousedown="${this.onMousedown}">
+          <div
+            class="ce-form-slider-track"
+            ${styles({
       height: this.trackSize + 'px',
-      'border-radius': this.round ? 'var(--l-border-radius-lg)' : '',
+      'border-radius': this.round ? 'var(--ce-round-lg)' : '',
       'background-color': getOpacityColor(this.trackColor, .5),
-    })}">
-            <div class="track-filled" style="${styles({
+    })}
+          >
+            <div
+              class="ce-form-slider-track-filled"
+              ${styles({
       left: this.filled + 'px',
       'background': this.trackFilledColor,
       'transition': this.hideThumb ? 'all .3s' : '',
-      'border-radius': this.round ? 'var(--l-border-radius-lg)' : ''
-    })}">
+      'border-radius': this.round ? 'var(--ce-round-lg)' : ''
+    })}
+            >
             </div>
-            ${forEach(this.showTicks ? this.segments : [], (p, i) => html`
-              <div key="${i}" class="tick" data-perc="${p}" style="${styles({
+            ${forEach(this.showTicks ? this.segments : [], (p, i) => i, (p, i) => h`
+              <div
+                class="ce-form-slider-tick"
+                data-perc="${p}"
+                ${styles({
       left: p + '%',
       width: this.tickSize + 'px',
       height: this.tickSize + 'px'
-    })}"></div>
+    })}
+              >
+              </div>
             `)}
           </div>
-          <div ${tooltip({ content: this.__innerValue + '', placement: 'top', alwaysShow: this.tooltip == 'always', disabled: !this.tooltip || this.disabled })} class="thumb" style="${styles({
+          <div
+            class="ce-form-slider-thumb"
+            ${tooltip({ content: this.__innerValue + '', placement: 'top', alwaysShow: this.tooltip == 'always', disabled: !this.tooltip || this.disabled, dragFollow: true })}
+            ${styles({
       'min-width': this.thumbSize + 'px',
       'min-height': this.thumbSize + 'px',
       display: this.hideThumb ? 'none' : '',
       'background-color': this.thumbColor,
       'border-radius': parseFloat(this.thumbRadius + '') == this.thumbRadius ? this.thumbRadius + 'px' : this.thumbRadius + ''
-    })}" >
-          <slot name="thumb"></slot>
+    })}
+          >
+            <slot name="thumb"></slot>
           </div>
         </div>
-        <div class="trailing" style="${styles({
-      'margin-inline-start': this.slots.trailing ? '1rem' : ''
-    })}">
-          <slot name="trailing"></slot>
+        <div
+          class="ce-form-slider-append"
+          ${styles({
+      'margin-inline-start': this.slots.append ? '1rem' : ''
+    })}
+        >
+          <slot name="append"></slot>
         </div>
-        <div class="bottom-tip">
-        ${forEach(!isEmpty(this.marks) ? this.markLabels : [], ([p, label], i) => html`
-          <div key="${i}" class="mark" data-perc="${p}" style="${styles({
+        <div class="ce-form-slider-bottom-tip">
+          ${forEach(!isEmpty(this.marks) ? this.markLabels : [], (x, i) => i, ([p, label], i) => h`
+            <div
+              class="ce-form-slider-mark"
+              data-perc="${p}"
+              ${styles({
       left: p + '%',
-    })}">${label}</div>
-        `)}
-        ${ifTrue(!isEmpty(this.marks), () => html`<div>&nbsp;</div>`)}
+    })}
+            >
+              ${label}
+            </div>
+          `)}
+          ${ifTrue(!isEmpty(this.marks), () => h`<div>&nbsp;</div>`)}
         </div>
-      </div>`;
+      </div>
+    `;
   }
 
   //////////////////////////////////// methods
 
   onMousedown(e: MouseEvent) {
-    if (this.hideThumb) return;
+    if (this.hideThumb || this.disabled) return;
     let thisRect = this.trackEl.getBoundingClientRect()
     let that = this;
     let left = e.clientX - thisRect.x
     that._moveThumbH(left)
-    this.renderRoot.classList.add('__dragging')
+    this.renderRoot?.classList.add('is-dragging')
     e.preventDefault();
     this.lastLeft = left;
 
@@ -201,7 +235,7 @@ export class Slider extends FormControl {
     }
     document.onmouseup = document.onblur = function () {
       document.onmousemove = document.onmouseup = document.onblur = null;
-      that.renderRoot.classList.remove('__dragging')
+      that.renderRoot?.classList.remove('is-dragging')
     }
   }
   _moveThumbH(left: number) {
@@ -223,9 +257,9 @@ export class Slider extends FormControl {
         this.allTicks.forEach(tick => {
           let tickPerc = parseFloat(tick.dataset.perc + '')
           if (tickPerc < perc) {
-            tick.classList.add('__filled')
+            tick.classList.add('is-filled')
           } else {
-            tick.classList.remove('__filled')
+            tick.classList.remove('is-filled')
           }
         })
       }

@@ -1,42 +1,40 @@
 import {
-  clone,
+  assign,
   cloneDeep,
   closest,
   compact,
   concat,
   each,
-  eachRight,
   every,
   except,
   filter,
   findIndex,
+  first,
   flat,
-  flatDeep,
   flatMap,
+  formatDate,
+  formatNumber,
   get,
-  head,
   includes,
+  isBlank,
   isDefined,
   isEmpty,
   isNumber,
   isObject,
   isString,
   isUndefined,
-  join,
-  kebabCase,
   last,
   lowerCase,
   map,
-  max,
-  min,
   padStart,
   range,
   set,
   size,
+  some,
   sort,
   split,
   startsWith,
-  throttle,
+  take,
   toArray,
   trim,
   union,
@@ -44,21 +42,41 @@ import {
 } from "myfx";
 import { getBox } from "uiik";
 
-import { event, html, ifTrue, prop, query, show, tag, Template } from "compelem";
-import { Input } from "../../form/input/Input";
+import { CompElem, computed, csscope, Csscope, debounced, emits, event, h, prop, query, QueryCache, state, tag, Template, watch } from "compelem";
+import { DataType } from "../../../constants";
+import { attr, escapeHtml, showError } from "../../../utils/utils";
+import { Message } from "../../feedback/message/Message";
 import { ContextMenu } from "../../nav/contextmenu/ContextMenu";
 import { MenuPane } from "../../nav/menupane/MenuPane";
-import { Message } from "../../notice/message/Message";
 import { Alert } from "../../overlays/modals/Alert";
-import styles from "./style.scss";
-import { Table } from "./Table";
-import "./TableColumn";
-import { TableColumn } from "./TableColumn";
-import { theadRender } from "./templates";
-import { CellBox, CellPos, ColumnMeta, DataSelectionOption, SelectorMeta } from "./types";
+import { useToast } from "../../overlays/toast/toast";
+import { Column } from "./Column";
+import { ColumnFoot } from "./ColumnFoot";
+import { getMenuItems } from "./contextmenu";
+import editableStyle from "./editableStyle.scss?tmpl";
+import { tableStyleSheet } from "./styleSheets";
+import { AVAILABLE_ROW_TAG, PRIV_COL_PREF, SCROLLER_COL_PROP, Table } from "./Table";
+import { CellBox, CellPos, ColumnMeta, ColumnType, DataSelectionOption, SelectorMeta } from "./types";
 const MultiSelectionDivider = " ";
+const FormulaTag = "=";
 const SelectorOffset = 2;
 const BaseCode = 65;
+const SnProp = '__sn'
+const THRESHOLD = 5
+//.selected-cell-bottom.selected-cell-right::after
+const SELECTOR_OP_SIZE = 4
+enum IndicatorAttrName {
+  RowSn = 'data-row-sn',
+  ColSn = 'data-col-sn'
+}
+
+export const CELL_CLASS_SELECTED_FILLER = 'ce-table-selected-filler-cell'
+export const CELL_CLASS_SELECTED_FILLER_TOP = 'ce-table-selected-filler-cell-top'
+export const CELL_CLASS_SELECTED_FILLER_BOTTOM = 'ce-table-selected-filler-cell-bottom'
+export const CELL_CLASS_SELECTED_FILLER_LEFT = 'ce-table-selected-filler-cell-left'
+export const CELL_CLASS_SELECTED_FILLER_RIGHT = 'ce-table-selected-filler-cell-right'
+
+const NO_EDITING_TIP = '过滤数据禁止编辑'
 const Command = {
   /**
    * 设置单元格内容
@@ -66,6 +84,19 @@ const Command = {
    */
   setCells: "setCells",
 };
+enum ChangeType {
+  Input = 'input',
+  Fill = 'fill',
+  Paste = 'paste',
+  Select = 'select',
+  Delete = 'delete',
+  Remove = 'remove',
+  Insert = 'insert'
+}
+enum IndicatorType {
+  Row = 'row',
+  Column = 'column'
+}
 /**
  * 可编辑表格组件
  * 鼠标操作
@@ -82,6 +113,7 @@ const Command = {
  *  4. tab 跳转当前激活单元格
  *  5. 直接输入可编辑内容
  * 
+ * 
  * @props
  *  height {number} table height,default 500px
  *  row-height {number} default 30px
@@ -89,8 +121,10 @@ const Command = {
  *  contextmenu {boolean} 是否支持右键菜单，默认true
  *  default-insert-size {number} 默认插入行数，默认5
  *  showRange {boolean} 显示范围输入框
- *  showColumnIndicator {boolean} 显示列标识，默认true
- *  edit-option {object} 编辑选项 fillable 是否可填充数据（光标），默认true；pastable 是否可粘贴到表格，默认true；copyable 是否可复制，默认true; deletable 清除单元格，默认true
+ *  showIndicator {boolean | string} 显示行列标识，默认false。如果为row/column 则为对应行/列标识。复合表头会导致列标识显示异常
+ *  trackIndicator {boolean} 在标识列/行上实时显示当前光标所在位置，默认true
+ *  indicatorStyle {string|object} 列标识样式，支持css样式或对象
+ *  edit-option {object} 编辑选项 dragselect 是否可以拖动多选，默认true；fillable 是否可填充数据（光标），默认true；pastable 是否可粘贴到表格，默认true；copyable 是否可复制，默认true; deletable 清除单元格，默认true
  * @events
  *  beforecellactive({cell,row,column,rowIndex,colIndex, value, cancel()}) 打开单元格编辑窗口前触发，可阻止激活
  *  cellactive({cell,row,column,rowIndex,colIndex, value}) 打开单元格编辑窗口时触发
@@ -98,698 +132,506 @@ const Command = {
  *  celldeactive({cell,row,column,rowIndex,colIndex, value, prevValue}) 退出单元格编辑窗口后触发
  *  beforecelldeactive({cell,row,column,rowIndex,colIndex, value, prevValue, cancel()}) 退出单元格编辑窗口前触发
  * 
- *  contextmenu({items,cells,rows,cancel}) 打开右键菜单时触发，可编辑菜单项
+ *  contextmenu({items,cells,rows,cancel()}) 打开右键菜单时触发，可编辑菜单项
  *  contextmenuselect({item}) 右键菜单选中某项后触发
  *  contextmenuinsert({data}) 右键菜单插入时触发，可以定制插入行的内容。data函数接收一个返回数据数组的函数，签名为(rowCount,props)=>[]
  *  
- *  change({type:input/fill/paste/select/delete,cells:[{cell,row,column,rowIndex,colIndex, value, prevValue}]}) 1-n个单元格内容变更后触发。cell可能为空
+ *  change({type:input/fill/paste/select/delete/insert/remove,cells:[{cell,row,column,rowIndex,colIndex, value, prevValue}]}) 1-n个单元格内容变更后触发。cell可能为空，当type为insert/remove时，cells为null
  *  focuschange({cell,row,column,rowIndex,colIndex,toggleSelection(enabled,{dataSelection,dataSelectionOption}}) 焦点单元格变更时触发，可以控制单元格的数据选项
  *  select({cells}) 框选单元格结束后触发
  *  
  * @methods
- *  setStyle(cellPos,style) 设置单元格样式
  *  setNote(cellPos,msg) 设置单元格批注。msg为undefined时取消note
  *  getColumnIndex(propName) 通过列属性名获取列索引
  *  updateData()
  *
  * @author holyhigh2
  */
-@tag("l-editable")
+@emits('beforecellactive', 'cellactive', 'cellchange', 'celldeactive', 'beforecelldeactive', 'contextmenu', 'contextmenuinsert', 'change', 'select')
+@tag("ce-editable")
 export class Editable extends Table {
+
   //选框
   #el_selector: HTMLElement;
-  #el_selector_filler: HTMLElement;
-  #el_selector_focus: HTMLElement;
-  #el_selector_copy: HTMLElement;
   #el_selector_caret: SVGElement;
-  @query('l-menu-pane')
+  @query('ce-menu-pane')
   el_input_options: MenuPane;
-  @query('l-context-menu')
+  @query('ce-context-menu')
   el_context_menu: ContextMenu;
   #el_warning_msg: Message;
-  #el_custom_msg: Message;
-  @query('l-alert')
+  @query('ce-alert')
   alert: Alert;
-  @query('.__header_range_input')
-  rangeInput: Input;
-  @query('.__header_formula_input')
-  textInput: Input;
-  @query('.c-table-header')
+  @query('.ce-table-header')
   tableHeader: HTMLElement;
-  #el_focusbar_v: HTMLElement;
-  #el_focusbar_h: HTMLElement;
+  @query('.ce-table-cell-input__text')
+  inputCell: HTMLTextAreaElement
+  @query('.ce-table-head ce-column[all]', QueryCache.ONCE)
+  headColAll!: Column
 
   //编辑中
   activeCell: HTMLElement | null;
   focusCell: HTMLElement | null;
+  focusCellPos: CellPos
   #startCell: HTMLElement | null;
   #endCell: HTMLElement | null;
-  #copyStartCell: HTMLElement | null;
-  #copyEndCell: HTMLElement | null;
   selectedCellsPos: Array<Array<CellPos>> | null;
-
-  #globalBlurHook: any;
-  #contextMenuHook: any;
-  #closeTipHook: any;
+  commandStack: Array<{ command: string; data: Record<string, any> }> = [];
 
   //用于selector操作
   #selectorMeta: Partial<SelectorMeta> = {}
   checkedCells: Array<CellPos> = []
 
-  menuItems: Array<Record<string, any> | string | null> = [
-    {
-      text: "插入行",
-      separate: true,
-      children: [
-        {
-          text: this.insertAbove.bind(this),
-          iconClass: "bi bi-layer-forward",
-          insert: 'above',
-        },
-        {
-          text: this.insertUnder.bind(this),
-          iconClass: "bi bi-layer-backward",
-          insert: 'under',
-        },
-      ],
-      insert: 'under',
-    },
-    {
-      text: "删除行",
-      children: [
-        {
-          text: "删除行",
-          icon: '<svg class="icon" width="16px" height="16.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M307.2 752.941176c0-36.141176 30.117647-60.235294 60.235294-60.235294h487.905882c24.094118 0 42.164706 18.070588 42.164706 36.141177s-12.047059 36.141176-36.141176 36.141176h-481.882353v66.258824h475.858823c18.070588 0 36.141176 12.047059 36.141177 36.141176v6.02353c0 18.070588-12.047059 36.141176-36.141177 36.141176H367.435294c-36.141176 0-66.258824-24.094118-66.258823-54.211765V752.941176zM307.2 186.729412c0-36.141176 30.117647-60.235294 60.235294-60.235294h487.905882c24.094118 0 36.141176 18.070588 36.141177 36.141176s-12.047059 36.141176-36.141177 36.141177h-481.882352v66.258823h475.858823c18.070588 0 36.141176 12.047059 36.141177 36.141177v6.023529c0 18.070588-12.047059 36.141176-36.141177 36.141176H361.411765c-36.141176 0-66.258824-24.094118-66.258824-54.211764V186.729412z" fill="#1B2231" /><path d="M90.352941 427.670588v180.705883c0 18.070588 12.047059 36.141176 36.141177 36.141176h301.17647c18.070588 0 36.141176-12.047059 36.141177-36.141176v-180.705883c0-18.070588-12.047059-36.141176-36.141177-36.141176h-301.17647c-18.070588 6.023529-36.141176 18.070588-36.141177 36.141176z m66.258824 36.141177h234.917647v114.447059H156.611765V463.811765z" fill="#FF2E2E" /><path d="M156.611765 463.811765h234.917647v114.447059H156.611765z" fill="#FCD5D5" /><path d="M789.082353 379.482353c12.047059-12.047059 36.141176-12.047059 48.188235 0 12.047059 12.047059 12.047059 30.117647 6.02353 42.164706l-6.02353 6.023529-210.823529 210.82353c-12.047059 12.047059-36.141176 12.047059-48.188235 0-6.023529-18.070588-12.047059-36.141176 0-48.188236l6.023529-6.023529 204.8-204.8z" fill="#FF2E2E" /><path d="M584.282353 379.482353c12.047059-12.047059 30.117647-12.047059 42.164706-6.023529l6.023529 6.023529L843.294118 590.305882c12.047059 12.047059 12.047059 36.141176 0 48.188236-12.047059 12.047059-30.117647 12.047059-42.164706 6.023529l-6.02353-6.023529-210.823529-210.82353c-18.070588-18.070588-18.070588-36.141176 0-48.188235z" fill="#FF2E2E" /></svg>',
-        },
-        {
-          text: "空白行",
-          icon: '<svg class="icon" width="16px" height="16.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M128 256h682.666667v213.333333H128V256z m700.074667 275.541333l48.256 48.256-81.408 81.365334 81.536 81.578666-48.256 48.256-81.536-81.578666-81.493334 81.578666-48.298666-48.256 81.493333-81.578666-81.365333-81.365334 48.256-48.256 81.408 81.322667 81.408-81.322667zM554.666667 554.666667v213.333333H128v-213.333333h426.666667z m-42.666667 42.666666H170.666667v128h341.333333v-128z m256-298.666666v128H170.666667V298.666667h597.333333z" fill="#333333" /></svg>',
-        },
-      ],
-      cellNeed: true,
-    },
-    {
-      mode: "checkbox",
-      checked: true,
-      cellNeed: true,
-      text: "清除内容",
-      hotKey: ["delete"],
-      icon: '<svg t="1713889314318" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15815" xmlns:xlink="http://www.w3.org/1999/xlink" width="16" height="16"><path d="M159.488 256c-52.608 0-96 43.328-96 96v256c0 52.672 43.392 96 96 96h291.264c-1.216 10.624-3.2 21.056-3.2 32 0 158.72 129.28 288 288 288 158.656 0 288-129.28 288-288a288 288 0 0 0-128-239.232V352c0-52.672-43.392-96-96-96h-640z m0 64h640c18.048 0 32 14.016 32 32v113.6a284.352 284.352 0 0 0-96-17.6C610.624 448 504.96 528.512 465.152 640H159.488a31.552 31.552 0 0 1-32-32v-256c0-17.984 14.016-32 32-32z m576 192c124.16 0 224 99.904 224 224s-99.84 224-224 224a223.488 223.488 0 0 1-224-224c0-124.096 99.904-224 224-224z m-160 192v64h320v-64h-320z" fill="#E51E34" p-id="15816"></path></svg>',
-    },
-    null,
-    {
-      text: "排序",
-      disabled: true,
-      children: [
-        {
-          text: "升序",
-          icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
-  <path fill-rule="evenodd" d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z"/>
-  <path d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z"/>
-</svg>`,
-        },
-        {
-          text: "降序",
-          icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sort-alpha-down-alt" viewBox="0 0 16 16">
-  <path d="M12.96 7H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645z"/>
-  <path fill-rule="evenodd" d="M10.082 12.629 9.664 14H8.598l1.789-5.332h1.234L13.402 14h-1.12l-.419-1.371zm1.57-.785L11 9.688h-.047l-.652 2.156z"/>
-  <path d="M4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z"/>
-</svg>`,
-        },
-      ],
-    },
-    null,
-    { text: "复制", iconClass: "bi bi-stickies", hotKey: ["ctrl", "c"], cellNeed: true },
-    { text: "粘贴", iconClass: "bi bi-clipboard", hotKey: ["ctrl", "v"] },
-  ];
+  menuItems: Array<Record<string, any> | string | null> = getMenuItems(this);
+  cellSelectionMap = new Map<string, []>
+  cellSelectionOptionMap = new Map<string, DataSelectionOption>
+
+  //计算公式
+  formulaMap: Map<string, string> = new Map
 
   //当前锁定的单元格位置映射
   lockedPosMap: Record<string, string> = {}
 
-  static checkedSheet = new CSSStyleSheet();
+  toast = useToast()
 
-  static get styles(): Array<string | CSSStyleSheet> {
-    return [styles, this.checkedSheet];
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [tableStyleSheet, editableStyle];
+  }
+  get cssVars() {
+    return assign(super.cssVars, {
+      '--editable-row-indicator-width': `${this.showRowIndicator ? this.rowIndicatorWidth : 0}px`
+    })
+  }
+  /////////////////////////////////// computed
+  @computed
+  get showRowIndicator() {
+    let rs = this.showIndicator === true || this.showIndicator === IndicatorType.Row
+    return rs
+  }
+  @computed
+  get showColumnIndicator() {
+    let rs = this.showIndicator === true || this.showIndicator === IndicatorType.Column
+    return rs
   }
   /////////////////////////////////// watches
+  @watch('showIndicator')
+  watchShowIndicator(v: number) {
+    this.nextTick(() => {
+      let headerExtCol = this.renderRoot?.querySelector<Column>('.ce-table-head ce-column[all]')
+      if (headerExtCol) {
+        headerExtCol.style.height = this.tableHead.clientHeight + 'px'
+      }
 
+      this.__toggleIndicatorClasses()
+    })
+  }
+  @watch('showHeader')
+  watchShowHeader() {
+    this.__toggleIndicatorClasses()
+  }
+  @watch('trackIndicator')
+  watchTrackIndicator(v: boolean) {
+    if (!this.renderRoot) return
+    this.renderRoot.classList.toggle('ce-table-track-indicator', v)
+  }
+  /** 指示器/表头状态类与 editableStyle.scss 选择器保持一致（is-show-row/column-indicator、is-header-hidden） */
+  __toggleIndicatorClasses() {
+    const root = this.renderRoot
+    if (!root) return
+    root.classList.toggle('is-show-row-indicator', this.showRowIndicator)
+    root.classList.toggle('is-show-column-indicator', this.showColumnIndicator)
+    // 隐藏表头但开启列标识时，保留一条窄列标栏用于显示 A/B/C 列标（见 editableStyle 的 .is-header-hidden）
+    root.classList.toggle('is-header-hidden', !this.showHeader && this.showColumnIndicator)
+  }
   //////////////////////////////////// props
   @prop contextmenu = true;
   @prop defaultInsertSize = 5;
   @prop showRange = true;
-  @prop showColumnIndicator = true;
-  @prop({ type: Object }) editOption = { fillable: true, pastable: true, copyable: true, deletable: true }
+  @prop trackIndicator = true;
+  @prop({ type: [Boolean, String] }) showIndicator: boolean | string = false;
+  @prop({ type: [Object, String] }) indicatorStyle: string | Record<string, any>
+  @prop({ type: Object }) editOption = { dragselect: true, fillable: true, pastable: true, copyable: true, deletable: true }
+
+  @state rowIndicatorWidth = 30
+  @state trackIndicatorProp = ''
 
   //////////////////////////////////// lifecycles
   render(): Template {
-
     const superTmpl = super.render();
-    if (this.showRange) {
-      superTmpl.strings[0] = `<div class="c-table-header-range"><l-input class="__header_range_input" round="false" tabindex="0" autoselect></l-input><l-input tabindex="0" round="false" class="__header_formula_input"></l-input></div>` + superTmpl.strings[0];
+
+    let selectorTmpl = h`
+      <div class="ce-table-selector-caret" @click="${this.onClickCaret}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+          <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+        </svg>
+      </div>
+      <textarea class="ce-table-cell-input__text" @input="${this.onInput}"></textarea>
+      <div class="ce-table-selector-filler"></div>
+      <ce-message class="ce-table-tipmsg" id="warningmsg" closable type="warning" descr="输入内容与限制选项不符" @close="${this.onCloseTip}"></ce-message>
+    `
+    superTmpl.insert(22, selectorTmpl)
+
+    let tmpl = h`
+      <ce-menu-pane round="false" items="[]" theme="light" @select="${this.onSelectOption}"></ce-menu-pane>
+      <ce-alert></ce-alert>
+      </div>
+    `
+
+    if (this.showRowIndicator) {
+      superTmpl.strings[8] = superTmpl.strings[8].replace(/(<div class="ce-table-column-fixed is-left"\s+part="fixed-column">)/, `
+        <ce-column fixed prop="${SnProp}" all resizable="false" width="${this.rowIndicatorWidth}" silent min-width="30"></ce-column>
+        $1`)
+
+      superTmpl.strings[27] = superTmpl.strings[27].replace(/(<div class="ce-table-column-fixed is-left"\s+part="fixed-column">)/, `
+        <ce-column-foot fixed ext-column prop="${SnProp}" foot resizable="false" width="${this.rowIndicatorWidth}" min-width="30"></ce-column-foot>
+        $1`)
     }
 
-    let tmpl = html`
-        <div class="c-table-selector">
-          <div class="c-table-selector-cover">
-            <div class="--focus"></div>
-          </div>
-          <div class="c-table-selector-op" @dblclick="${this.onClickFillHandle}" ${show(get(this.editOption, 'fillable', true))}></div>
-          <div class="c-table-selector-filler"></div>
-        </div>
-        <div class="c-table-focusbar-v"></div>
-        
-        <div class="c-table-selector-copy"><div class="content"></div></div>
-        <div class="c-table-selector-caret">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-            <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
-          </svg>
-        </div>
-        <l-message id="warningmsg" border style="position: absolute;width: 300px;display: none;" closable type="warning" descr="输入内容与限制选项不符"></l-message>
-        <l-message id="custommsg" border style="position: absolute;width: 300px;display: none;" closable type="warning" descr=""></l-message>
-        <l-menu-pane round="false" items="[]" theme="light" @select="${this.onSelectOption}"></l-menu-pane>
-        <l-alert></l-alert>
-      ${ifTrue(
-      this.contextmenu,
-      () => html`
-          <l-context-menu
-            @select="${this.onMenuSelect}"
-            @hover="${this.onMenuHover}"
-            .items="${this.menuItems}"
-            theme="light"
-          >
-          </l-context-menu>
-        `
-    )}
-      </section>
-    `;
+
     superTmpl.strings[superTmpl.strings.length - 1] = "";
-    return superTmpl.append(tmpl);
+    return superTmpl.append(tmpl)
   }
   constructor() {
     super();
-
-    this.#globalBlurHook = this.onGlobalBlur.bind(this);
-    window.addEventListener("blur", this.#globalBlurHook);
   }
   connectedCallback() {
     super.connectedCallback();
 
-    this.#contextMenuHook = this.onContextMenu.bind(this);
-    this.el_table.addEventListener("contextmenu", this.#contextMenuHook);
+    this.#el_selector_caret = this.renderRoot!.querySelector(".ce-table-selector-caret"
+    )!;
+    this.#el_warning_msg = this.renderRoot!.querySelector("#warningmsg")!;
 
-    this.#el_focusbar_v = this.el_table.querySelector('.c-table-focusbar-v')!
-    this.#el_selector = this.el_table.querySelector(".c-table-selector")!;
-    this.#el_selector_focus = this.#el_selector.querySelector(".--focus")!;
-    this.#el_selector_filler = this.#el_selector.querySelector(
-      ".c-table-selector-filler"
-    )!;
-    this.#el_selector_copy = this.el_table.querySelector(
-      ".c-table-selector-copy"
-    )!;
-    this.#el_selector_caret = this.el_table.querySelector(
-      ".c-table-selector-caret"
-    )!;
-    this.#el_warning_msg = this.el_table.querySelector("#warningmsg")!;
-    this.#el_custom_msg = this.el_table.querySelector("#custommsg")!;
+    if (this.showRowIndicator) {
+      this.snWidthDetector = document.createElement('div')
+      this.snWidthDetector.style.cssText = 'position:absolute;left:-100px;top:-100px;visibility: hidden;overflow:hidden;padding-inline:.5rem;width:' + this.rowIndicatorWidth + 'px'
+      this.renderRoot!.appendChild(this.snWidthDetector)
 
-    this.#closeTipHook = this.onCloseTip.bind(this);
-    this.#el_warning_msg.addEventListener("close", this.#closeTipHook);
-    this.#el_custom_msg.addEventListener("close", this.#closeTipHook);
+      if (this.trackIndicator) {
+        // this.tableBody.addEventListener('mouseover', this.onMouseOver.bind(this))
+        // this.addEventListener('mouseover', this.onMouseOverColumn.bind(this))
+      }
+    }
+
+  }
+  onColumnVisibleChange() {
+
+  }
+  onColumnFix() {
+
+  }
+  onColumnMove(colProp: string, toProp: string) {
+
+  }
+  onColumnChange() {
+    if (this.showColumnIndicator) {
+      let i = 0;
+      each(this.allColumns, col => {
+        if (col.prop === SCROLLER_COL_PROP) return;
+        let colEl = this._fieldMap.get(col.prop)
+        if (colEl && !(colEl.parentComponent instanceof Column)) colEl.renderRoot!.style.height = this.headerHeight * this.headerRows + 'px'
+        colEl?.setAttribute(IndicatorAttrName.ColSn, this._getColumnChar(i++))
+      })
+
+      this.watchShowIndicator(1)
+    }
+  }
+  onContextMenuSelect(obj: Record<string, any>) {
+    super.onContextMenuSelect(obj)
+    let { item, el } = obj
+    this.onMenuSelect(item, el)
+  }
+  _onContextMenu(obj: Record<string, any>) {
+    let { items, cells } = obj
+    if (!this.contextmenu) return
+
+    items.push(null, ...getMenuItems(this))
   }
   mounted() {
     super.mounted()
-    this.el_table.classList.add("editable");
+    this.renderRoot!.classList.add("editable");
+    this.renderRoot?.classList.toggle('ce-table-track-indicator', this.trackIndicator)
+    this.__toggleIndicatorClasses()
 
-    this.rangeInput && this.rangeInput.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (lowerCase(e.key) !== 'enter') return;
-      let t = e.target as Input
-      let v = t.inputRef.current.value;
-      let matched = v.match(/(?<col>[a-z]+)(?<row>\d+)(?:[:：](?<col2>[a-z]+)(?<row2>\d+))?/i)
-      if (!matched) {
-        this.alert.open('无效范围')
-        this.setFocusCell(this.#startCell!);
-        return;
-      }
-      //校验数据列及行是否存在
-      let startColIndex = this._getColumnCode(matched.groups!.col)
-      let startRowIndex = parseInt(matched.groups!.row) - 1
-      let endColIndex = startColIndex
-      let endRowIndex = startRowIndex
+    if (this.showRowIndicator) {
+      this.__recalcSnWidth();
+    }
 
-      if (matched.groups!.col2 && matched.groups!.row2) {
-        endColIndex = this._getColumnCode(matched.groups!.col2)
-        endRowIndex = parseInt(matched.groups!.row2) - 1
-      }
-
-      try {
-        this.__getCellsPosOfRange(startColIndex, endColIndex, startRowIndex, endRowIndex);
-      } catch (error) {
-        this.alert.open('超出数据行列范围')
-      }
-
-      let minRow = Math.min(startRowIndex, endRowIndex)
-
-      // if (minCol < 1 || maxCol > (this.renderColumns.length - 1) || minRow < 0 || maxRow > (this._innerData.length - 1)) {
-      //   this.alert.open('超出数据行列范围')
-      // }
-      this.el_table.scrollTop = minRow * this.rowHeight
-      //定位行记录位置
-      this.updateData()
-      // debugger
-      let startTd = this._getCellDom(startRowIndex, startColIndex);
-      let endTd = this._getCellDom(endRowIndex, endColIndex);
-
-      this.#startCell = startRowIndex < endRowIndex ? startTd : endTd
-      this.#endCell = startRowIndex < endRowIndex ? endTd : startTd
-
-      let startColProp = this.renderColumns[startColIndex]
-      let endColProp = this.renderColumns[endColIndex]
-      let endCellPos = { colIndex: endColIndex, rowIndex: endRowIndex, prop: endColProp.prop! }
-      this._selectedCells({ colIndex: startColIndex, rowIndex: startRowIndex, prop: startColProp.prop! }, endCellPos)
-      this.locateSelector(this.#startCell, this.#endCell, true, endCellPos);
-      this.setFocusCell(this.#startCell);
-      t.blur();
-      this.nextTick(() => {
-        this.el_table.focus();
-      })
-    })
-    this.textInput && this.textInput.addEventListener('input', (e: CustomEvent) => {
-
-      if (this.focusCell) {
-        let rowIndex = this.getRowIndex(this.focusCell!);
-        let column = this.getColumnMeta(this.focusCell!);
-        let rowData = this._innerData[rowIndex];
-        this.focusCell.querySelector(".view")!.textContent = rowData[column.prop!] = e.detail.value
-      }
-    })
+    if (get(this.editOption, 'fillable', true)) {
+      this.renderRoot!.classList.add("fillable");
+    }
   }
-  disconnectedCallback() {
-    super.disconnectedCallback();
+  onListReady() {
+    super.onListReady()
+    let headerExtCol = this.headColAll
+    if (headerExtCol) {
+      headerExtCol.style.height = this.tableHead.clientHeight + 'px'
+    }
+  }
+  shouldUpdate(changed: Record<string, any>): boolean {
+    if (!super.shouldUpdate(changed)) return false;
+    const selectionChange = every(changed, (v, k) => k.indexOf('scrollColumns') > -1)
+    if (selectionChange) return false;
+    return true
   }
   //////////////////////////////////// methods
-  setFocusCell(cell: HTMLElement, event?: Event) {
-    if (!cell) return;
-    this.focusCell = cell;
-    let colIndex = this.getColIndex(cell);
-    let rowIndex = this.getRowIndex(cell);
-    let column = this.getColumnMeta(cell);
-    let rowData = this._innerData[rowIndex];
-    this.rangeInput && this.rangeInput.setValue(this._getColumnChar(colIndex - 1) + (rowIndex + 1))
-    this.textInput && this.textInput.setValue(rowData[column.prop!] || '')
-    let cellPos = { colIndex: colIndex, rowIndex: rowIndex, prop: column.prop };
-    this.emit('focuschange', {
-      cell: cellPos, row: rowData, column, rowIndex, colIndex,
-      toggleSelection: (enabled: boolean, data?: { dataSelection: [], dataSelectionOption: DataSelectionOption }) => {
-        cell.classList.toggle('__selection', enabled)
-        if (data) {
-          set(cell, '__l_editable_dataSelection', data.dataSelection)
-          set(cell, '__l_editable_dataSelectionOption', data.dataSelectionOption)
-        }
-      }
-    }, { event })
+  doCommand(command: string, data: Record<string, any>) {
+    this.onCommand(command, data);
+    this.commandStack.push({ command, data });
+  }
+  _getCellPosKey(cell: CellPos) {
+    return `${cell.rowIndex}_${cell.colIndex}_${cell.prop}`
   }
   isEqualCell(n1: HTMLElement, n2?: HTMLElement) {
     if (!n1 || !n2) return false;
     return (
-      n1.dataset.columnIndex == n2.dataset.columnIndex &&
-      n1.dataset.rowIndex == n2.dataset.rowIndex
+      n1.dataset.colIndex == n2.dataset.colIndex &&
+      n1.closest<HTMLElement>('.ce-table-row')?.dataset.rowIndex == n2.closest<HTMLElement>('.ce-table-row')?.dataset.rowIndex
     );
+  }
+  onDataChange(sizeChanged: boolean) {
+    if (!sizeChanged) return;
+
+    // this.refreshView()
+
+    this.hideSelector()
+    // clear formula
+    this.formulaMap.clear()
   }
   /********* layout **********/
   onResize() {
-    super.onResize();
-    setTimeout(() => {
-      this.locateSelector(this.#startCell!, this.#endCell!);
-      this.locateSelectorCopy();
-    }, 400);
+    super.onResize()
   }
-  onRebuild() {
-    if (this.#startCell) {
-      //内容刷新，需重新定位
-      if (!this.el_table.contains(this.#startCell)) {
-        let rIndex = this.#startCell.dataset.rowIndex;
-        let cIndex = this.#startCell.dataset.columnIndex;
-        let rIndexEnd = this.#endCell!.dataset.rowIndex;
-        let cIndexEnd = this.#endCell!.dataset.columnIndex;
-        let startCell = this._getCellDom(rIndex!, cIndex!);
+  //数字个数对应宽度，用于判断是否对应正确宽度
+  sizeMap = new Map()
+  @debounced(50)
+  __recalcSnWidth() {
+    let len = size(this.snWidthDetector.textContent)
+    let offset = this.snWidthDetector.scrollWidth - this.snWidthDetector.offsetWidth
+    let headerExtCol = this.headColAll
+    if (!headerExtCol) return;
 
-        let endCell = this._getCellDom(rIndexEnd!, cIndexEnd!);
+    if (Math.abs(this.sizeMap.get(len) - parseInt(headerExtCol.style.width)) > 5) {
+      offset = 1
+    }
+    if (offset > 0) {
+      this.rowIndicatorWidth = this.snWidthDetector.scrollWidth
 
-        if (
-          get<number>(startCell, "offsetLeft", 0) <
-          get<number>(endCell, "offsetLeft", 0)
-        ) {
-          this.#startCell = startCell;
-          this.#endCell = endCell;
-        } else {
-          this.#endCell = startCell;
-          this.#startCell = endCell;
-        }
-        this.setFocusCell(this.#startCell);
+      headerExtCol.style.width = this.rowIndicatorWidth + 'px'
+
+      let footExtCol = this.renderRoot!.querySelector<ColumnFoot>('ce-column-foot[ext-column]')
+      if (footExtCol) footExtCol.style.width = this.rowIndicatorWidth + 'px'
+    }
+    if (!this.sizeMap.has(len)) {
+      this.sizeMap.set(len, this.rowIndicatorWidth)
+    }
+
+    if (this.fit) {
+      this._fitWidth()
+    }
+    this._updateScrollWidth()
+  }
+  onScroll(obj: Record<string, any>) {
+    super.onScroll(obj)
+    let { to, direction, preventDefault } = obj
+    if (direction === 'h') {
+      if (!this._scrolled) {
+        return;
       }
-      this.locateSelector(this.#startCell!, this.#endCell!);
-      this.locateSelectorCopy();
+      //修复右侧超出父元素的宽度撑开问题
+      if (this.bodyCon.scrollLeft > 0) {
+        this.bodyCon.scrollLeft = 0
+      }
+      // this._relocateSelector()
+      // this.locateSelectorCopy()
+    }
+    if (this.showRowIndicator && this.vList) {
+      let maxIndex = 1
+      this.vList.forEach(e => {
+        if (!e?.hasAttribute(AVAILABLE_ROW_TAG)) return;
+        let sn = parseInt(e.firstElementChild!.getAttribute('data-row-sn') + '')
+        if (sn > maxIndex) {
+          maxIndex = sn
+        }
+      })
+
+      this.snWidthDetector.textContent = maxIndex
+      this.__recalcSnWidth()
     }
 
-    let snCell = this.el_table.querySelector('th.__sn_row') as HTMLElement
-    this.#el_focusbar_v.style.width = snCell.offsetWidth + 'px'
-
-    if (this.showColumnIndicator) {
-      snCell = this.el_table.querySelector('th.__sn_col_first') as HTMLElement
-      this.#el_focusbar_h.style.height = snCell.offsetHeight + 'px'
-    }
   }
-  onColumnResize(th: HTMLElement, col: ColumnMeta, w: number) {
-    setTimeout(() => {
-      this.locateSelector(this.#startCell!, this.#endCell!);
-      this.locateSelectorCopy();
-    }, 400);
-  }
-  onClickHead(e: Event) {
-    super.onClickHead(e);
-
-    if (this.#el_warning_msg.style.display !== "none" || this.#el_custom_msg.style.display !== "none") return;
-
-    let t = e.target as Element;
-    let startTH = closest<HTMLElement>(
-      t,
-      (node) =>
-        node.tagName == "TH" && node.classList.contains("__sn_row"),
-      "parentNode"
-    );
-    if (startTH) {
-      //select all
-      let lastRowIndex = this._innerData.length - 1;
-      let lastColIndex = this.renderColumns.length - 1;
-      let startTd = this._getCellDom(0, 1)
-      let endTd = this._getCellDom(lastRowIndex, lastColIndex)
-      let endCellPos = { colIndex: lastColIndex, rowIndex: lastRowIndex, prop: last(this.renderColumns).prop! }
-      this.locateSelector(startTd!, endTd, true, endCellPos);
+  onScrollEnd(obj: Record<string, any>) {
+    super.onScrollEnd(obj)
+    if (this.showRowIndicator && this.vList) {
+      // setTimeout(() => {
+      this.__recalcSnWidth()
+      // }, 50);
     }
   }
   onClickFillHandle() {
     if (!get(this.editOption, 'fillable', true)) return;
 
-    let { ltColIndex, ltRowIndex, rbColIndex, rbRowIndex } =
-      this.getCellBox(this.#startCell!, this.#endCell!);
-    let ltCellPos: CellPos = { rowIndex: ltRowIndex, colIndex: ltColIndex, prop: '' };
-    let rbCellPos: CellPos = { rowIndex: rbRowIndex, colIndex: rbColIndex, prop: '' };
+    let startCellPos = { colIndex: this.leftSelectedCellColIndex, rowIndex: this.topSelectedCellRowIndex, prop: this.getColumnPropByIndex(this.leftSelectedCellColIndex) }
+    let endCellPos = { colIndex: this.rightSelectedCellColIndex, rowIndex: this.bottomSelectedCellRowIndex, prop: this.getColumnPropByIndex(this.rightSelectedCellColIndex) }
 
-    let endRowIndex = this._innerData.length - 1
-
-    this.doFill('bottom', ltCellPos, rbCellPos, ltColIndex, rbColIndex, this._innerData.length - (rbRowIndex + 1));
-    let endCellPos = { colIndex: rbColIndex, rowIndex: endRowIndex, prop: this.getColumnMeta(this.#endCell || this.#startCell!).prop! }
-    this.locateSelector(this.#startCell!, this.#endCell!, false, endCellPos);
+    this.doFill('bottom', startCellPos, endCellPos, this.leftSelectedCellColIndex, this.rightSelectedCellColIndex, this.innerData.length - (this.bottomSelectedCellRowIndex + 1));
+    // this.locateSelector(startCellPos, endCellPos);
+    this._selectedCells(startCellPos, endCellPos);
   }
-  onMouseDown(e: MouseEvent) {
-    let t = e.target as Element;
-
-    if (this.el_input_options.contains(t)) {
-      e.stopPropagation();
-    }
-
-    let startTd = closest<HTMLElement>(
-      t,
-      (node) =>
-        node.tagName == "TD" && node.classList.contains("c-table-cell"),
-      "parentNode"
-    );
-    let startTH = closest<HTMLElement>(
-      t,
-      (node) =>
-        node.tagName == "TH" && node.classList.contains("__sn_col"),
-      "parentNode"
-    );
-
-    let dragSelector = false,
-      dragFiller = false,
-      dragSnRow = false,
-      dragSnCol = false;
-
-    if (startTd) {
-      if (this.activeCell) {
-        if (this.isEqualCell(this.activeCell, startTd)) {
-          return;
-        } else if (this.closeInput() === false) {
-          return;
-        }
-      }
-      if (startTd.classList.contains("__sn_row")) {
-        dragSnRow = true;
-      } else {
-        dragSelector = true;
-      }
-    } else if (t.classList.contains("c-table-selector-op")) {
-      dragFiller = true;
-    } else if (startTH) {
-      if (this.closeInput() === false) {
-        return;
-      }
-      dragSnCol = true;
-    }
-    if (!dragSelector && !dragFiller && !dragSnRow && !dragSnCol) {
-      //右键非单元格范围，选中取消
-      if (e.button === 2) {
-        //隐藏selector
-        this.hideSelector();
-        //重置高亮侧边
-        this.hideFocusbar();
-        this.selectedCellsPos = null;
-      }
-      return;
-    }
-    if (
-      e.button === 0 &&
-      this.el_context_menu &&
-      this.el_context_menu.isOpen()
-    )
-      return;
-    //右键菜单在框选范围内打开直接返回
-    let cIndex = this.getColIndex(startTd!)
-    let rIndex = this.getRowIndex(startTd!)
-
-    if (e.button === 2 && (compact(flat<CellPos>(this.selectedCellsPos!)).some(pos => pos.rowIndex == rIndex && pos.colIndex == cIndex) || this.checkedCells.some(pos => pos.rowIndex == rIndex && pos.colIndex == cIndex))) {
-      return;
-    }
-
-    let checking = false;
-    if (e.ctrlKey) {
-      checking = true;
-      let lastSelected = flatDeep<CellPos>(this.selectedCellsPos || []);
-      this.checkedCells.push(...lastSelected)
-    } else {
-      if (this.checkedCells.length > 0) {
-        this.checkedCells = []
-      }
-    }
-    this._updateCheckedStyle();
-
-    if (dragSelector) {
-      if (e.shiftKey) {
-        this.#endCell = startTd;
-        this.locateSelector(this.#startCell!, startTd!);
-      } else {
-        this.#startCell = this.#endCell = startTd;
-        this.setFocusCell(startTd!, e);
-        this.locateSelector(startTd!, undefined);
-      }
-    }
-
-    let onMouseMove, onMouseUp: Function;
-    if (dragSelector) {
-      let { mouseMove, mouseUp } = this.getSelectDragHandles(e);
-      onMouseMove = mouseMove;
-      onMouseUp = mouseUp;
-    } else if (dragFiller) {
-      if (!get(this.editOption, 'fillable', true)) return;
-      let { mouseMove, mouseUp } = this.getFillDragHandles(e);
-      onMouseMove = mouseMove;
-      onMouseUp = mouseUp;
-    } else if (dragSnRow) {
-      let rowIndex = this.getRowIndex(startTd!);
-      let { mouseMove, mouseUp } = this.getSnRowDragHandles(e, rowIndex);
-      onMouseMove = mouseMove;
-      onMouseUp = mouseUp;
-    } else if (dragSnCol) {
-      let colIndex = this.getColIndex(startTH!);
-      let { mouseMove, mouseUp } = this.getSnColDragHandles(startTH!, colIndex);
-      onMouseMove = mouseMove;
-      onMouseUp = mouseUp;
-    }
-
-    let moved = false;
-    if (e.button === 0) {
-      let root = this.el_table;
-      let headHeight = this.getHeaderHeight();
-      let posMap = this.columnPositionMap;
-      let rowHeight = this.rowHeight;
-
-      let throttledMove = throttle(onMouseMove!, 50);
-      //1. 确定边界
-      let boundary = {
-        top: headHeight,
-        left: this.renderColumns[0].width!,
-        right: this.el_table.offsetWidth,
-        bottom: this.el_table.offsetHeight,
-      };
-      let rect = root.getBoundingClientRect();
-      let maxRowIndex = this._innerData.length
-      document.onmousemove = function (e: MouseEvent) {
-        let cx = e.clientX,
-          cy = e.clientY;
-
-        moved = true;
-
-        let moveX = e.clientX + root.scrollLeft - rect.x;
-        let moveY = e.clientY + root.scrollTop - headHeight - rect.y;
-
-        let colIndex = 1,
-          rowIndex = Math.ceil(moveY / rowHeight) - 1;
-        if (rowIndex < 0) rowIndex = 0;
-        if (rowIndex >= maxRowIndex) rowIndex = maxRowIndex - 1;
-
-        eachRight(posMap, (v, k: number) => {
-          if (moveX > k) {
-            colIndex = v;
-            //todo 这里需要把固定列位置加入计算，否则会出现问题
-            return false;
-          }
-        });
-
-        if (colIndex < 1) colIndex = 1;
-
-        throttledMove(e, colIndex, rowIndex, moveX, moveY);
-
-        //自动边界滚动
-        if (cx > boundary.right) {
-          root.scrollBy({ left: 10 });
-        } else if (cx < boundary.left) {
-          root.scrollBy({ left: -10 });
-        } else if (cy > boundary.bottom) {
-          root.scrollBy({ top: 10 });
-        } else if (cy < boundary.top) {
-          root.scrollBy({ top: -10 });
-        }
-      };
-    }
-    window.onblur = document.onmouseup = (moe: MouseEvent) => {
-      window.onblur = document.onmousemove = document.onmouseup = null;
-
-      onMouseUp(moe, checking, moved);
-    };
-  }
-  onScroll(scrollV: boolean) {
-    if (!this.#startCell) return;
-
-    // let tlCell =
-    //   this.getColIndex(this.#startCell) < this.getColIndex(this.#endCell!)
-    //     ? this.#startCell
-    //     : this.#endCell;
-    //检测selector是否选定了固定列
-
-    if (!scrollV) {
-      // console.log(this.el_table.scrollLeft)
-      this.#el_focusbar_v.style.left = this.el_table.scrollLeft + 'px'
-    }
-    //1. 检测selector左上角是否固定（无论左右）
-    // let isTLFixed = this.isFixedCell(tlCell!);
-    // if (isTLFixed) {
-    //   this.#el_selector.style.transform = `translateX(${this.el_table.scrollLeft}px)`;
-    // }
-
-    // let isFixedLeft = this.isFixedCell(this.#startCell!, 'left') || this.isFixedCell(this.#endCell!, 'left')
-  }
-  onClickBody(e: Event) {
+  onMouseDownHeader(e: MouseEvent) {
     let t = e.target as HTMLElement;
-    super.onClickBody(e)
 
-    if (t.classList.contains("c-table-selector-caret")) {
-      if (this.closeInput() === false) {
-        return;
-      }
+    if (t.hasAttribute('all')) {
+      let startCellPos = { colIndex: 0, rowIndex: 0, prop: this.getRenderColumns()[0].prop }
+      let endCellPos = { colIndex: this.getRenderColumns().length - 1, rowIndex: this.innerData.length - 1, prop: last(this.getRenderColumns()).prop }
+      this.focusCellPos = { colIndex: 0, rowIndex: 0, prop: startCellPos.prop }
+      // this.locateSelector(startCellPos, endCellPos);
+      return;
+    }
+    if (!(t instanceof Column)) return
 
-      let startBox = getBox(t, this.el_table);
-      let colIndex = this.getColIndex(this.#startCell!);
-      let rIndex = this.getRowIndex(this.#startCell!);
-      let col = this.renderColumns[colIndex];
-      let cell = this.#startCell
+    if (t.type === ColumnType.Selection) return;
 
-      let ds = get<Array<any>>(cell, '__l_editable_dataSelection', col.dataSelection)
-      let dso = get<DataSelectionOption>(cell, '__l_editable_dataSelectionOption', col.dataSelectionOption)
+    if (window.getComputedStyle(t.renderRoot!, ':before').content === '">!<"') return;
 
-      //渲染菜单
-      if (!isEmpty(ds)) {
-        let selection = map(ds!, (s) => {
-          let obj = s;
-          if (isString(s)) {
-            obj = { text: s, value: s };
-          }
-          obj.checkMode = dso?.multiple
-            ? "checkbox"
-            : "radio";
-          obj.checkGroup = col.prop + "_check";
-          return obj;
-        });
-        let value = col.prop
-          ? this._innerData[rIndex][col.prop]
-          : this.#startCell?.innerText;
-        value = value ?? ''
-        value += '';
-        each(selection, (s) => {
-          s.checked = value.indexOf(s.text) > -1;
-        });
-        this.el_input_options.setItems(selection);
-      }
-
-      //显示菜单
-      const list = this.el_input_options;
-      const positionX = startBox.x + t.offsetWidth - list.scrollWidth;
-      const positionY = startBox.y + t.offsetHeight;
-
-      list.open(positionX, positionY);
-
-      this.#el_selector_caret.classList.add("active");
+    // this.onMouseDown(e, t)
+  }
+  onMouseOver(e: MouseEvent) {
+    let t = e.target as HTMLElement
+    let cell = t.closest<HTMLElement>('.ce-table-cell')
+    this.trackIndicatorProp = ''
+    if (cell) {
+      let row = cell.closest('.ce-table-row[inview]')
+      if (!row) return;
+      this.trackIndicatorProp = attr(cell, 'column')!
     }
   }
-  onDblClickBody(e: Event) {
+  onMouseOverColumn(e: MouseEvent) {
+    this.trackIndicatorProp = ''
+    let t = e.target as HTMLElement
+    if (t instanceof CompElem) {
+      if (!(t instanceof Column)) return;
+      this.trackIndicatorProp = t.prop || (t.children[0] as Column).prop
+    } else {
+      let prop = t.closest<Column>('ce-column')?.prop
+      if (prop) this.trackIndicatorProp = prop
+    }
+  }
+
+  onClickCaret(e: Event) {
+    if (this.closeInput() === false) {
+      return;
+    }
+    //过滤后禁止编辑
+    if (this.__noEditingCheck()) {
+      return;
+    }
+
+    let t = e.target as HTMLElement;
+    let startBox = getBox(t, this.renderRoot);
+    let colIndex = this.focusCellPos.colIndex
+    let rIndex = this.focusCellPos.rowIndex
+    let col = this.getRenderColumns()[colIndex];
+
+    let cellPos = this.focusCellPos
+
+    let ds = this._fieldMap.get(col.prop)?.dataSelection as Array<string | Record<string, any>>;
+    let dso = this._fieldMap.get(col.prop)?.dataSelectionOption as DataSelectionOption;
+
+    let cellDs = this.cellSelectionMap.get(this._getCellPosKey(cellPos!))
+    let cellDso = this.cellSelectionOptionMap.get(this._getCellPosKey(cellPos!))!
+    if (cellDs) {
+      ds = cellDs
+      dso = cellDso
+    }
+
+    //渲染菜单
+    if (!isEmpty(ds)) {
+      let selection = ds.map((s) => {
+        let obj;
+        if (isObject(s)) {
+          obj = s
+        } else {
+          obj = { text: s, value: s };
+        }
+        obj.checkMode = dso?.multiple
+          ? "checkbox"
+          : "radio";
+        obj.checkGroup = col.prop + "_check";
+        return obj;
+      });
+      let value = col.prop
+        ? this.renderList[rIndex][col.prop]
+        : this.#startCell?.innerText;
+      value = value ?? ''
+      value += '';
+      each(selection, (s) => {
+        s.checked = value == s.text;
+      });
+      this.el_input_options.setItems(selection);
+    } else {
+      this.toast.pushMessage("无可用选项");
+      return
+    }
+
+    //显示菜单
+    const list = this.el_input_options;
+    const positionX = startBox.x + t.offsetWidth - list.scrollWidth;
+    const positionY = startBox.y + t.offsetHeight;
+
+    list.open(positionX, positionY);
+
+    this.#el_selector_caret.classList.add("active");
+  }
+  onDblClickBody(e: MouseEvent) {
     let t = e.target as Element;
     let td = closest<HTMLElement>(
       t,
-      (node) =>
-        node.tagName == "TD" && node.classList.contains("c-table-cell"),
+      (node) => {
+        const el = node as HTMLElement
+        return attr(el, 'role') == "cell" && el.classList && el.classList.contains("ce-table-cell")
+      },
       "parentNode"
     );
 
-    td && this.activeInput(td!);
-  }
-  onMenuSelect(ev: CustomEvent) {
-    let { item, index, el } = ev.detail;
+    if (startsWith(td?.getAttribute('key'), PRIV_COL_PREF)) return;
 
+    let cellBox = td?.getBoundingClientRect()
+    if (cellBox) {
+      let { width, height } = window.getComputedStyle(td as Element, '::after')
+      let minX = Math.floor(cellBox.x) + Math.floor(cellBox.width) - parseFloat(width)
+      let minY = Math.floor(cellBox.y) + Math.floor(cellBox.height) - parseFloat(height)
+      if (e.clientX >= minX && e.clientY >= minY) {
+        this.onClickFillHandle()
+        return
+      }
+    }
+
+    td && this.activeInput();
+  }
+  onMenuSelect(item: any, el: HTMLElement) {
     if (item.text === "清除内容") {
+      let changedCells = map(this.__selectedCells, (cellPos) => {
+        let rIndex = cellPos.rowIndex
+        let colProp = cellPos.prop;
+        let oldValue = this.data[rIndex][colProp];
+        return {
+          cell: cellPos,
+          oldValue,
+          newValue: "",
+        };
+      })
       this.doCommand(Command.setCells, {
-        startCell: this.#startCell,
-        endCell: this.#endCell,
-        focusCell: this.focusCell,
-        cells: map(flatDeep<CellPos>(this.selectedCellsPos!), (cellPos) => {
-          let rIndex = cellPos.rowIndex
-          let colProp = cellPos.prop;
-          let oldValue = this._innerData[rIndex][colProp];
-          return {
-            cell: cellPos,
-            oldValue,
-            newValue: "",
-          };
-        }),
+        cells: changedCells,
       });
-    } else if (item.text === "复制") {
-      this.doCopy();
+      this.emit('change', { type: ChangeType.Delete, cells: changedCells })
     } else if (item.text === "粘贴") {
       this.doPaste();
     } else if (item.insert) {
-      let rowInput = el.firstElementChild.querySelector("input");
-      let rowCount = rowInput ? rowInput.value >> 0 : 1;
+      let rowInput = el.firstElementChild!.querySelector("input");
+      let rowCount = rowInput ? parseInt(rowInput.value) : 1;
       let newRows: Record<string, any>[] = [];
-      let props = flatMap(this.renderColumns, (col) => {
+      const renderColumns = this.getRenderColumns()
+      let props = flatMap(renderColumns, (col) => {
         if (startsWith(col.prop, '__')) return [];
         return col.prop
       })
@@ -798,7 +640,7 @@ export class Editable extends Table {
         let nrs = []
         while (rc--) {
           let newRow: Record<string, any> = {};
-          each(this.renderColumns, (col) => {
+          each(renderColumns, (col) => {
             if (startsWith(col.prop, '__')) return;
             newRow[col.prop!] = "";
           });
@@ -813,26 +655,30 @@ export class Editable extends Table {
       });
       newRows = dataGetter(rowCount, props)
 
-      if (this.focusCell) {
-        let { ltColIndex, ltRowIndex, rbColIndex, rbRowIndex } =
-          this.getCellBox(this.#startCell!, this.#endCell!);
+      let startCell = first(this.__selectedCells)
+      let lastCell = last(this.__selectedCells)
+      if (startCell || lastCell) {
         if (item.insert === 'under') {
-          this._innerData.splice(rbRowIndex + 1, 0, ...newRows)
+          this.data.splice(startCell.rowIndex + 1, 0, ...newRows)
         } else {
-          this._innerData.splice(ltRowIndex, 0, ...newRows)
+          this.data.splice(lastCell.rowIndex, 0, ...newRows)
         }
       } else {
-        this._innerData.push(...newRows);
+        this.data.push(...newRows);
       }
+      //refresh view
+      this.resetVirtualList();
+      this.refreshView()
 
-      this.updateData();
+      this.emit('change', { type: ChangeType.Insert, cells: null })
     } else if (item.text === "删除行") {
       this._removeRows();
+      this.refreshView()
     } else if (item.text === "空白行") {
       this._removeRows(true);
+      this.refreshView()
     }
 
-    this.emit('contextmenuselect', { item })
   }
   onReload() {
     //隐藏selector
@@ -842,27 +688,33 @@ export class Editable extends Table {
     //隐藏显示中的信息
     this.hideMsg()
   }
-  onMenuHover(ev: CustomEvent) {
-    let { item, index, el } = ev.detail;
-    let input = el.querySelector("input");
-    if (input) {
-      input.select();
-      input.focus();
+  onInput(ev: InputEvent) {
+    const target = ev.target as HTMLInputElement;
+    const rect = target.getBoundingClientRect()
+    const pRect = this.renderRoot!.getBoundingClientRect()
+    if (rect.y < pRect.y || rect.y > pRect.y + this.renderRoot!.offsetHeight) {
+      target.blur()
     }
   }
-  onSelectOption(ev: CustomEvent) {
-    let item = ev.detail.item;
+  onSelectOption(obj: Record<string, any>) {
+    let item = obj.item;
     let val = item.text || item;
     let col = this.getColumnMeta(this.#startCell!);
-    let rIndex = this.getRowIndex(this.#startCell!);
-    let cIndex = this.getColIndex(this.#startCell!);
+    let rIndex = this.focusCellPos.rowIndex
+    let cIndex = this.focusCellPos.colIndex
+
+    //过滤后禁止编辑
+    if (this.__noEditingCheck()) {
+      return;
+    }
 
     let value = col.prop
-      ? this._innerData[rIndex][col.prop]
+      ? this.data[rIndex][col.prop]
       : this.#startCell?.innerText;
     let oldValue = value;
     value = value || ''
-    if (col.dataSelectionOption?.multiple) {
+
+    if (this._fieldMap.get(col.prop!)?.dataSelectionOption?.multiple) {
       if (value.indexOf(val) < 0) {
         value += MultiSelectionDivider + val;
       } else {
@@ -874,11 +726,24 @@ export class Editable extends Table {
       this.closeList();
     }
 
-    this.updateCellView(this.#startCell!, this._innerData, value);
+    this.updateCellView(this._getCellDom(rIndex, cIndex), this.data, value, this.focusCellPos);
+
+    //关联公式
+    let traceCell = this._getColumnChar(cIndex) + (rIndex + 1)
+    let traceList = this.traceCells.get(traceCell.toLowerCase())
+    if (traceList) {
+      traceList?.forEach(c => {
+        this._updateFormulaCell(c)
+      })
+    }
 
     let cellPos = { colIndex: rIndex, rowIndex: cIndex, prop: col.prop };
-    this.emit('change', { type: 'select', cells: [{ row: this._innerData[rIndex], column: col, rowIndex: rIndex, colIndex: cIndex, cell: cellPos, value: value, prevValue: oldValue }] })
+    this.emit('change', { type: ChangeType.Select, cells: [{ row: this.data[rIndex], column: col, rowIndex: rIndex, colIndex: cIndex, cell: cellPos, value: value, prevValue: oldValue }] })
   }
+  onOutside() {
+    this.hideSelector()
+  }
+  @event('mousedown')
   onGlobalMousedown(e: MouseEvent) {
     let t = e.target as Element;
 
@@ -886,81 +751,53 @@ export class Editable extends Table {
       this.closeList();
     }
   }
-  @event('keydown', { target: function () { return this.el_body_table } })
+  @event('keydown', () => document.body)
   onGlobalKeydown(e: KeyboardEvent) {
-    let startTd = this.#startCell!;
-    let endTd = this.#endCell!;
+    super.onGlobalKeydown(e)
 
-    if (e.ctrlKey && e.key == "c") {
-      if (this.activeCell) return;
+    //没有选框的不处理
+    if (this.__selectedCells.length < 1) return;
 
-      this.doCopy();
-    } else if (e.ctrlKey && e.key == "v") {
+    let k = e.key
+    if (/F\d+/.test(k)) return;
+    if (k === 'Control') return;
+    if (k === 'Alt') return;
+
+    if (e.ctrlKey && e.key === "v") {
       if (this.activeCell) return;
 
       this.doPaste();
-    } else if (lowerCase(e.key) == "tab") {
-      e.preventDefault();
-      if (this.closeInput() === false) {
-        return;
-      }
-      let startRIndex = this.getRowIndex(startTd);
-      let startCIndex = this.getColIndex(startTd);
-      let maxCIndex = this.renderColumns.length - 1;
-      let maxRIndex = this._innerData.length - 1
-      let minRIndex = 0
-      //single
-      if (this.isEqualCell(startTd, endTd)) {
-        this.focusNextCell(startTd, e)
-      } else {
-        //multi rows
-        maxRIndex = Math.max(startRIndex, this.getRowIndex(endTd));
-        maxCIndex = Math.max(startCIndex, this.getColIndex(endTd));
-        minRIndex = Math.min(startRIndex, this.getRowIndex(endTd));
-        let minCIndex = Math.min(startCIndex, this.getColIndex(endTd));
-        let nextRIndex = this.getRowIndex(this.focusCell!);
-        let nextCIndex = this.getColIndex(this.focusCell!) + 1;
+    } else if (lowerCase(e.key) === "tab") {
 
-        if (nextCIndex > maxCIndex) {
-          nextCIndex = minCIndex;
-          nextRIndex += 1;
-        }
-        if (nextRIndex > maxRIndex) {
-          nextRIndex = minRIndex;
-        }
-        let nextTd = this._getCellDom(nextRIndex, nextCIndex);
-        this.setFocusCell(nextTd!, e);
-        this.locateFocus();
-      }
+
     } else if (lowerCase(e.key) == "escape") {
       this.closeCopy();
       this.closeInput(true);
       this.closeList();
     } else if (lowerCase(e.key) == "enter") {
       if (this.activeCell && e.altKey) {
-        let input = this.activeCell.querySelector(
-          ".c-table-cell-input__text"
+        let input = this.activeCell.querySelector(".ce-table-cell-input__text"
         ) as HTMLTextAreaElement;
         input.value += '\n'
         return;
       }
       this.closeInput();
-      this.focusNextCell(startTd, e)
-      this.el_body_table.focus();
+      // this.focusNextCell(startTd, e)
+      this.bodyCon.focus();
     } else if (lowerCase(e.key) == "delete") {
       if (this.activeCell) return;
-      if (!get(this.editOption, 'deletable', true)) return;
+      if (!get(this.editOption, 'deletable', true)) {
+        this.toast.warn('禁止删除')
+        return;
+      }
 
       let changedCells: Record<string, any>[] = []
       this.doCommand(Command.setCells, {
-        startCell: this.#startCell,
-        endCell: this.#endCell,
-        focusCell: this.focusCell,
-        cells: map(concat(flatDeep(this.selectedCellsPos!), this.checkedCells), (cellPos: CellPos) => {
+        cells: map(this.__selectedCells, (cellPos: CellPos) => {
           let rIndex = cellPos.rowIndex;
           let colProp = cellPos.prop;
-          let oldValue = this._innerData[rIndex][colProp];
-          changedCells.push({ cell: cellPos, row: this._innerData[rIndex], column: this.renderColumns[cellPos.colIndex], rowIndex: rIndex, colIndex: cellPos.colIndex, value: '', prevValue: oldValue })
+          let oldValue = this.innerData[rIndex][colProp];
+          changedCells.push({ cell: cellPos, row: this.innerData[rIndex], column: this.getRenderColumns()[cellPos.colIndex], rowIndex: rIndex, colIndex: cellPos.colIndex, value: '', prevValue: oldValue })
           return {
             cell: cellPos,
             oldValue,
@@ -969,11 +806,11 @@ export class Editable extends Table {
         }),
       });
 
-      this.emit('change', { type: 'delete', cells: changedCells })
+      this.emit('change', { type: ChangeType.Delete, cells: changedCells })
     } else if (lowerCase(e.key) == "backspace") {
       if (this.activeCell) return;
       if (this.focusCell) {
-        this.activeInput(this.focusCell, "");
+        this.activeInput("");
       }
     } else if (
       !this.activeCell &&
@@ -982,26 +819,57 @@ export class Editable extends Table {
       )
     ) {
       if (this.activeCell) return;
-      if (this.focusCell) {
-        this.activeInput(this.focusCell, "");
-      }
+      if (this.inputCell.style.display == 'none' && (e.ctrlKey || e.shiftKey)) return
+      this.activeInput("");
+
       // e.preventDefault();
     }
   }
+  @event('blur', () => window)
   onGlobalBlur(e: Event) {
     if (document.activeElement !== this) return;
 
     this.closeCopy();
   }
+  // @event('contextmenu', { target: function () { return this.renderRoot } })
+  // onContextMenu(e: MouseEvent) {
+  //   e.stopPropagation();
+  //   if (!this.el_context_menu) return;
+  //   if (!this.tableBody.contains(e.target as HTMLElement)) return
+
+  //   let rows = map<CellPos[], string, Record<string, any>>(this.selectedCellsPos!, cellAry => {
+  //     return this.data[cellAry[0].rowIndex]
+  //   })
+
+  //   //屏蔽删除
+  //   this.el_context_menu.itemList.forEach(item => {
+  //     if (item && item.cellNeed) {
+  //       item.disabled = rows.length < 1;
+  //     }
+  //   })
+
+  //   let showMenu = true;
+  //   this.emit('contextmenu', { items: this.el_context_menu.itemList, cells: this.selectedCellsPos, rows, cancel: () => { showMenu = false } }, { event: e })
+  //   if (showMenu)
+  //     this.el_context_menu.open(e);
+  // }
   onCommand(command: string, data: Record<string, any>) {
-    super.onCommand(command, data);
     if (command === Command.setCells) {
-      let { cells } = data;
-      each(cells, (v: { cell: HTMLElement | CellPos; oldValue: any; newValue: any }) => {
+      let updateFormulaCell = new Set()
+      let cells = data.cells as { cell: HTMLElement | CellPos; oldValue: any; newValue: any }[];
+      cells.forEach((v: { cell: HTMLElement | CellPos; oldValue: any; newValue: any }) => {
         let newValue = v.newValue;
         let cellDom = v.cell instanceof HTMLElement ? v.cell : this._getCellDom(v.cell.rowIndex, v.cell.colIndex);
 
-        let { dataType } = this.renderColumns[cellDom ? this.getColIndex(cellDom) : (v.cell as CellPos).colIndex]
+        let cIndex = cellDom ? this.getColIndex(cellDom) : (v.cell as CellPos).colIndex
+        let rIndex = cellDom ? this.getRowIndex(cellDom) : (v.cell as CellPos).rowIndex
+        let traceCell = this._getColumnChar(cIndex) + (rIndex + 1)
+        let traceList = this.traceCells.get(traceCell.toLowerCase())
+        traceList?.forEach(c => {
+          updateFormulaCell.add(c)
+        })
+
+        let { dataType } = this.getRenderColumns()[cIndex]
         //转数字
         if (dataType === "number" && !isNumber(newValue)) {
           newValue = parseFloat(newValue);
@@ -1009,285 +877,199 @@ export class Editable extends Table {
         }
         newValue = isUndefined(newValue) ? '' : newValue;
 
-        if (cellDom) {
-          //更新dom
-          let input = cellDom.querySelector(
-            ".c-table-cell-input__text"
-          ) as HTMLTextAreaElement;
-          if (!input) return;
-          input.value = newValue
+        //更新formula
+        if (isBlank(newValue)) {
+          this.formulaMap.delete(traceCell)
         }
 
         //更新data
-        let data = this._innerData;
+        let data = this.innerData;
         this.updateCellView(cellDom, data, newValue, v.cell as any);
-      });
-    }
-  }
-  onBuildColumns(columns: ColumnMeta[], header: Partial<ColumnMeta>[][]) {
-    super.onBuildColumns(columns, header as any)
-    //增加行标识
-    let width = (this._innerData.length + "").length * 10 + 10;
-    width = width < 40 ? 40 : width;
-
-    let columnSn: ColumnMeta = {
-      label: "",
-      prop: "__sn_row",
-      colspan: 0,
-      rowspan: 0,
-      width: width,
-      primaryWidth: width,
-      type: "index",
-      slots: {},
-      align: "center",
-      headerAlign: "center",
-      hasSub: false,
-      resizable: false,
-      fixed: true,
-      sort: false,
-      cellClass: "__sn_row",
-      headerClass: "__sn_row",
-    };
-
-    //增加列标识
-    let colsRow: Partial<ColumnMeta>[] = []
-    columns.forEach((c, i) => {
-      let label = this._getColumnChar(i);
-
-      let isFixedCol = c.fixed
-      colsRow.push({
-        label,
-        prop: c.prop,
-        colspan: 0,
-        rowspan: 0,
-        width: width,
-        primaryWidth: width,
-        headerAlign: 'center',
-        resizable: true,
-        fixed: isFixedCol,
-        slots: {},
-        headerClass: "__sn_col",
       })
-    })
+      //更新公式
+      let delCells: string[] = []
+      updateFormulaCell.forEach((c: any) => {
+        if (!this._updateFormulaCell(c)) {
+          delCells.push(c)
+        }
+      })
 
-    columns.unshift(columnSn);
-    header[0].unshift(columnSn);
-
-    let headerHolder = clone<ColumnMeta>(columnSn)
-    headerHolder.headerClass = '__sn_col __sn_col_first'
-    colsRow.unshift(headerHolder)
-
-    let theadHTML = theadRender({
-      headerHeight: this.headerHeight,
-      columns: this.renderColumns,
-      header: [colsRow],
-      maxLevel: 1,
-      render: TableColumn.renderSlotHeaderCell,
-    });
-
-    if (this.showColumnIndicator) {
-      this.el_thead_ext.innerHTML = '<div class="c-table-focusbar-h"></div>' + theadHTML
-      this.#el_focusbar_h = this.el_thead_ext.querySelector('.c-table-focusbar-h')!
+      delCells.forEach(dc => {
+        Array.from(this.traceCells.values()).forEach(list => {
+          list.delete(dc)
+        })
+      })
     }
   }
-  onContextMenu(e: MouseEvent) {
-    if (!this.el_context_menu) return;
-    let startTH = closest<HTMLElement>(
-      e.target!,
-      (node) =>
-        node.tagName == "THEAD",
-      "parentNode"
-    );
-    if (startTH) {
-      e.stopPropagation();
-      e.preventDefault()
-      return;
-    }
-    let rows = map<CellPos[], string, Record<string, any>>(this.selectedCellsPos!, cellAry => {
-      return this._innerData[cellAry[0].rowIndex]
-    })
 
-    //屏蔽删除
-    this.el_context_menu.itemList.forEach(item => {
-      if (item && item.cellNeed) {
-        item.disabled = rows.length < 1;
-      }
-    })
-
-    let showMenu = true;
-    this.emit('contextmenu', { items: this.el_context_menu.itemList, cells: this.selectedCellsPos, rows, cancel: () => { showMenu = false } }, { event: e })
-    if (showMenu)
-      this.el_context_menu.open(e);
-    e.stopPropagation();
-  }
-  getSelectDragHandles(se: MouseEvent) {
+  getFillerDragHandles(se: MouseEvent) {
     let that = this;
-    let startTd = this.#startCell;
-    let endCell: HTMLElement | null | undefined = undefined;
-    let startColIndex = this.getColIndex(startTd!)
-    let startRowIndex = this.getRowIndex(startTd!)
-    let root = this.el_table;
-    return {
-      mouseMove: function (
-        moe: MouseEvent,
-        colIndex: number,
-        rowIndex: number
-      ) {
-        let endTd = (endCell = that._getCellDom(rowIndex, colIndex));
-        if (!endTd) return;
 
-        //序号列
-        if (endTd.classList.contains("__sn_row")) {
-          let rowIndex = endTd.dataset.rowIndex;
-          let td = that._getCellDom(rowIndex!, 1)
-          endTd = td;
-        }
+    let ltColIndex = this.leftSelectedCellColIndex
+    let ltRowIndex = this.topSelectedCellRowIndex
+    let rbColIndex = this.rightSelectedCellColIndex
+    let rbRowIndex = this.bottomSelectedCellRowIndex
 
-        endCell = endTd;
-        that.locateSelector(startTd!, endTd);
-        that.rangeInput && that.rangeInput.setValue((Math.abs(rowIndex - startRowIndex) + 1) + 'R x ' + (Math.abs(colIndex - startColIndex) + 1) + 'C')
-      },
-      mouseUp: function (e: MouseEvent, checking: boolean) {
-        if (isDefined(endCell)) {
-          that.#endCell = endCell || that.#startCell;
-        }
-        that._selectedCells()
-
-        if (checking) {
-
-        }
-        let fColIndex = that.getColIndex(that.focusCell!)
-        let fRowIndex = that.getRowIndex(that.focusCell!)
-        that.rangeInput && that.rangeInput.setValue(that._getColumnChar(fColIndex - 1) + (fRowIndex + 1))
-      },
-    };
-  }
-  getFillDragHandles(se: MouseEvent) {
-    let el_selector_filler = this.#el_selector_filler;
-    let fillerStyle = el_selector_filler.style;
-    let that = this;
-    let getCellBox = this.getCellBox.bind(this);
-    let { x, y, ltColIndex, ltRowIndex, rbColIndex, rbRowIndex } =
-      getCellBox(this.#startCell!, this.#endCell!);
     let ltCell = this._getCellDom(ltRowIndex, ltColIndex)
     let rbCell = this._getCellDom(rbRowIndex, rbColIndex)
-    let ltCellPos: CellPos = { rowIndex: ltRowIndex, colIndex: ltColIndex, prop: '' };
-    let rbCellPos: CellPos = { rowIndex: rbRowIndex, colIndex: rbColIndex, prop: '' };
-    let dir = "";
-    let root = this.el_table;
-    let headHeight = this.getHeaderHeight();
 
+    let startProp = this.getColumnPropByIndex(this.leftSelectedCellColIndex)
+    let endProp = this.getColumnPropByIndex(this.rightSelectedCellColIndex)
+
+    let startCellPos = { colIndex: ltColIndex, rowIndex: ltRowIndex, prop: startProp }
+    let endCellPos = { colIndex: rbColIndex, rowIndex: rbRowIndex, prop: endProp }
+
+    //topleft
+    let tlCellPos: CellPos = { rowIndex: ltRowIndex, colIndex: ltColIndex, prop: startProp };
+    //bottomright
+    let brCellPos: CellPos = { rowIndex: rbRowIndex, colIndex: rbColIndex, prop: endProp };
+    let dir = "";
+    let root = this.renderRoot!;
+    let startCell = ltCell
+    let endCell = rbCell
     let rect = root.getBoundingClientRect();
-    let startX = se.clientX + root.scrollLeft - rect.x,
-      startY = se.clientY + root.scrollTop - headHeight - rect.y;
-    let endCell, startCell;
+    let headerHeight = this.tableHead.offsetHeight
+    let scroller = this.scroller
+    let startX = se.clientX + scroller.x - rect.x,
+      startY = se.clientY + scroller.y - rect.y - headerHeight;
+    let startRowIndex = ltRowIndex
+    let endRowIndex = rbRowIndex
     let startColIndex = ltColIndex
     let endColIndex = rbColIndex
-    // let startRowIndex = this.getRowIndex(this.#startCell!)
+
+    let tlCellBox
+    const DEG = 45
+    let scs: CellPos[] = []
     return {
       mouseMove: function (
         moe: MouseEvent,
-        colIndex: number,
-        rowIndex: number,
+        startCellPos: CellPos,
+        endCellPos: CellPos,
         moveX: number,
         moveY: number
       ) {
-        fillerStyle.display = "block";
 
         //计算当前点的斜率，以便确定拖动方向
         let k = Math.atan2(moveY - startY, moveX - startX);
-        let angle = (450 + (k * 180) / Math.PI) % 360;
-        if (angle > 45 && angle < 135) {
-          dir = "right";
-        } else if (angle <= 45 || angle > 315) {
-          dir = "top";
-        } else if (angle >= 135 && angle < 225) {
-          dir = "bottom";
-        } else {
-          dir = "left";
+        let angle = k * 180 / Math.PI
+        if (angle < 0) {
+          angle += 360
         }
 
-        startCell = ltCell;
+        dir = ''
+        /**
+         *     270
+         * 180     0  
+         *     90
+         */
+        if (angle < 270 + DEG && angle > 270 - DEG) {
+          dir = "top";
+        } else if (angle <= 90 + DEG && angle >= 90 - DEG) {
+          dir = "bottom";
+        } else if (angle < 180 + DEG && angle > 180 - DEG) {
+          dir = "left";
+        } else if (angle <= DEG || angle >= 360 - DEG) {
+          dir = "right";
+        }
+        //暂不支持left/right
+        if (dir == 'left' || dir == 'right') return
 
+        let moveCell, moveCellBox, moveCellPos
+        endRowIndex = endCellPos.rowIndex;
+        endColIndex = endCellPos.colIndex;
+
+        startCellPos = { rowIndex: startRowIndex, colIndex: startColIndex, prop: ltCell.getAttribute('column')! };
         switch (dir) {
           case "right":
-            rowIndex = rbRowIndex;
-            startCell = startCell;
+            endRowIndex = rbRowIndex;
             break;
           case "bottom":
-            colIndex = rbColIndex;
-            startCell = startCell;
+            endColIndex = rbColIndex;
             break;
           case "top":
-            //TODO: top结束后，如果新的rowIndex未超过ltRowIndex，则结果是ltRowIndex到rowIndex，否则就是rowIndex到rbRowIndex
-            colIndex = ltColIndex;
-            startCell = rbCell;
+            endRowIndex = rbRowIndex;
+            endColIndex = rbColIndex;
+            startRowIndex = endCellPos.rowIndex
+            startColIndex = ltColIndex
+
+            moveCell = that._getCellDom(startRowIndex, startColIndex)
+            moveCellBox = getBox(moveCell, that.bodyCon);
+            startCellPos.prop = moveCell.getAttribute('column')!;
+
             break;
           case "left":
-            rowIndex = ltRowIndex;
-            startCell = rbCell;
+            startColIndex = endCellPos.colIndex
+            startRowIndex = ltRowIndex
+            endColIndex = rbColIndex
+            endRowIndex = rbRowIndex
+
+            moveCell = that._getCellDom(ltRowIndex, endCellPos.colIndex)
+            moveCellBox = getBox(moveCell, that.bodyCon);
+            startCellPos.prop = moveCell.getAttribute('column')!;
+
             break;
         }
 
-        endCell = that._getCellDom(rowIndex, colIndex)
-        let fillBox = getCellBox(startCell, endCell);
+        endCellPos = { rowIndex: endRowIndex, colIndex: endColIndex, prop: endCellPos.prop };
 
-        if (dir == "right" || dir == "bottom") {
-          fillerStyle.left = fillerStyle.top = "0";
+        scs = []
+        console.log(startRowIndex, startColIndex, endRowIndex, endColIndex)
+        let minR = Math.min(startRowIndex, endRowIndex)
+        let minC = Math.min(startColIndex, endColIndex)
+        let maxR = Math.max(startRowIndex, endRowIndex)
+        let maxC = Math.max(startColIndex, endColIndex)
+        range(minR, maxR + 1).forEach(r => {
+          range(minC, maxC + 1).forEach(c => {
+            let colProp = that.getRenderColumns()[c].prop
+            if (!some(that.__selectedCells, sc => sc.colIndex === c && sc.rowIndex === r)) {
+              scs.push({
+                rowIndex: r,
+                colIndex: c,
+                prop: colProp,
+              })
+            }
+          })
+        })
 
-          // fillLength =
-        } else if (dir === "top") {
-          fillerStyle.left = "0";
-          fillerStyle.top = fillBox.y - y + "px";
-        } else if (dir === "left") {
-          fillerStyle.left = fillBox.x - x + "px";
-          fillerStyle.top = "0";
-        }
-
-        fillerStyle.width = fillBox.w + "px";
-        fillerStyle.height = fillBox.h + "px";
+        that.__renderSelectorFiller(scs, minR, minC, maxR, maxC)
       },
       mouseUp: function (e: MouseEvent, checking: boolean, moved: boolean) {
-        fillerStyle.display = "none";
-        fillerStyle.width = fillerStyle.height = "0";
-
+        console.log('-=-=-=-=-=--')
         if (!moved) return;
-
-        let endRow = that.getRowIndex(endCell!);
-        let endCol = that.getColIndex(endCell!);
-
         let fillLength = 0;
         //relocate selector
         switch (dir) {
           case "right":
-            fillLength = endCol - that.getColIndex(rbCell);
+            fillLength = endCellPos.colIndex - startCellPos.colIndex
             break;
           case "bottom":
-            that.#startCell = startCell!;
-            that.#endCell = endCell!;
-            fillLength = endRow - that.getRowIndex(rbCell);
+            fillLength = endCellPos.rowIndex - startCellPos.rowIndex
             break;
           case "top":
-            fillLength = that.getRowIndex(ltCell) - endRow;
+            fillLength = endCellPos.rowIndex - startCellPos.rowIndex
             break;
           case "left":
-            that.#startCell = endCell!;
-            that.#endCell = startCell!;
-            fillLength = that.getColIndex(ltCell) - endCol;
+            fillLength = endCellPos.colIndex - startCellPos.colIndex
             break;
         }
-
-        that.doFill(dir, ltCellPos, rbCellPos, startColIndex, endColIndex, fillLength);
-        that.locateSelector(startCell! || that.#selectorMeta.startCell, endCell!, false);
-
+        that.doFill(dir, tlCellPos, brCellPos, startColIndex, endColIndex, fillLength);
+        let sPos = { colIndex: startColIndex, rowIndex: startRowIndex, prop: startProp }
+        let endPos = { colIndex: endColIndex, rowIndex: endRowIndex, prop: endProp }
+        that.__renderSelectorFiller([])
+        that.__locateSelector(sPos, endPos)
+        that._selectedCells(startCellPos, endCellPos);
       },
     };
   }
   getSnRowDragHandles(se: MouseEvent, startRowIndex: number) {
-    let lastColIndex = this.renderColumns.length - 1;
-    let startTd = this._getCellDom(startRowIndex, 1)
-    let endTd = this._getCellDom(startRowIndex, lastColIndex)
-    this.locateSelector(startTd!, endTd);
+    let lastColIndex = this.getRenderColumns().length - 1;
+    let startTd = this._getCellDom(startRowIndex, 0)
+    let endColProp = last(this.getRenderColumns()).prop
+    // let endTd = this._getCellDom(startRowIndex, lastColIndex)
+    let startCellPos: CellPos = { colIndex: 0, rowIndex: startRowIndex, prop: startTd?.getAttribute('column')! }
+    let endCellPos: CellPos = { colIndex: lastColIndex, rowIndex: startRowIndex, prop: startTd?.getAttribute('column')! }
+    this.focusCellPos = { colIndex: 0, rowIndex: startRowIndex, prop: startCellPos.prop }
+    this.locateSelector(startCellPos, endCellPos);
     let that = this;
     return {
       mouseMove: function (
@@ -1297,25 +1079,27 @@ export class Editable extends Table {
         moveX: number,
         moveY: number
       ) {
-        endTd = that._getCellDom(rowIndex, lastColIndex)
-
-        that.locateSelector(startTd!, endTd);
+        // endTd = that._getCellDom(rowIndex, lastColIndex)
+        endCellPos.rowIndex = rowIndex;
+        that.locateSelector(startCellPos, { colIndex: lastColIndex, rowIndex, prop: endColProp });
       },
       mouseUp: function (e: MouseEvent) {
         that.#startCell = startTd
-        that.#endCell = endTd
+        // that.#endCell = endTd
 
-        that._selectedCells()
+        that._selectedCells(startCellPos, endCellPos)
       },
     };
   }
   getSnColDragHandles(th: HTMLElement, startColIndex: number) {
-    let lastRowIndex = this._innerData.length - 1;
+    let lastRowIndex = this.data.length - 1;
     let startTd = this._getCellDom(0, startColIndex)
     let endTd = this._getCellDom(lastRowIndex, startColIndex)
-    let startCellPos = { colIndex: startColIndex, rowIndex: 0, prop: '' }
-    let endCellPos = { colIndex: startColIndex, rowIndex: lastRowIndex, prop: '' }
-    this.locateSelector(startTd!, endTd, true, endCellPos, startCellPos, th);
+    let startColProp = this.getRenderColumns()[startColIndex]
+    let startCellPos = { colIndex: startColIndex, rowIndex: 0, prop: startColProp.prop }
+    let endCellPos = { colIndex: startColIndex, rowIndex: lastRowIndex, prop: startColProp.prop }
+    this.focusCellPos = { colIndex: startColIndex, rowIndex: 0, prop: startCellPos.prop }
+    this.locateSelector(startCellPos, endCellPos);
     let that = this;
     return {
       mouseMove: function (
@@ -1325,13 +1109,11 @@ export class Editable extends Table {
         moveX: number,
         moveY: number
       ) {
+        if (startColIndex === colIndex) return;
+        endCellPos = { colIndex: colIndex, rowIndex: lastRowIndex, prop: that.getRenderColumns()[colIndex].prop }
         endTd = that._getCellDom(lastRowIndex, colIndex)
-        if (endTd) {
-          that.locateSelector(startTd!, endTd);
-        } else {
-          endCellPos = { colIndex: colIndex, rowIndex: lastRowIndex, prop: '' }
-          that.locateSelector(startTd!, endTd, true, endCellPos, startCellPos);
-        }
+
+        that.locateSelector(startCellPos!, endCellPos);
 
       },
       mouseUp: function (e: MouseEvent) {
@@ -1349,8 +1131,8 @@ export class Editable extends Table {
   focusNextCell(currentTd: HTMLElement, e?: Event) {
     let startRIndex = this.getRowIndex(currentTd);
     let startCIndex = this.getColIndex(currentTd);
-    let maxCIndex = this.renderColumns.length - 1;
-    let maxRIndex = this._innerData.length - 1
+    let maxCIndex = this.getRenderColumns().length - 1;
+    let maxRIndex = this.data.length - 1
     let minRIndex = 0
     let nextCIndex = startCIndex + 1;
     let nextRIndex = startRIndex;
@@ -1362,9 +1144,33 @@ export class Editable extends Table {
       nextRIndex = minRIndex;
     }
     let nextTd = this._getCellDom(nextRIndex, nextCIndex);
-    this.locateSelector(nextTd, nextTd);
+    let nextCellPos = { colIndex: nextCIndex, rowIndex: nextRIndex, prop: nextTd.getAttribute('column')! }
+    this.locateSelector(nextCellPos);
     this.#startCell = this.#endCell = nextTd;
-    this.setFocusCell(nextTd!, e);
+  }
+  __renderSelectorFiller(scs: CellPos[], minR?: number, minC?: number, maxR?: number, maxC?: number) {
+    let list = this.bodyCon.querySelectorAll('.ce-table-cell.' + CELL_CLASS_SELECTED_FILLER)
+    each(list, (el: Element) => {
+      el.classList.remove(CELL_CLASS_SELECTED_FILLER, CELL_CLASS_SELECTED_FILLER_TOP, CELL_CLASS_SELECTED_FILLER_BOTTOM, CELL_CLASS_SELECTED_FILLER_LEFT, CELL_CLASS_SELECTED_FILLER_RIGHT)
+    })
+    each(scs, (cell: CellPos) => {
+      let el = this.bodyCon.querySelector('.ce-table-row[data-row-index="' + cell.rowIndex + '"] .ce-table-cell[column="' + cell.prop + '"]') as HTMLElement
+      if (!el) return
+
+      el.classList.add(CELL_CLASS_SELECTED_FILLER)
+      if (cell.rowIndex === minR) {
+        el.classList.add(CELL_CLASS_SELECTED_FILLER_TOP)
+      }
+      if (cell.rowIndex === maxR) {
+        el.classList.add(CELL_CLASS_SELECTED_FILLER_BOTTOM)
+      }
+      if (cell.colIndex === minC) {
+        el.classList.add(CELL_CLASS_SELECTED_FILLER_LEFT)
+      }
+      if (cell.colIndex === maxC) {
+        el.classList.add(CELL_CLASS_SELECTED_FILLER_RIGHT)
+      }
+    })
   }
   /**
    * 获取两个cell组成的矩形空间
@@ -1377,14 +1183,14 @@ export class Editable extends Table {
       endCell?.classList.contains("__end") ||
       startCell?.classList.contains("__end");
 
-    let startBox = startCell ? getBox(startCell, this.el_body_table) : this.#selectorMeta.startBox!;
+    let startBox = startCell ? getBox(startCell, this.bodyCon) : this.#selectorMeta.startBox!;
     if (startBox.w < 1 || startBox.h < 1) {
       startBox = this.#selectorMeta.startBox!
     }
     let endBox = null;
 
     if (endCell) {
-      endBox = getBox(endCell, this.el_body_table);
+      endBox = getBox(endCell, this.bodyCon);
     } else {
       endCell = startCell;
       endBox = {
@@ -1433,16 +1239,15 @@ export class Editable extends Table {
     let w = x2 - x;
     let h = y2 - y;
 
-    x = x - SelectorOffset;
-    y = y - SelectorOffset;
+    // x = x - SelectorOffset;
+    // y = y - SelectorOffset;
     if (x < 0) {
-      x = 0;
-      w -= 1;
+      // x = 0;
+      // w -= 1;
     }
-    let headH = this.getHeaderHeight();
-    if (y < headH) {
-      y = headH - 1;
-      h -= 1;
+    if (y < 0) {
+      // y = 0 - 1;
+      // h -= 1;
     }
     if (isEnd) {
       w -= SelectorOffset;
@@ -1454,166 +1259,25 @@ export class Editable extends Table {
   }
   //隐藏选框，比如刷新数据后
   hideSelector() {
-    if (!this.#el_selector) return;
 
-    this.#el_selector.style.transform = 'translateX(-10px)';
-    this.#el_selector.style.width = this.#el_selector.style.height = '';
-    this.#el_selector_copy.style.left = '-9999px';
-    this.#el_selector_caret.style.left = '-9999px';
+    this.__clearSelector()
+    this.#el_selector_caret.style.display = 'none'
+
+    this.#startCell = this.#endCell = null;
+
+    this.closeCopy()
+
+    this.inputCell.style.width = this.inputCell.style.height = '0'
+    this.inputCell.style.display = "none";
   }
   hideFocusbar() {
-    if (!this.#el_focusbar_h) return;
-
-    this.#el_focusbar_h.style.width = '0';
-    this.#el_focusbar_v.style.height = '0'
   }
   hideMsg() {
     if (!this.#el_warning_msg)
       return;
     this.#el_warning_msg.style.display = "none";
-    this.#el_custom_msg.style.display = "none";
   }
-  //重新设置起始单元格
-  locateSelector(
-    startTd: HTMLElement,
-    endTd?: HTMLElement,
-    changeFocus: boolean = true,
-    endCellPos?: CellPos,
-    startCellPos?: CellPos,
-    th?: HTMLElement
-  ) {
-    let isEnd =
-      endTd?.classList.contains("__end") ||
-      startTd?.classList.contains("__end");
-    if (!startTd && !startCellPos) return;
-    let startRowIndex = this.getRowIndex(startTd)
-    if (this.#selectorMeta.startCell !== startTd) {
-      this.#selectorMeta.startCell = startTd;
-      this.#selectorMeta.startBox = startTd ? getBox(startTd, this.el_body_table) : undefined;
-      this.#selectorMeta.startRow = startRowIndex;
-      this.#selectorMeta.startColumn = this.getColIndex(startTd);
-    }
 
-    let startBox = this.#selectorMeta.startBox!;
-    if (!startBox && startCellPos) {
-      let h = (startCellPos.rowIndex - (this.#selectorMeta.startRow || 0)) * this.rowHeight
-      let cell = this._getCellDom(startRowIndex, startCellPos.colIndex)
-      let cellBox = getBox(cell || th, this.el_body_table);
-      // let tmpBox = this.getCellRect(startBox, cellBox, isEnd)
-      let y = this.el_thead.offsetHeight + this.el_thead_ext.offsetHeight
-      startBox = {
-        x: cellBox.x,
-        y: y,
-        w: cellBox.w,
-        h
-      }
-    }
-    let sx = startBox.x - SelectorOffset;
-    let sy = startBox.y //- SelectorOffset;
-    let sw = startBox.w;
-    let sh = startBox.h;
-    let isEndStart = (startTd || th).classList.contains("__end");
-
-    this.#el_selector.classList.toggle("__end", isEnd);
-
-    let selectorStyle = this.#el_selector.style;
-    let focusBox = { x: startBox.x - SelectorOffset, y: startBox.y - (this.#selectorMeta.startRow! < 1 ? 0 : SelectorOffset), w: startBox.w, h: startBox.h - (this.#selectorMeta.startRow! < 1 ? SelectorOffset : 0) }
-
-    if (sx < 0) {
-      sx = 0;
-      sw -= 1;
-    }
-    if (sy < 0) {
-      sy = 0;
-      sh -= 1;
-    }
-    if (isEndStart) {
-      sw -= SelectorOffset;
-      focusBox.w -= SelectorOffset;
-    }
-
-    if (endTd && endTd !== startTd) {
-      let endBox = getBox(endTd, this.el_body_table);
-      focusBox = this.getCellRect(startBox, endBox, isEnd)
-    }
-    if (endCellPos) {
-      let h = (endCellPos.rowIndex - (this.#selectorMeta.startRow || 0) + 1) * this.rowHeight
-      let cell = this._getCellDom(startRowIndex, endCellPos.colIndex)
-      let cellBox = getBox(cell || th, this.el_body_table);
-      let tmpBox = this.getCellRect(startBox, cellBox, isEnd)
-      focusBox = {
-        x: tmpBox.x,
-        y: sy,
-        w: tmpBox.w,
-        h
-      }
-    }
-
-    let { x, y, w, h } = focusBox;
-
-    selectorStyle.transform = `translate3d(${x}px, ${y}px,0)`
-    selectorStyle.width = w - 1 + "px";
-    selectorStyle.height = h - 1 + "px";
-
-    if (changeFocus) {
-      this.#el_selector_focus.style.left = sx - x + "px";
-      this.#el_selector_focus.style.top = sy - y - 2 + "px";
-      this.#el_selector_focus.style.width = sw - 0 + "px";
-      this.#el_selector_focus.style.height = sh - 0 + "px";
-    }
-
-    if ((startTd || th).classList.contains("__selection")) {
-      this.#el_selector_caret.style.left = "9999px";
-    } else {
-      this.#el_selector_caret.style.left = "-99999px";
-    }
-
-    if (parseInt(this.#el_selector_caret.style.left) > 0) {
-      this.#el_selector_caret.style.left =
-        sx + sw - this.#el_selector_caret.clientWidth - SelectorOffset + "px";
-      this.#el_selector_caret.style.top = sy + 3 + "px";
-    }
-
-    //侧边焦点条
-    this.#el_focusbar_v.style.top = y + 2 + 'px'
-    this.#el_focusbar_v.style.height = h + 'px'
-
-    if (this.showColumnIndicator) {
-      this.#el_focusbar_h.style.left = x + 2 + 'px'
-      this.#el_focusbar_h.style.width = w + 'px'
-    }
-
-    //隐藏填充框
-    let fillerStyle = this.#el_selector_filler.style;
-    fillerStyle.display = "none";
-    fillerStyle.width = fillerStyle.height = "0";
-  }
-  locateFocus() {
-    // let selectorStyle = this.#el_selector.style;
-    let isEnd = this.focusCell?.classList.contains("__end");
-    let box = getBox(this.focusCell!);
-    let transform = window.getComputedStyle(this.#el_selector).transform
-    let xy = transform.split(',')
-    let sx = parseFloat(xy[4]);
-    let sy = parseFloat(xy[5]);
-    this.#el_selector_focus.style.left = box.x - sx - 2 + "px";
-    this.#el_selector_focus.style.top = box.y - sy - 0 + "px";
-    this.#el_selector_focus.style.width = box.w - 1 - (isEnd ? 2 : 0) + "px";
-    this.#el_selector_focus.style.height = box.h - 1 + "px";
-  }
-  locateSelectorCopy() {
-    if (!this.#copyStartCell) return;
-
-    let startBox = getBox(this.#copyStartCell, this.el_body_table);
-    let endBox = getBox(this.#copyEndCell!, this.el_body_table);
-    let copyStyle = this.#el_selector_copy.style;
-    if (parseInt(copyStyle.left) > 0) {
-      copyStyle.left = startBox.x + "px";
-      copyStyle.top = Math.min(startBox.y, endBox.y) + "px";
-      copyStyle.width = endBox.x - startBox.x + endBox.w + "px";
-      copyStyle.height = Math.abs(endBox.y - startBox.y) + endBox.h + "px";
-    }
-  }
   //刷新视图内数据
   updateCellView(
     cell: HTMLElement,
@@ -1625,78 +1289,111 @@ export class Editable extends Table {
 
     let rIndex = cell ? this.getRowIndex(cell) : cellPos?.rowIndex;
     let cIndex = cell ? this.getColIndex(cell) : cellPos?.colIndex;
-    let colProp = cell ? cell.dataset.columnProp! : cellPos?.prop;
-    let col = this.renderColumns[cIndex!];
+    let colProp = cell ? cell.getAttribute('column') : cellPos?.prop;
+    let col = this.getRenderColumns()[cIndex!];
     //update data
-    set(data[rIndex!], colProp!, text);
+    //如果有对应公式保存公式
+    let f = this.formulaMap.get(this._getColumnChar(cIndex!) + (rIndex! + 1))
+    set(data[rIndex!], colProp!, f || text);
 
     //update view
     if (cell) {
-      let str = TableColumn.renderSlotBodyCell(
-        col,
-        data[rIndex!],
-        rIndex!,
-        cIndex!,
-        this.__formatter
-      );
-      str = isUndefined(str) ? '' : str;
-      cell.querySelector(".view")!.innerHTML = str;
+      let cellFn = col.cellTmpl
+
+      let isHtml = false
+      let str: string = text ?? f
+      if (cellFn) {
+        isHtml = true
+        str = (cellFn(data[rIndex!]) as Template).getHTML(this)
+      }
+
+      str = isUndefined(str) ? '' : str
+      if (col.pattern) {
+        switch (col.dataType) {
+          case DataType.Number:
+            str = formatNumber(str, col.pattern)
+            break;
+          case DataType.Time:
+          case DataType.DateTime:
+          case DataType.Date:
+            str = formatDate(str, col.pattern)
+            break;
+        }
+      }
+      let cellEl = cell.querySelector('.ce-table-cell-content [name="text"]')!
+
+      if (isHtml) {
+        cellEl.innerHTML = str;
+      } else {
+        cellEl.textContent = str;
+      }
+
+    }
+  }
+  //更新公式单元格
+  _updateFormulaCell(c: string) {
+    let cProp = this._getColumnProp(c.replace(/\d+/, ''))
+    let rIndex = parseInt(c.replace(/[a-z]+/i, '')) - 1
+
+    let formulaStr = get(this.innerData, [rIndex, cProp], '') as string
+    let v
+    let f = this.formulaFnMap.get(lowerCase(formulaStr))
+    if (f) {
+      v = this._pushFxQueue(formulaStr, rIndex, cProp, true)
     }
 
+    return true
   }
+
   updateCellInput(cell: HTMLElement, data: Array<Record<string, any>>) {
     let rIndex = this.getRowIndex(cell);
     let cIndex = this.getColIndex(cell);
     let colProp = cell.dataset.columnProp!;
-    let col = this.renderColumns[cIndex];
+    let col = this.getRenderColumns()[cIndex];
     //update input
     let html = "";
-    if (col.slots.input) {
-      html = TableColumn.renderSlotInputCell(col, data[rIndex], rIndex, cIndex);
-    } else if (col.dataType) {
-      html = TableColumn.renderInput(
-        col.dataType,
-        col.dataSelection!,
-        col.dataSelectionOption!,
-        col.dataOption!,
-        data[rIndex][colProp]
-      );
-    }
-    cell.querySelector(".input")!.innerHTML = html;
+    cell.querySelector(".ce-table-input")!.innerHTML = html;
   }
-  activeInput(cell: HTMLElement, text?: string) {
-    if (!cell.classList.contains("__editable")) return;
-    if (cell.classList.contains("__slotted")) return;
-    if (this.activeCell && this.isEqualCell(this.activeCell, cell)) return;
-    if (this.#el_warning_msg.style.display !== "none" || this.#el_custom_msg.style.display !== "none") return;
+  activeInput(text?: string) {
+    if (!this.__lastStartCellPos) return
 
-    let colProp = cell.dataset.columnProp!;
-    let rIndex = this.getRowIndex(cell);
-    let cIndex = this.getColIndex(cell);
+    let cIndex = this.__lastStartCellPos.colIndex
+    let colMeta = this.getRenderColumns()[cIndex]
+    if (colMeta.hasCellSlot || colMeta.cellTmpl) return;
+
+    // if (this.activeCell && this.isEqualCell(this.activeCell, cell)) return;
+    if (window.getComputedStyle(this.#el_warning_msg).display !== "none") return;
+
+    let colProp = colMeta.prop;
+    let rIndex = this.__lastStartCellPos.rowIndex;
     if (this.lockedPosMap[cIndex + ":" + rIndex]) {
       return;
     }
-    let rowData = cloneDeep(this._innerData[rIndex]);
-    let col = this.getColumnMeta(cell);
+    let rowData = cloneDeep(this.innerData[rIndex]);
 
     let toBreak = false;
     this.emit('beforecellactive', {
-      row: rowData, column: col, rowIndex: rIndex, colIndex: cIndex, cell: { colIndex: cIndex, rowIndex: rIndex, prop: colProp }, value: text, cancel: () => {
+      row: rowData, column: colMeta, rowIndex: rIndex, colIndex: cIndex, cell: { colIndex: cIndex, rowIndex: rIndex, prop: colProp }, value: text, cancel: () => {
         toBreak = true;
       }
     })
     if (toBreak) return;
-
+    let cell = this._getCellDom(rIndex, cIndex)
     cell.classList.add("active-input");
-    this.renderRoot.classList.add("__in-input");
+    this.renderRoot?.classList.add("__in-input");
     this.activeCell = cell;
-    let input = cell.querySelector(
-      ".c-table-cell-input__text"
-    ) as HTMLTextAreaElement;
+    let input = this.inputCell
+
+    let box = getBox(cell, this.bodyCon);
+    input.style.left = box.x + 1 + "px"
+    input.style.top = box.y + 1 + "px"
+    input.style.width = box.w - 2 + "px"
+    input.style.height = box.h - 2 + "px"
+    input.style.display = "block"
     input.focus();
 
     //打开input前，更新input数据
-    input.value = (isDefined(text) ? text : this._innerData[rIndex][colProp]) || '';
+    input.value = (isDefined(text) ? text : get(this.innerData[rIndex], colProp)) ?? '';
     this.closeCopy();
 
     let that = this;
@@ -1704,39 +1401,40 @@ export class Editable extends Table {
       that.closeInput();
     };
 
-    this.emit('cellActive', { row: rowData, column: col, rowIndex: rIndex, colIndex: cIndex, cell: { colIndex: cIndex, rowIndex: rIndex, prop: colProp }, value: text })
+    this.emit('cellActive', { row: rowData, column: colMeta, rowIndex: rIndex, colIndex: cIndex, cell: { colIndex: cIndex, rowIndex: rIndex, prop: colProp }, value: text })
   }
   closeInput(cancelText?: boolean) {
-    if (!this.activeCell || !this.el_body_table.contains(this.activeCell)) return;
-    // if(this.#el_warning_msg.style.display !== "none" || this.#el_custom_msg.style.display !== "none")return false;
+    if (!this.activeCell || !this.bodyCon.contains(this.activeCell)) return;
 
     //校验选择内容
     let col = this.getColumnMeta(this.activeCell);
-    let colProp = this.activeCell.dataset.columnProp!;
-    let input = this.activeCell.querySelector(
-      ".c-table-cell-input__text"
-    ) as HTMLTextAreaElement;
-    let text = input.value;
-    let isMulti = col.dataSelectionOption?.multiple;
-    if (col.dataSelectionOption?.constraint && !cancelText && trim(text)) {
+    let colProp = this.activeCell.getAttribute('column')
+    let input = this.inputCell
+    let text = escapeHtml(input.value);
+    const column = this._fieldMap.get(col.prop!)
+    let isMulti = column?.dataSelectionOption?.multiple;
+    let hasSelector = this.__selectedCells.length > 0
+    if (column?.dataSelection && column?.dataSelectionOption?.constraint && !cancelText && trim(text) && hasSelector) {
+      let dsValues = column?.dataSelection?.map(s => isString(s) ? s : s.value)
       if (
-        (!isMulti && !includes(col.dataSelection!, trim(text))) ||
+        (!isMulti && !includes(dsValues!, trim(text))) ||
         (isMulti &&
           !isEmpty(
             except(
               union(
                 split(trim(text), MultiSelectionDivider),
-                col.dataSelection
+                dsValues,
+                (a: string) => a + ''
               ),
-              col.dataSelection
+              dsValues,
+              (a: string) => a + ''
             )
           ))
       ) {
-        let box = getBox(this.activeCell, this.el_body_table);
-        this.#el_warning_msg.style.left = box.x - 2 + "px";
-        this.#el_warning_msg.style.top = box.y + box.h + 2 + "px";
+        let box = getBox(this.activeCell, this.bodyCon)
+        this.#el_warning_msg.style.transform = `translate3d(${box.x}px, ${box.y + box.h}px,0)`
         this.#el_warning_msg.style.display = "block";
-        this.#el_warning_msg.open()
+        // this.#el_warning_msg.open()
 
         input.select();
         input.focus();
@@ -1744,19 +1442,14 @@ export class Editable extends Table {
       }
     }
     if (cancelText) {
-      let input = this.activeCell.querySelector(
-        ".c-table-cell-input__text"
-      ) as HTMLTextAreaElement;
-      if (input) input.onblur = null;
+      input.onblur = null;
     } else {
       if (colProp) {
-
         let ri = this.getRowIndex(this.activeCell);
         let ci = this.getColIndex(this.activeCell);
 
-        let old = this._innerData[ri][colProp];
-        let rowData = cloneDeep(this._innerData[ri])
-
+        let old = get(this.innerData[ri], colProp)
+        let rowData = cloneDeep(this.innerData[ri])
 
         let cellPos = { colIndex: ci, rowIndex: ri, prop: colProp };
 
@@ -1764,66 +1457,103 @@ export class Editable extends Table {
         let cancelDeactiveMsgOptions: Record<string, any> = { type: 'warning' }
         let activedCell = this.activeCell
         this.emit('beforecelldeactive', {
-          row: rowData, column: this.renderColumns[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old, lock: () => {
+          row: rowData, column: this.getRenderColumns()[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old, lock: () => {
             lockCell = true;
           }, cancel: () => {
             if (!this.activeCell || this.activeCell !== activedCell) return;
             this.#el_warning_msg.style.display = "none";
-            this.#el_custom_msg.style.display = "none";
 
             this.activeCell && this.activeCell.classList.remove("active-input");
             this.activeCell = null;
-            this.renderRoot.classList.remove("__in-input");
+            this.renderRoot?.classList.remove("__in-input");
           }
         })
         if (lockCell) {
-          this.lockCells(this._getColumnChar(ci - 1) + (ri + 1))
+          this.lockCells(this._getColumnChar(ci) + (ri + 1))
         }
 
         //同步调用cancel后会出现
         if (!this.activeCell) return;
+        if (old !== text) {
+          //处理公式
+          let cellChar = this._getColumnChar(ci) + (ri + 1)
+          if (text[0] === FormulaTag && text.match(/=/img)?.length === 1) {
+            //0. 检测自引用
+            let checker = new RegExp(`([^a-z]|^)${cellChar}([^0-9]|$)`, 'i')
+            if (checker.test(text)) {
+              let box = getBox(this.#el_selector, this.bodyCon)
+              this.#el_warning_msg.style.transform = `translate3d(${box.x}px, ${box.y + box.h}px,0)`
+              this.#el_warning_msg.style.display = "block";
+              this.#el_warning_msg.descr = '不能引用自身'
+              // this.#el_warning_msg.open()
 
-        this.doCommand(Command.setCells, {
-          startCell: this.#startCell,
-          endCell: this.#endCell,
-          focusCell: this.focusCell,
-          cells: [
-            {
-              cell: this.activeCell,
-              oldValue: old,
-              newValue: text,
-            },
-          ],
-        });
+              input.select();
+              input.focus();
+              return false;
+            }
+            //1. 保存
+            this.formulaMap.set(cellChar, text)
+            //2. 计算
+            let v = this._pushFxQueue(text, ri, colProp, true)//this._calcFormula(text, cellChar)
+            //3. rewrite
+            // text = v
+          } else {
+            //如果存在公式，删除
+            this.formulaMap.delete(cellChar)
+          }
 
-        this.emit('celldeactive', { row: rowData, column: this.renderColumns[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old })
+          this.doCommand(Command.setCells, {
+            startCell: this.#startCell,
+            endCell: this.#endCell,
+            focusCell: this.focusCell,
+            cells: [
+              {
+                cell: this.activeCell,
+                oldValue: old,
+                newValue: text,
+              },
+            ],
+          });
+
+          // 更新汇总
+          this._updateSummary()
+        }
+
+        this.emit('celldeactive', { row: rowData, column: this.getRenderColumns()[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old })
         if (text !== old) {
-          this.emit('cellchange', { row: rowData, column: this.renderColumns[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old })
-          this.emit('change', { type: 'input', cells: [{ row: rowData, column: this.renderColumns[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old }] })
+          this.emit('cellchange', { row: rowData, column: this.getRenderColumns()[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old })
+          this.emit('change', { type: ChangeType.Input, cells: [{ row: rowData, column: this.getRenderColumns()[ci], rowIndex: ri, colIndex: ci, cell: cellPos, value: text, prevValue: old }] })
         }
       }
     }
 
     this.#el_warning_msg.style.display = "none";
-    this.#el_custom_msg.style.display = "none";
 
     this.activeCell && this.activeCell.classList.remove("active-input");
     this.activeCell = null;
-    this.renderRoot.classList.remove("__in-input");
+    this.renderRoot?.classList.remove("__in-input");
 
+    input.style.width = input.style.height = '0'
+    input.style.display = "none";
   }
-  onCloseTip() {
+  _updateSummary() {
+    // 更新汇总
+    if (this.showFooter) {
+      this.onStat()
+    }
+  }
+  onCloseTip(e: PointerEvent) {
     this.closeInput(true);
     // this.#el_warning_msg.removeAttribute("showing");
   }
   closeCopy() {
-    this.#el_selector_copy.style.left = "-9999px";
-    this.#el_selector_copy.style.width = this.#el_selector_copy.style.height =
-      "0";
-    this.#copyStartCell = this.#copyEndCell = null;
-    if (this.#copyStartCell) {
-      navigator.clipboard.writeText("");
-    }
+    // this.#el_selector_copy.style.left = "-9999px";
+    // this.#el_selector_copy.style.width = this.#el_selector_copy.style.height =
+    //   "0";
+    // this.#copyStartCell = this.#copyEndCell = null;
+    // if (this.#copyStartCell) {
+    //   navigator.clipboard.writeText("");
+    // }
   }
   insertAbove() {
     return `在上方插入<input type="text" value="${this.defaultInsertSize}" style="width: 2rem;margin:0 .1rem" onclick="event.stopPropagation()" maxlength="4" onkeydown="event.stopPropagation()"/>行`;
@@ -1831,110 +1561,100 @@ export class Editable extends Table {
   insertUnder() {
     return `在下方插入<input type="text" value="${this.defaultInsertSize}" style="width: 2rem;margin:0 .1rem" onclick="event.stopPropagation()" maxlength="4" onkeydown="event.stopPropagation()"/>行`;
   }
-  doCopy() {
-    if (!get(this.editOption, 'copyable', true)) return;
-
-    let text = "";
-    let table = this.el_body_table;
-    let data = this._innerData;
-    each(this.selectedCellsPos!, (cellsPos) => {
-      let rowText = "";
-      each(cellsPos, (cellPos) => {
-        let td = this._getCellDom(cellPos.rowIndex, cellPos.colIndex)
-        if (td) {
-          rowText += "\t" + td.innerText;
-        } else {
-          rowText += "\t" + get(data, [cellPos.rowIndex, cellPos.prop]);
-        }
-      });
-      text += "\r\n" + rowText.replace(/^\t/, '');
-    });
-
-    navigator.clipboard.writeText(text.replace(/^\r\n/, ""));
-
-    if (
-      get<number>(this.#startCell, "offsetLeft", 0) <
-      get<number>(this.#endCell, "offsetLeft", 0)
-    ) {
-      this.#copyStartCell = this.#startCell;
-      this.#copyEndCell = this.#endCell;
-    } else {
-      this.#copyStartCell = this.#endCell;
-      this.#copyEndCell = this.#startCell;
+  doCopy(withHeader?: boolean) {
+    if (!get(this.editOption, 'copyable', true)) {
+      this.toast.warn('禁止复制')
+      return;
     }
-
-    let style = this.#el_selector_copy.style;
-    let style2 = this.#el_selector.style;
-    let transform = window.getComputedStyle(this.#el_selector).transform
-    let xy = transform.split(',')
-    style.left = parseFloat(xy[4]) + 'px';
-    style.top = parseFloat(xy[5]) + 'px';
-    style.width = parseInt(style2.width) + 4 + "px";
-    style.height = parseInt(style2.height) + 4 + "px";
+    super.doCopy(withHeader)
   }
   doPaste() {
-    if (!get(this.editOption, 'pastable', true)) return;
-    let startTd = this.#startCell!;
-    let endTd = this.#endCell!;
+    if (!get(this.editOption, 'pastable', true)) {
+      this.toast.warn('禁止粘贴')
+      return;
+    }
+
+    let firstCell = first(this.__selectedCells)
+    let lastCell = last(this.__selectedCells)
+    if (!navigator.clipboard) {
+      showError('Cannot read navigator.clipboard, it is available only in HTTPS')
+      return
+    }
     //粘贴统一从剪切板获取 \t用于分列，\r\n用于换行
     navigator.clipboard.readText().then((rs) => {
       //格式check
       let content = rs;
       if (!content) return;
 
+      let selectionRange = this.getSelectionRange()
+      let startRowIndex = selectionRange.topLeft.rowIndex
+      let startColIndex = selectionRange.topLeft.colIndex
+      let endRowIndex = selectionRange.bottomRight.rowIndex
+      let endColIndex = selectionRange.bottomRight.colIndex
+
       let rows = content.split(/\r\n|\n/gim);
-      let targetRowCount = this.getRowIndex(endTd) - this.getRowIndex(startTd) + 1;
+      if (isEmpty(last(rows))) {
+        rows = take(rows, rows.length - 1);
+      }
+
+      let targetRowCount = selectionRange.bottomRight.rowIndex - startRowIndex + 1;
+      let targetColCount = selectionRange.bottomRight.colIndex - startColIndex + 1;
       let contentRowCount = rows.length;
       let contentColCount = rows[0].split("\t").length;
       //解析行列
-      let endRIndex = this.getRowIndex(startTd) + contentRowCount - 1;
-      if (endRIndex > this._innerData.length - 1) {
-        endRIndex = this._innerData.length - 1;
+      if (contentRowCount < 2) {
+        endRowIndex = selectionRange.bottomRight.rowIndex
+        endColIndex = selectionRange.bottomRight.colIndex
+      } else {
+        if (targetRowCount % contentRowCount) {
+          endRowIndex = startRowIndex + contentRowCount - 1
+        }
+        if (targetColCount % contentColCount) {
+          endColIndex = startColIndex + contentColCount - 1
+        }
       }
-      let endCIndex = this.getColIndex(startTd) + contentColCount - 1;
-      if (endCIndex > this.renderColumns.length - 1) {
-        endCIndex = this.renderColumns.length - 1;
+
+      if (endRowIndex > this.innerData.length - 1) {
+        endRowIndex = this.innerData.length - 1;
       }
-      let needRelocate = targetRowCount % contentRowCount;
+      if (endColIndex > this.getRenderColumns().length - 1) {
+        endColIndex = this.getRenderColumns().length - 1;
+      }
+      let needRelocate = targetRowCount % contentRowCount || targetColCount % contentColCount;
 
       if (needRelocate) {
         //重新定位selector
-        endTd = this._getCellDom(endRIndex, endCIndex)
-        let endCellPos = { colIndex: endCIndex, rowIndex: endRIndex, prop: '' }
-        this.locateSelector(startTd, endTd, false, endCellPos);
+        let startCellPos = { colIndex: startColIndex, rowIndex: startRowIndex, prop: selectionRange.topLeft.prop }
+        let endCellPos = { colIndex: endColIndex, rowIndex: endRowIndex, prop: selectionRange.bottomRight.prop }
+        this.__locateSelector(startCellPos, endCellPos);
       }
 
-      let sri = this.getRowIndex(startTd);
-      let sci = this.getColIndex(startTd);
-      let eri = endRIndex//this.getRowIndex(endTd);
-      let eci = endCIndex//this.getColIndex(endTd);
-      let body = this.el_body_table;
       let cells: Array<Record<string, any>> = [];
       let changedCells: CellPos[] = []
-      each(range(sri, eri + 1), (rIndex, i: number) => {
+      each(range(startRowIndex, endRowIndex + 1), (rIndex, i: number) => {
         let rowData = rows[i % contentRowCount].split("\t")
-        each(range(sci, eci + 1), (cIndex, j: number) => {
+        each(range(startColIndex, endColIndex + 1), (cIndex, j: number) => {
           let cellValue = rowData[j % contentColCount]
-          let colProp = this.renderColumns[cIndex].prop
+          let colProp = this.getRenderColumns()[cIndex].prop
           let cellPos = { colIndex: cIndex, rowIndex: rIndex, prop: colProp! }
           changedCells.push(cellPos)
 
           cells.push({
             cell: cellPos,
-            oldValue: this._innerData[rIndex][colProp!],
+            oldValue: this.innerData[rIndex][colProp!],
             newValue: cellValue,
           });
         })
       });
 
       this.doCommand(Command.setCells, {
-        startCell: startTd,
-        endCell: endTd,
         focusCell: this.focusCell,
         cells,
       });
 
-      this.emit('change', { type: 'paste', cells: changedCells })
+      this._updateSummary()
+
+      this.emit('change', { type: ChangeType.Paste, cells: changedCells })
     });
   }
   doFill(
@@ -1945,6 +1665,10 @@ export class Editable extends Table {
     endColIndex: number,
     fillLength: number
   ) {
+    if (!get(this.editOption, 'fillable', true)) {
+      this.toast.warn('禁止填充')
+      return;
+    }
     let fillingMap = new WeakMap();
     let allCells: CellPos[] = [];
     let FILL_TAG = '_\$*$\_';
@@ -1955,7 +1679,7 @@ export class Editable extends Table {
         endColIndex + 1
       ),
       (col) => {
-        let prop = this.renderColumns[col].prop;
+        let prop = this.getRenderColumns()[col].prop;
         if (!prop) return;
         let fillingCells: CellPos[] = [];
         let sequence: number[] = [];
@@ -1971,7 +1695,7 @@ export class Editable extends Table {
                 ltCellPos.rowIndex,
                 rbCellPos.rowIndex + 1
               ),
-              (row) => this._innerData[row][prop]
+              (row) => get(this.innerData[row], prop)
             );
             defaultStep = 1;
             break;
@@ -1985,7 +1709,7 @@ export class Editable extends Table {
                 ltCellPos.rowIndex,
                 rbCellPos.rowIndex + 1
               ),
-              (row) => this._innerData[row][prop]
+              (row) => get<number>(this.innerData[row], prop)
             ).reverse();
             defaultStep = -1;
             break;
@@ -2035,14 +1759,15 @@ export class Editable extends Table {
         each(seqGroup, set => {
           let setSize = size(set)
           if (setSize > 1) {
-            let base = parseFloat(steps[last<number>(toArray(set))].num) - parseFloat(steps[head<number>(toArray(set))].num)
+            let base = parseFloat(steps[last<number>(toArray(set))].num) - parseFloat(steps[first<number>(toArray(set))].num)
             let accDiff = 0;
-            each(map(set, i => steps[i].num), (v, i: number, seq: number[]) => {
-              let next = seq[i + 1];
+            const seqArr = map(set, i => steps[i].num) as number[]
+            for (let i = 0; i < seqArr.length; i++) {
+              let next = seqArr[i + 1];
               if (next) {
-                accDiff += parseFloat(next + "") - parseFloat(v + "");
+                accDiff += parseFloat(next + "") - parseFloat(seqArr[i] + "");
               }
-            });
+            }
             let step = accDiff / (setSize - 1)
             set.forEach(i => {
               steps[i].base = base
@@ -2050,15 +1775,15 @@ export class Editable extends Table {
             })
           }
         })
-
+        let cols = this.getRenderColumns()
         each(fillingCells, (cell, i: number) => {
           let row = cell.rowIndex
           let step = steps[i % steps.length];
-          let oldValue = this._innerData[row][prop];
+          let oldValue = get(this.innerData[row], prop)
           let newValue = step.tmpl
           if (isDefined(step.num)) {
             let base = step.base || 0;
-            let nNum = parseInt(step.num) + parseInt(step.step) + (parseInt(base))
+            let nNum = parseFloat(step.num) + parseFloat(step.step) + (parseFloat(base))
 
             if (step.tmpl) {
               newValue = step.tmpl.replace(FILL_TAG, nNum)
@@ -2067,7 +1792,9 @@ export class Editable extends Table {
             }
             step.num = nNum
           }
-
+          if (!cols[cell.colIndex].dataType || cols[cell.colIndex].dataType === DataType.Text) {
+            newValue = newValue + ''
+          }
           fillingMap.set(cell, [oldValue, newValue]);
         });
       }
@@ -2081,9 +1808,9 @@ export class Editable extends Table {
       cells: map(allCells, (cell) => {
         let [oldValue, newValue] = fillingMap.get(cell);
 
-        let rowData = this._innerData[cell.rowIndex]
+        let rowData = this.innerData[cell.rowIndex]
         if (oldValue !== newValue)
-          changedCells.push({ row: rowData, column: this.renderColumns[cell.colIndex], rowIndex: cell.rowIndex, colIndex: cell.colIndex, cell: null, value: newValue, prevValue: oldValue })
+          changedCells.push({ row: rowData, column: this.getRenderColumns()[cell.colIndex], rowIndex: cell.rowIndex, colIndex: cell.colIndex, cell: null, value: newValue, prevValue: oldValue })
         return {
           cell,
           oldValue,
@@ -2092,10 +1819,13 @@ export class Editable extends Table {
       }),
     });
 
-    this.emit('change', { type: 'fill', cells: changedCells })
+    this._updateSummary()
+
+    this.emit('change', { type: ChangeType.Fill, cells: changedCells })
   }
   _removeRows(onlyBlank: boolean = false) {
-    let startRow = this.getRowIndex(this.#startCell!)
+    let startCell = first(this.__selectedCells)
+    let startRow = startCell.rowIndex
     if (startRow < 0 && this.checkedCells.length < 1) return;
 
     //1. 计算checked行列
@@ -2105,63 +1835,40 @@ export class Editable extends Table {
       cells.add(cellPos.colIndex)
     })
     //2. 计算selected行列
-    each(flatDeep<CellPos>(this.selectedCellsPos || []), cellPos => {
+    each(this.__selectedCells, cellPos => {
       rows.add(cellPos.rowIndex)
       cells.add(cellPos.colIndex)
     })
     //3. 删除行
     //仅删除渲染列字段为空的行
-    let cols = filter(this.renderColumns, c => c.prop)
-    sort(rows, (a: number, b: number) => b - a).forEach((r: number) => {
-      let rowData = this._innerData[r]
+    let cols = filter(this.getRenderColumns(), c => c.prop)
+    let i = 0
+    let dels: typeof this.data = []
+    sort(rows as any, (a: number, b: number) => b - a).forEach((r: number) => {
+      let rowData = this.data[r]
       let isEmptyRow = every(cols, col => !trim(rowData[col.prop!]));
-      if ((onlyBlank && isEmptyRow) || !onlyBlank)
-        this._innerData.splice(r, 1);
+      if ((onlyBlank && isEmptyRow) || !onlyBlank) {
+        // this.data.splice(r, 1);
+        dels.push(rowData)
+        i++
+      }
     })
-    this.updateData();
-    //4. 重新定位selector
-    this._relocateSelector();
+
+    this.data = filter(this.data, (r) => !dels.includes(r))
+
     this.hideFocusbar();
-  }
-  _relocateSelector() {
-    if (!this.selectedCellsPos) return;
-    let selectedRows = map(flat(this.selectedCellsPos), cell => cell.rowIndex)
-    let dataRow = this._innerData.length
-    let minRow = min(selectedRows)
-    let maxRow = max(selectedRows)
 
-    if (minRow > dataRow || maxRow > dataRow) {
-      this.hideSelector()
-    }
+    if (i > 0)
+      this.emit('change', { type: ChangeType.Remove, cells: null })
   }
-  _updateCheckedStyle() {
-    let selectors = map(this.checkedCells, cellPos => {
-      return `.c-table-cell[data-column-index="${cellPos.colIndex}"][data-row-index="${cellPos.rowIndex}"] .c-table-cell-wrapper::before`
-    }).join(',');
-    // console.log(selectors)
-    Editable.checkedSheet.replaceSync(
-      selectors +
-      `{
-        position: absolute;
-        width: calc(100% - 2px);
-        height: calc(100% - 2px);
-        padding: 0;
-        left: 1px;
-        top: 1px;
-        content: "";
-        background: rgba(0, 0, 0, 0.1);
-      }`
-    );
-  }
+
   _selectedCells(startPos?: CellPos, endPos?: CellPos) {
-    if (isEmpty(this._innerData)) return;
-    let sdataset = this.#startCell?.dataset!;
-    let edataset = this.#endCell?.dataset || sdataset;
+    if (isEmpty(this.data)) return;
 
-    let startColIndex = startPos ? startPos.colIndex : sdataset.columnIndex!
-    let startRowIndex = startPos ? startPos.rowIndex : sdataset.rowIndex!
-    let endColIndex = endPos ? endPos.colIndex : edataset.columnIndex!
-    let endRowIndex = endPos ? endPos.rowIndex : edataset.rowIndex!
+    let startColIndex = startPos ? startPos.colIndex : this.getColumnIndex(this.#startCell?.getAttribute('column')!)
+    let startRowIndex = startPos ? startPos.rowIndex : this.getRowIndex(this.#startCell!)
+    let endColIndex = endPos ? endPos.colIndex : this.getColumnIndex(this.#endCell?.getAttribute('column')!)
+    let endRowIndex = endPos ? endPos.rowIndex : this.getRowIndex(this.#endCell!)
 
     let rowCells = this.selectedCellsPos = this.__getCellsPosOfRange(startColIndex, endColIndex, startRowIndex, endRowIndex);
 
@@ -2177,9 +1884,25 @@ export class Editable extends Table {
       code += c.charCodeAt(0) - BaseCode;
     })
 
-    return code + 1;
+    return code;
   }
-
+  _getColumnProp(char: string) {
+    let cIndex = this._getColumnCode(char)
+    return this.getRenderColumns()[cIndex].prop
+  }
+  _getCellDom(rowIndex: string | number, colIndex: string | number) {
+    let colName = this.getRenderColumns()[colIndex as number].prop;
+    return this.bodyCon.querySelector(
+      `div[data-row-index="${rowIndex}"] div[column="${colName}"]`
+    ) as HTMLElement;
+  }
+  __noEditingCheck() {
+    if (size(this.filterMap) > 0) {
+      this.toast.warn(NO_EDITING_TIP);
+      return true;
+    }
+    return false
+  }
   /********* data **********/
   //通过对角位置确定一个范围并返回，如D3,C6
   __getRange(startCellPos: string, endCellPos?: string) {
@@ -2206,11 +1929,11 @@ export class Editable extends Table {
     let maxCol = Math.max(parseInt(startColIndex + ""), parseInt(endColIndex + ""))
     let maxRow = Math.max(parseInt(startRowIndex + ""), parseInt(endRowIndex + ""))
 
-    if (minCol < 1 || maxCol > (this.renderColumns.length - 1) || minRow < 0 || maxRow > (this._innerData.length - 1)) {
+    if (minCol < 0 || maxCol > (this.getRenderColumns().length - 1) || minRow < 0 || maxRow > (this.data.length)) {
       throw new Error('cell index is out of range')
     }
     let rowCells = [];
-    let data = this.renderColumns;
+    let data = this.getRenderColumns();
     for (let rIndex = minRow; rIndex <= maxRow; rIndex++) {
       let colCells: CellPos[] = [];
       for (let cIndex = minCol; cIndex <= maxCol; cIndex++) {
@@ -2233,55 +1956,27 @@ export class Editable extends Table {
       }
     })
   }
-  setStyle(cell: string | CellPos, style: string | Record<string, string>) {
-    let cssText: string = style + '';
-    if (isObject(style)) {
-      cssText = join(map(styles, (v, k: string) => kebabCase(k) + ":" + v), ';')
-    }
-    let rIndex: number = -1, cIndex: number = -1;
-    if (isString(cell)) {
-      let range = this.__getRange(cell)
-      rIndex = range.startRowIndex
-      cIndex = range.startColIndex
-    } else if (cell.colIndex) {
-      rIndex = cell.rowIndex
-      cIndex = cell.colIndex
-    }
-    this.cellStyleMap[rIndex + ":" + cIndex] = cssText
-    //update dom
-    let td = this._getCellDom(rIndex, cIndex);
-    if (td) {
-      td.style.cssText += ';' + cssText
-    }
-  }
-  setNote(cell: string | CellPos, message: string) {
-    let rIndex: number = -1, cIndex: number = -1;
-    if (isString(cell)) {
-      let range = this.__getRange(cell)
-      rIndex = range.startRowIndex
-      cIndex = range.startColIndex
-    } else if (cell.colIndex) {
-      rIndex = cell.rowIndex
-      cIndex = cell.colIndex
-    }
-    this.cellNoteMap[rIndex + ":" + cIndex] = message
-    //update dom
-    let td = this._getCellDom(rIndex, cIndex);
-    if (td) {
-      let tip = td.querySelector('l-tooltip')
-      if (message) {
-        td.setAttribute('data-note', message)
-        tip?.setAttribute('content', message)
-        tip?.toggleAttribute('disabled', false)
-      } else {
-        td.removeAttribute('data-note')
-        tip?.toggleAttribute('disabled', true)
-      }
-
-    }
-  }
   getColumnIndex(prop: string) {
-    let i = findIndex(this.renderColumns, col => col.prop === prop)
-    return this._getColumnChar(i - 1)
+    let i = findIndex(this.getRenderColumns(), col => col.prop === prop)
+    return i
+  }
+  getColumnPropByIndex(colIndex: number) {
+    return this.getRenderColumns()[colIndex].prop
+  }
+  getColumnMeta(cell: HTMLElement): ColumnMeta {
+    return this.getRenderColumns()[this.getColIndex(cell)] as ColumnMeta;
+  }
+  onBeforeSelect(el: HTMLElement, e: MouseEvent) {
+    if (el === this.inputCell) return true
+
+    let cellBox = el?.getBoundingClientRect()
+    if (cellBox) {
+      let { width, height } = window.getComputedStyle(el as Element, '::after')
+      let minX = Math.floor(cellBox.x) + Math.floor(cellBox.width) - parseFloat(width)
+      let minY = Math.floor(cellBox.y) + Math.floor(cellBox.height) - parseFloat(height)
+      if (e.clientX >= minX && e.clientY >= minY) {
+        return this.getFillerDragHandles(e)
+      }
+    }
   }
 }

@@ -1,166 +1,299 @@
-import { bind, classes, html, ifElse, prop, query, QueryCache, state, tag, Template, watch } from "compelem";
-import { cloneDeep, isArray, isEmpty, isEqual, merge } from "myfx";
-import { ChevronDown, Close } from "../../../icons/icons";
-import { SelectPanel } from "../../dataentry/selectpanel/SelectPanel";
-import { Popup } from "../../overlays/popup/Popup";
-import { FormControl } from "../FormControl";
-import { Input } from "../input/Input";
-import formStyle from "../style.scss";
-import style from "./style.scss";
+import { bind, classes, computed, createRef, csscope, Csscope, emits, h, ifElse, ifTrue, model, prop, query, QueryCache, show, slot, state, styles, tag, Template, watch } from "compelem";
+import { each, find, isArray, isBlank, isEmpty, isObject, size, slice, toString } from "myfx";
+import { ControlBox } from "../../../base/ControlBox";
+import { ChevronDown } from "../../../icons/icons";
+import { Overlay } from "../../overlays/overlay/Overlay";
+import { ListPicker } from "../../picker/listpicker/ListPicker";
+import { InputTag } from "../input/InputTag";
+import formStyle from "../style.scss?tmpl";
+import style from "./style.scss?tmpl";
 /**
- * 下拉选择框
+ * 下拉选择框，支持多选（仅逗号分隔）
  * @props
  *  data {array|object} 列表数组，格式[{value,label,selected}]。如果值类型为对象表示分组数据，格式 {groupLabel: [{value,label,selected}]}
  *  multiple {boolean} 是否可多选，默认false
+ *  tags {boolean} 是否以标签形式显示，默认false
  *  limit {number} 多选时允许的最大项，小于1表示不限制。默认0
- *  clearable {boolean} 是否可清除，默认 true
- *  filterable {boolean} 是否可过滤，默认 true
- *  maxHeight {number} 弹出列表的最大高度，默认320
+ *  clearable {boolean} 是否可清除，默认 false
+ *  filterable {boolean} 是否可过滤，默认 false
+ *  maxHeight {number} 弹出列表最大显示高度，超过会显示滚动条，默认30vh
+ *  maxWidth {number} 弹出列表最大显示宽度，默认100%
  *  loading {boolean} 显示加载状态
- *  crud {string} 多实例时crud标识
- *  crudData {object} 可定义api地址自动查询，格式如下
- *  {
- *    url:'', //API服务地址，GET请求。支持url变量如：/a/b/{form.xx}
- *    listField:'', //用于指定返回结果的列表字段名，支持链式如'data.list'。如果为空，则直接使用返回结果作为列表。
- *    labelField:'label', //label字段名，默认label
- *    valueField:'value', //value字段名，默认value
- *    watchVar:false //监控url变量，默认false。如果开启，当url变量发生变更时，自动重新发起get请求
- *    filter: (list,rs,callback) {Function|string} 对检索结果进行过滤，可以是函数或函数字符串，必须调用callback函数传递过滤后的list
- *  }
+ *  collapse-items {number} 折叠选项，在显示项超过数字后仅显示计数。小于1时无效，默认0
  *  
- *  value {string} model属性，受控
+ *  value {string|string[]} model属性，受控
  * @events
  *  change({label,value})
+ *  close() 选择框关闭时触发
  * @slots
- *  default 内部可使用option标签自定义内容样式，启用slot会
+ *  default 内部可使用option标签自定义内容样式
+ *  option 列表选项插槽
+ *  tag 当tags为true时，选中项插槽
  *
  * @author holyhigh2
  */
-@tag("l-select")
-export class Select extends FormControl {
+@emits('change', 'close', 'update:value')
+@tag("ce-select")
+export class Select extends ControlBox {
 
   changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
+    this.plaintext = enabled
   }
-  @query('l-input', QueryCache.ONCE)
-  input: Input
-  @query('l-popup', QueryCache.ONCE)
-  list: Popup;
+  @query('ce-input-tag', QueryCache.ONCE)
+  input: InputTag
 
-  @query('.c-form-select slot')
+  @query('ce-overlay', QueryCache.ONCE)
+  list: Overlay;
+
+  @query('.ce-form-select slot')
   slotEl: HTMLSlotElement;
-  @query('l-select-panel')
-  selectPanel: SelectPanel
+
+  selectPanel = createRef<ListPicker>()
   //////////////////////////////////// props
-  @prop({ type: [Array, Object, String] }) data = [];
-  @prop clearable = true;
+  @prop({ type: Array, shallow: true }) data: Array<Record<string, any>> = [];
+  @prop clearable = false;
+  @prop tags = false;
   @prop multiple = false;
-  @prop filterable = true;
+  @prop filterable = false;
   @prop loading = false;
-  @prop maxHeight = 320;
+  @prop maxHeight = '30vh';
+  @prop maxWidth = '100%';
+  @prop({ type: Number }) popHeight: number;
   @prop limit = 0;
-  @prop({ type: String, sync: true }) value = '';
+  @prop({
+    type: [String, Array, Number], model: true, hasChanged(nv, ov) {
+      return toString(nv) !== toString(ov)
+    }
+  }) value = '';
+  @prop collapseItems = 0
 
-  //crud
-  @prop({ type: String }) crud: string;
-  @prop({ type: Object }) crudData: Object;
+  @state selectLabel: string | string[];
+  @state opened = false
+  @state minW = 0
+  @state __plusCount: number = 0;
+  @state __r = 0
 
-  @state selectLabel: string;
-
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [formStyle, style];
   }
 
   /////////////////////////////////// watches
-  @watch('data')
+  @watch('data', { deep: true })
   watchData(nv: any, ov: any) {
-    if (nv !== ov)
-      this.selectLabel = this.selectPanel.getLabel(nv)
+    this.calcInitValue()
   }
-  @watch('value', {})
+  @watch('value')
   watchValue(nv: any, ov: any) {
-    if (nv !== ov)
-      this.selectLabel = this.selectPanel.getLabel(nv)
+    if (!isObject(nv) && nv === ov) return;
+    if (!this.selectPanel.current) return
+
+    if (this.multiple) {
+      this.selectLabel = [...this.selectPanel.current.selectLabelAry]
+      this.__r = Math.random()
+    } else {
+      this.selectLabel = this.selectPanel.current.getLabel(nv)!
+    }
   }
-  _crudData: object
-  @watch('crudData', { immediate: true })
-  watchCrudData(nv: any, ov: any) {
-    if (isEmpty(nv)) return;
-    if (isEqual(this._crudData, nv)) return;
-    if (!this._crudData) this._crudData = cloneDeep(nv)
-    if (nv.url) this.loading = true;
+  /////////////////////////////////// computed
+  @computed
+  get collapseValue() {
+    this.__r;
+    if (this.collapseItems > 0) {
+      this.__plusCount = size(this.selectPanel.current?.selectLabelAry ?? []) - this.collapseItems
+      return slice(this.selectPanel.current?.selectLabelAry ?? [], 0, this.collapseItems)
+    }
+    return this.selectPanel.current?.selectLabelAry ?? []
   }
   //////////////////////////////////// lifecycles
   constructor() {
     super();
-    const that = this;
-    document.addEventListener('mousedown', (e) => {
-      if (that.list.style.display !== 'block' || that.dontClose) return;
-
-      if (that.closeTimer) {
-        clearTimeout(that.closeTimer)
-      }
-      that.closeTimer = setTimeout(() => {
-        that.__hideList();
-        that.closeTimer = null;
-      }, 10);
-    })
-
   }
 
   mounted(): void {
+    this.minW = this.offsetWidth
+    //init
+    setTimeout(() => {
+      if (!isEmpty(this.value) && isEmpty(this.selectLabel)) {
+        // this.watchValue(this.value, undefined)
+        this.calcInitValue()
+      }
+    }, 0);
   }
+  slotChange(slot: HTMLSlotElement, name: string): void {
+    let els = slot.assignedElements({ flatten: true });
 
+    if (els.length > 0 && this.selectPanel.current) {
+      this.selectPanel.current!.innerHTML = ''
+      this.selectPanel.current?.append(...els)
+    }
+
+    this.calcInitValue()
+  }
+  calcInitValue() {
+    // if (this.firstPopup) return
+    //计算初值
+    if (this.value) {
+      if (!isEmpty(this.data)) {
+        each(this.data, item => {
+          if (item.value == this.value) {
+            this.selectLabel = item.label ?? ''
+            return false
+          }
+        })
+      } else if (!isEmpty(this.slots.default)) {
+        each(this.slots.default, (el: Element) => {
+          if (el.getAttribute('value') == this.value) {
+            this.selectLabel = el.textContent ?? ''
+            return false
+          }
+        })
+      }
+    }
+  }
+  @state firstPopup = false
   render(): Template {
-
-    return this.plaintext ? html`${this.value}` : html`<div class="c-form-select ${classes({
-      __disabled: this.disabled
-    })}">
-      <l-input inside readonly ?disabled="${this.disabled || this.loading}" .value="${this.selectLabel}" ${bind(merge({
+    return this.plaintext ? h`${this.value}` : h`
+      <div
+        class="ce-form-select"
+        @resize.debounce="${this.onResize}"
+        ${classes({
+      "is-disabled": this.disabled
+    })}
+      >
+        <ce-input-tag
+          inside
+          readonly
+          active="${this.opened}"
+          style="user-select: none;"
+          ?clearable="${this.clearable}"
+          ?disabled="${this.disabled || this.loading}"
+          .max-collapse-tags="${this.collapseItems}"
+          .value="${isBlank(this.selectLabel) ? [] : isArray(this.selectLabel) ? this.selectLabel : [this.selectLabel]}"
+          .required="${this.required}"
+          .error="${this.error}"
+          .error-message="${this.errorMessage}"
+          .hint="${this.hint}"
+          .hide-hint="${this.hideHint}"
+          @mousedown="${this.onMouseDown}"
+          @clear="${this.onClear}"
+          ${bind(({
       appearance: this.appearance,
       color: this.color,
       size: this.size,
       round: this.round,
       loading: this.loading,
       label: this.label
-    }, this.attrs))} @mousedown="${this.onMouseDown}" @focus="${this.onFocus}" @blur="${this.onBlur}" @update:value.stop  style="cursor:pointer;user-select: none;">
-        ${ifElse(this.loading, () => html`
-          <l-progress-circular slot="trailing" class="--caret" r="9" width="3" indeterminate="true"></l-progress-circular>  
-        `, () => html`
-          <l-icon @mousedown.stop="${this.onClickIcon}" class="--caret ${classes({ 'c-btn-close': !!this.selectLabel && this.clearable })}" slot="trailing" .svg="${(!!this.selectLabel && this.clearable) ? Close : ChevronDown}"></l-icon>
-        `)}
-      </l-input>
-      <l-popup @mousedown.stop>
-        <l-select-panel .crud="${this.crud}" .crud-data="${this.crudData}" @load="${this.onLoad}" .filterable="${this.filterable}" .value="${(this.value)}" @clickoption="${this.onClickOption}" @change="${this.onSelectChange}" ?multiple="${this.multiple}" ?readonly="${this.readonly}">
-          <slot></slot>
-        </l-select-panel>
-      </l-popup>
+    }))}
+        >
+          ${slot((v, i, onClose) => this.tags ? (this.slotHooks.tag ? this.slotHooks.tag(find(this.data, d => d.label == v) ?? {}) : h`<ce-tag appearance="flat" closable @close="${onClose}">${v}</ce-tag>`) : h`${v}`)}
+          ${ifElse(this.loading, () => h`
+            <ce-progress-circular
+              slot="append"
+              class="ce-form-select-caret"
+              r="9"
+              width="3"
+              indeterminate="true"
+              @mousedown.stop
+            >
+            </ce-progress-circular>
+          `, () => h`
+            <ce-icon
+              size="${this.size}"
+              class="ce-form-select-caret"
+              slot="append"
+              .svg="${ChevronDown}"
+              @mousedown.stop="${this.onClickIcon}"
+              ${show(!this.clearable || (!this.value))}
+            >
+            </ce-icon>
+          `)}
+        </ce-input-tag>
+        <ce-overlay
+          style="width:100%"
+          close-on-click
+          backdrop="false"
+          placement="bottom-start"
+          open-delay="100"
+          .min-width="${this.minW}"
+          @closed="${this.onClosed}"
+          @beforeopen="${this.onBeforeopen}"
+          @beforeclose="${this.onBeforeClose}"
+          ${model(this.opened, 'visible')}
+        >
+          <div>
+            ${ifTrue(this.firstPopup, () => h`
+              <ce-list-picker
+                shadowed
+                ref="${this.selectPanel}"
+                ?multiple="${this.multiple}"
+                ?readonly="${this.readonly}"
+                .height="${this.popHeight}"
+                .data="${this.data}"
+                .filterable="${this.filterable}"
+                .value="${this.multiple ? (isArray(this.value) ? this.value : []) : this.value}"
+                @clickoption="${this.onClickOption}"
+                @change="${this.onSelectChange}"
+                @ready="${this.onReady}"
+                ${styles({ maxWidth: this.maxWidth, width: '100%', maxHeight: '30vh' })}
+              >
+                ${slot((data) => this.slotHooks.option ? this.slotHooks.option(data) : h`${data.label}`, 'option')}
+              </ce-list-picker>
+            `)}
+          </div>
+        </ce-overlay>
+        <slot style="display:none"></slot>
       </div>
     `;
   }
   //////////////////////////////////// methods
+  onBeforeopen() {
+    this.selectPanel.current?.resetVirtualized()
+  }
+  onBeforeClose(obj: Record<string, any>) {
+    let { event, cancel } = obj
+    if (!event) return
+    let targetElAry = event.composedPath()
+    if (find(targetElAry, (el: Element) => el instanceof Node && this.input.contains(el))) cancel()
+  }
+  onClosed() {
+    this.emit('close')
+  }
   onClear() {
+    this.selectPanel.current?.clear()
     let v = this.value;
     this.selectLabel = this.value = '';
     if (v !== this.value)
       this.emit('change', { label: '', value: '' })
+    this.opened = false
 
-    // this.input.blur()
+    this.nextTick(() => {
+      this.selectPanel.current?.refreshView()
+    })
   }
   __showList() {
     if (this.loading) return;
-    this.list && this.list.open(this.input)
-    // this.__opened = true;
+    this.list && this.list.openBy(this.input)
   }
   __hideList() {
-    if (this.list) this.list.style.display = 'none'
-    // this.__opened = false;
+    this.opened = false
   }
   onMouseDown(e: Event) {
-    this.dontClose = true;
-    setTimeout(() => {
-      this.dontClose = false;
-    }, 10);
+    // this.opened = true
+    if (!this.firstPopup) {
+      this.firstPopup = true
+      this.nextTick(() => {
+        this.selectPanel.current!.innerHTML = ''
+        if (!isEmpty(this.data)) {
+        } else if (!isEmpty(this.slots.default))
+          this.selectPanel.current?.append(...this.slots.default)
+
+        // this.selectPanel.current?.resetVirtualized()
+        this.list.openBy(this.input)
+      })
+      return
+    }
+    this.list.openBy(this.input)
   }
   onFocus(e: Event) {
     this.__showList();
@@ -168,25 +301,33 @@ export class Select extends FormControl {
   onBlur(e: Event) {
     let t = e.target;
   }
-  onSelectChange(e: CustomEvent) {
-    let { label, value } = e.detail
-
-    if (!isArray(value)) {
-      setTimeout(() => {
-        this.__hideList();
-      }, 200);
-    }
+  onSelectChange(obj: Record<string, any>) {
+    let { label, value } = obj
 
     let ov = this.value;
     if (this.value != value) this.value = value!
 
+    //multiple 时 label 为数组，保留数组结构供 input-tag 逐项渲染
+    if (this.multiple) {
+      this.selectLabel = isBlank(label) ? [] : (isArray(label) ? label as string[] : [toString(label)])
+    } else {
+      this.selectLabel = toString(label) || ''
+    }
 
-    this.selectLabel = label || ''
-
-    if (value !== ov)
+    if (value !== ov) {
+      if (!isArray(value)) {
+        setTimeout(() => {
+          this.__hideList();
+        }, 200);
+      }
       this.emit('change', { label, value })
+    }
+
   }
-  onClickOption(e: CustomEvent) {
+  onClickOption() {
+    if (this.multiple) {
+      return;
+    }
     setTimeout(() => {
       this.__hideList();
     }, 200);
@@ -198,10 +339,18 @@ export class Select extends FormControl {
       this.input.focus()
     }
   }
-  onLoad() {
-    if (this.value && !this.selectLabel) {
-      this.selectLabel = this.selectPanel.getLabel(this.value)
-    }
-    this.loading = false;
+  onReady() {
+    this.list.openBy(this.input)
+    // this.opened = true
+  }
+  onResize() {
+    if (this.opened)
+      this.minW = this.offsetWidth
+  }
+  clear(): void {
+    this.onClear()
+  }
+  setData(data: Array<Record<string, any>>) {
+    this.updateProps({ data })
   }
 }

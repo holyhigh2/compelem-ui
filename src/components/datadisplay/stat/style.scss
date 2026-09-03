@@ -1,0 +1,53 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/utils";
+
+:host {}
+
+.ce-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--ce-spacing-sm);
+
+  .ce-stat-title {
+    margin: 0;
+    font-size: var(--ce-font-sm-em);
+    line-height: var(--ce-lineh-md-em);
+    color: var(--ce-color-gray-500);
+    white-space: nowrap;
+  }
+
+  .ce-stat-value {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.5em;
+    color: var(--ce-color-text-header);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: var(--ce-spacing-xs);
+
+    .is-desc {
+      font-size: var(--ce-font-sm);
+      color: var(--ce-color-gray-500);
+      font-weight: 500;
+    }
+
+    .ce-stat-trend {
+      font-size: var(--ce-font-sm);
+
+      &.ce-stat-up {
+        color: var(--ce-color-success);
+      }
+
+      &.ce-stat-down {
+        color: var(--ce-color-error);
+      }
+
+      ce-tag {
+        padding-inline: var(--ce-spacing-xs) var(--ce-spacing-sm);
+        line-height: var(--ce-lineh-sm);
+        height: 1.5em;
+      }
+    }
+  }
+}

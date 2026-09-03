@@ -1,65 +1,40 @@
-import { classes, CompElem, html, ifTrue, prop, styles, tag, Template, watch } from "compelem";
-import { find } from "myfx";
-import { Close } from "../../../icons/icons";
-import tooltipStyle from "../tooltip/style.scss";
-import style from "./style.scss";
+import { CompElem, csscope, Csscope, emits, h, model, prop, tag, Template, watch } from "compelem";
+import tooltipStyle from "../tooltip/style.scss?tmpl";
+import style from "./style.scss?tmpl";
 /**
- * 对话框
- * @attrs
- *  visible {boolean} 是否显示
- *  title {string} 标题
- *  backdrop {string} 遮罩背景，可选值 static/initial/none。默认initial
- *  appendToBody {boolean} 以body为容器，默认true。false时使用Modal父元素为容器
+ * 对话框容器，用于弹出方式打断提醒操作者
+ * @props
+ *  visible {boolean} 是否显示，受控model属性
+ *  backdrop {boolean} 遮罩背景，true / false，默认true
  *  esc {boolean} 按下ESC按键时关闭Modal，默认true
- *  showClose {boolean} 在头部显示关闭按钮，默认true
  *  width {string} 任何合法的css width值，默认280px
  *  height {string} 任何合法的css height值
+ *  contained {boolean} 浮动层是否仅在容器内显示，默认false
  *
  * @slots
- *  default 弹框内容
- *  title 标题
- *  footer 底部内容
+ *  - 弹框内容
+ *  trigger 触发点击弹出对话框的元素
  * @events
+ *  beforeopen 动画执行前触发
  *  opened 动画执行完成后触发
  *  closed 动画执行完成后触发
  *
  * @author holyhigh2
  */
-@tag("l-dialog")
+@emits('beforeopen', 'opened', 'closed', 'update:visible')
+@tag("ce-dialog")
 export class Dialog extends CompElem {
-  static stack: Dialog[] = [];
-  static {
-    document.addEventListener("keydown", function (e) {
-      if (e.key !== "Escape") return;
-      if (Dialog.stack.length < 1) return;
-      let visibleDialog = find(Dialog.stack, (d) => d.visible);
-      if (!visibleDialog) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (visibleDialog.esc) {
-        visibleDialog.close();
-      } else {
-        visibleDialog.renderRoot.classList.add("__shake");
-      }
-    });
-  }
-  hook_click: any;
   //////////////////////////////////// props
   @prop width = '280px';
   @prop({ type: String }) height: string;
-  @prop backdrop: string = "initial"; //static/none
+  @prop backdrop: boolean = true;
   @prop esc = true;
-  @prop appendToBody = true; //在body上时，使用fixed定位
-  @prop showClose = true;
-  @prop({ type: String }) title: string;
-  @prop({ type: Boolean, sync: true }) visible = false;
+  @prop({ type: Boolean, model: true }) visible = false;
+  @prop contained = false
 
-  //-1:close, 1:open
-  transiting = 0;
 
-  static get styles(): string[] {
+  @csscope(Csscope.INNER)
+  static get css() {
     return [style, tooltipStyle];
   }
 
@@ -75,106 +50,67 @@ export class Dialog extends CompElem {
   //////////////////////////////////// lifecycles
   constructor() {
     super();
+  }
 
-    this.hook_click = this.onClick.bind(this);
+  mounted(): void {
+    const sr = this.shadowRoot;
+    if (!sr) return;
+    const overlay = sr.querySelector('ce-overlay') as any;
+    if (!overlay) return;
+
+    const tryMove = (): boolean => {
+      const contentEl = overlay.contentEl?.current;
+      if (!contentEl) return false;
+      let surface = contentEl.querySelector('.ce-dialog-surface') as HTMLElement;
+      if (!surface) {
+        surface = overlay.renderRoot?.querySelector('.ce-dialog-surface');
+        if (surface) contentEl.appendChild(surface);
+      }
+      if (!surface) return false;
+      const slot = surface.querySelector('slot');
+      const hasContent = slot
+        ? slot.assignedElements({ flatten: true }).length > 0
+        : surface.childNodes.length > 0;
+      if (hasContent) return true;
+      const children = Array.from(this.childNodes);
+      children.forEach(c => surface.appendChild(c));
+      return true;
+    };
+
+    if (!tryMove()) {
+      const tick = () => { if (!tryMove()) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    }
   }
 
   render(): Template {
-    return html`
-      <dialog
-        class="c-dialog ${classes({
-      '__no-backdrop': this.backdrop == 'none'
-    })}"
-        style="${styles({
-      width: this.width,
-      'max-height': this.height
-    })}"
-        @transitionend.debounce="${this.onTransitionEnd}"
-        @animationend="${this.onAnimationEnd}"
-      >
-        <l-panel class="--wrapper" shadow="never">
-          <div slot="header">
-            ${this.title} <slot name="title"></slot>
-            ${ifTrue(
-      this.showClose,
-      () => html`<l-icon
-                        class="--close"
-                        .svg="${Close}"
-                        @click="${this.onClose}"
-                        style="color:var(--color-gray-400)"
-                      ></l-icon>`
-    )}
-          </div>
-          <main><slot @slotchange="${this.onSlotChange}"></slot></main>
-          <footer><slot name="footer"></slot></footer>
-        </l-panel>
-      </dialog>
+    return h`
+      <ce-overlay ${model(this.visible, 'visible')} placement="center" .esc="${this.esc}" .width="${this.width}" .height="${this.height}" .contained="${this.contained}"
+      @beforeopen="${this.onBeforeOpen}" @opened="${this.onOpened}" @closed="${this.onClosed}" .backdrop="${this.backdrop}">
+        <div class="ce-dialog-surface">
+          <slot></slot>
+        </div>
+        <slot name="trigger" slot="trigger"></slot>
+      </ce-overlay>
     `;
   }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-
-    this.renderRoot.addEventListener("click", this.hook_click);
-  }
-
-  disconnectedCallback() { }
   //////////////////////////////////// methods
+  onBeforeOpen() {
+    this.emit("beforeopen");
+  }
+  onOpened() {
+    this.emit("opened");
+  }
+  onClosed() {
+    this.emit("closed");
+  }
   open() {
-    let dialog = <HTMLDialogElement>this.renderRoot;
-    if (this.backdrop === "none") {
-      dialog.show();
-    } else {
-      dialog.showModal();
-    }
-    Dialog.stack.unshift(this);
-    setTimeout(() => {
-      this.transiting = 1;
-      dialog.classList.add("__visible");
-    }, 0);
+    this.visible = true;
   }
   close() {
-    let dialog = <HTMLDialogElement>this.renderRoot;
-    dialog.classList.remove("__visible");
-    this.transiting = -1;
-    setTimeout(() => {
-      this.visible = false;
-      dialog.close();
-      Dialog.stack.unshift(this);
-    }, 300);
-  }
-  onClick(e: MouseEvent) {
-    let t = e.target;
-    if (t === this.renderRoot) {
-      if (this.backdrop === "static") {
-        this.renderRoot.classList.add("__shake");
-      } else if (this.backdrop === "initial") {
-        this.close();
-      }
-    }
+    this.visible = false;
   }
   onClose() {
     this.close();
-  }
-  onTransitionEnd(e: Event) {
-    if (this.transiting > 0) {
-      this.emit("opened");
-      if (this.renderRoot.scrollHeight > this.renderRoot.clientHeight) {
-        this.renderRoot.style.height = 'auto';
-      }
-    } else {
-      this.emit("closed");
-      this.renderRoot.style.height = '';
-    }
-  }
-  onAnimationEnd() {
-    this.renderRoot.classList.remove("__shake");
-  }
-  onSlotChange() {
-    if (this.renderRoot.scrollHeight > this.renderRoot.clientHeight) {
-      this.renderRoot.style.height = 'auto';
-    } else {
-      this.renderRoot.style.height = '';
-    }
   }
 }

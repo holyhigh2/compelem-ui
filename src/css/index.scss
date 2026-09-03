@@ -2,7 +2,7 @@
 * base styles
 * @author holyhigh
 *********************/
-@import './root.scss';
+@use './root.scss';
 
 //same as --tw
 .text-center {
@@ -10,6 +10,6 @@
 }
 
 :host {
-    color: var(--l-color-text);
+    color: var(--ce-color-text);
     font-size: 14px;
 }

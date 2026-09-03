@@ -1,0 +1,92 @@
+@use "../../../css/functions" as fn;
+
+////////////////////////////////// size
+:host([size="xs"]) {
+  --ce-pagination-gap: .375em;
+  --ce-pagination-fs: .75em;
+}
+
+:host([size="sm"]) {
+  --ce-pagination-gap: .375em;
+  --ce-pagination-fs: .8125em;
+}
+
+:host([size="md"]) {
+  --ce-pagination-gap: .5em;
+  --ce-pagination-fs: .875em;
+}
+
+:host([size="lg"]) {
+  --ce-pagination-gap: .625em;
+  --ce-pagination-fs: 1em;
+}
+
+:host([size="xl"]) {
+  --ce-pagination-gap: .75em;
+  --ce-pagination-fs: 1.125em;
+}
+
+:host {
+  display: inline-flex;
+  font-size: var(--ce-pagination-fs, .875em);
+  --ce-pagination-gap: .5em;
+  color: var(--ce-color-text);
+  // 居中/右对齐时撑满父容器，使 align 生效
+  &[align="center"],
+  &[align="end"] {
+    display: flex;
+  }
+}
+
+.ce-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ce-pagination-gap);
+  width: 100%;
+
+  &.is-start {
+    justify-content: flex-start;
+  }
+
+  &.is-center {
+    justify-content: center;
+  }
+
+  &.is-end {
+    justify-content: flex-end;
+  }
+
+  // 页码按钮等宽
+  ce-button.ce-pagination-pager {
+    min-width: 2.25em;
+    justify-content: center;
+  }
+
+  // 折叠省略号（以禁用按钮呈现，保证 forEach 模板结构一致）
+  ce-button.ce-pagination-pager.ce-pagination-ellipsis {
+    min-width: 1.75em;
+    color: var(--ce-color-text-desc);
+    cursor: default;
+  }
+
+  .ce-pagination-total,
+  .ce-pagination-simple-info {
+    color: var(--ce-color-text-secondary);
+    white-space: nowrap;
+  }
+
+  .ce-pagination-jumper {
+    display: inline-flex;
+    align-items: center;
+    gap: .25em;
+    color: var(--ce-color-text-secondary);
+
+    &-input {
+      width: 4.5em;
+    }
+  }
+
+  .ce-pagination-sizes {
+    width: 7.5em;
+  }
+}

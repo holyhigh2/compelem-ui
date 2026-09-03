@@ -1,15 +1,13 @@
-import { CompElem, html, state, Template } from "compelem";
+import { CompElem, emits, state } from "compelem";
 import { Options } from ".";
 /**
  * 内置模态框基类
  * @author holyhigh2
  */
+@emits("confirm", "cancel")
 export class Modal extends CompElem {
-  render(): Template {
-    return html``;
-  }
   //////////////////////////////////// props
-  @state _title: string;
+  @state _title: string = '';
   @state message = '';
   @state confirmBtnText = '确定';
   @state cancelBtnText = '取消';
@@ -37,12 +35,22 @@ export class Modal extends CompElem {
   close() {
     this.visible = false;
   }
-  onConfirm() {
+  onConfirmClick() {
     this.emit('confirm')
+    if (this.#confirmCbk) this.#confirmCbk()
     this.close()
   }
-  onCancel() {
+  onCancelClick() {
     this.emit('cancel')
+    if (this.#cancelCbk) this.#cancelCbk()
     this.close()
+  }
+  #confirmCbk: Function
+  #cancelCbk: Function
+  onConfirm(cbk: Function) {
+    this.#confirmCbk = cbk
+  }
+  onCancel(cbk: Function) {
+    this.#cancelCbk = cbk
   }
 }

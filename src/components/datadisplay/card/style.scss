@@ -1,30 +1,34 @@
-@import "../../../css/_functions.scss";
-@import "../../../css/utils";
+@use "../../../css/utils";
 
 :host {
-  display: inline-block;
-  border-radius: var(--l-border-radius-md);
-  --l-card-subtitle-opacity: 0.6;
+  display: block;
+  border-radius: var(--ce-card-radius);
+  background: var(--ce-card-bg);
+  padding: calc(var(--ce-card-padding) / 2);
 }
 
-.c-card {
+:host([link]),
+:host([href]),
+:host([to]) {
+  cursor: pointer;
+}
+
+.ce-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
   border-radius: inherit;
-  transition: box-shadow 0.3s;
+  transition: box-shadow 0.3s, border-width 0.3s, opacity 0.3s;
+  z-index: 1;
 
-  &.__shadow-always {
-    box-shadow: var(--l-shadow-lg);
-  }
-  &.__shadow-hover {
-    &:hover {
-      box-shadow: var(--l-shadow-lg);
-    }
-  }
+  .ce-card-content {
+    flex: 1;
 
-  .--content {
-    > h3 {
-      font-size: 1.125rem;
+    >h3 {
+      font-size: var(--ce-card-header-size);
       font-weight: 500;
-      line-height: 1.5;
+      line-height: 1.25;
       letter-spacing: 0.0125em;
       text-overflow: ellipsis;
       text-transform: none;
@@ -34,24 +38,68 @@
       padding: 0;
       margin: 0;
     }
-    > p {
-      font-size: 0.875rem;
+
+    >p {
+      font-size: var(--ce-card-body-size);
       font-weight: 400;
-      line-height: 1.25;
-      white-space: nowrap;
+      line-height: 1.5;
       margin: 0;
-      opacity: var(--l-card-subtitle-opacity);
+      padding-bottom: .25rem;
+      opacity: var(--ce-card-subtitle-opacity);
     }
   }
-  > header {
-    padding: 0.625rem 1rem;
+
+  >header {
+    font-size: var(--ce-card-header-size);
+    display: flex;
+    align-items: center;
+    gap: var(--ce-card-gap);
+
+    &[visible] {
+      padding-bottom: var(--ce-card-gap);
+      padding-inline: calc(var(--ce-card-padding) / 2);
+
+      +main {
+        padding-top: 0;
+      }
+    }
+
+    +div {
+      padding-inline: calc(var(--ce-card-padding) / 2);
+      line-height: 1.5;
+      font-size: var(--ce-card-body-size);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
   }
-  > main {
-    padding: 1rem;
-    padding-top: 0;
-    font-size: 0.875rem;
+
+  >main {
+    font-size: var(--ce-card-body-size);
+    padding-inline: calc(var(--ce-card-padding) / 2);
   }
-  > footer {
-    padding: 0.5rem;
+
+  >footer {
+    // font-size: var(--ce-card-footer-size);
+    display: flex;
+    align-items: center;
+    padding-top: calc(var(--ce-card-padding) / 2);
+    gap: .5rem;
+  }
+
+}
+
+.ce-card-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+
+  ce-img {
+    width: 100%;
+    height: 100%;
   }
 }

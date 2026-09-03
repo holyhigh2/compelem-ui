@@ -1,8 +1,8 @@
-import { html, prop, state, tag, Template } from "compelem";
+import { css, csscope, Csscope, emits, h, prop, state, tag, Template } from "compelem";
 import { join, remove } from 'myfx';
 import { FormControl } from "../FormControl";
 import { Checkbox } from './Checkbox';
-import style from "./style.scss";
+import style from "./style.scss?tmpl";
 /**
  * 复选框组
  * @attrs
@@ -15,18 +15,20 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag("l-checkbox-group")
+@emits('update:value')
+@tag("ce-checkbox-group")
 export class CheckboxGroup extends FormControl {
   changeDisplay(stateName: string, enabled: boolean): void {
     throw new Error("Method not implemented.");
   }
   //////////////////////////////////// props
   @prop max = 9999;
-  @prop({ type: Array<String>, sync: true }) value: Array<string> = [];
+  @prop({ type: Array<String>, model: true }) value: Array<string> = [];
   @state label = '';
 
-  static get styles(): string[] {
-    return [style, `:host{
+  @csscope(Csscope.INNER)
+  static get css() {
+    return [style, css`:host{
       display: inline-block;
       vertical-align: super;
     }`];
@@ -34,48 +36,34 @@ export class CheckboxGroup extends FormControl {
   /////////////////////////////////// watches
 
   //////////////////////////////////// lifecycles
-  constructor() {
-    super();
-  }
 
   render(): Template {
-    return this.plaintext ? html`${join(this.value, ',')}` : html`
-      <div class="c-form-checkbox-group">
+    return this.plaintext ? h`${join(this.value, ',')}` : h`
+      <div class="ce-form-checkbox-group">
         <slot ></slot>
       </div>`;
   }
 
-  mounted(): void {
-
-  }
-  slotchange(slot: HTMLSlotElement, name: string): void {
-    let eles = slot.assignedElements({ flatten: true }) as Array<Checkbox>;
-    let values = this.value;
-    const that = this;
-    eles.forEach((el, i) => {
-      if (!(el instanceof Checkbox)) return;
-
-      let v = values[i]
-      if (el.getAttribute('value') === v) {
-        el.checked = true;
-      }
-      el.addEventListener('change', (e: CustomEvent) => {
-        that.onCheckChange(e)
-      })
-    })
-  }
   //////////////////////////////////// methods
-
+  childrenSize: 0
+  _addChild(checkbox: Checkbox) {
+    let values = this.value;
+    if (checkbox.getAttribute('value')! === values[this.childrenSize++]) {
+      checkbox.checked = true;
+    }
+  }
   onClick(e: Event) {
     if (this.readonly)
       e.preventDefault();
   }
-  onCheckChange(e: CustomEvent) {
-    let { value, checked } = e.detail;
+  onCheckChange(value: string, checked: boolean) {
     if (checked) {
       this.value.push(value)
     } else {
       remove(this.value, v => v == value)
     }
+  }
+  clear() {
+
   }
 }

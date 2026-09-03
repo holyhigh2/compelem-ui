@@ -17,10 +17,10 @@ function alertModal(message: any, title?: string, options?: Options) {
 
   return new Promise(
     (resolve: (value?: unknown) => void, reject: (reason?: any) => void) => {
-      innerAlert.on("confirm", () => {
+      innerAlert.onConfirm(() => {
         resolve();
       });
-      innerAlert.on("cancel", () => {
+      innerAlert.onCancel(() => {
         reject();
       });
     }
@@ -30,10 +30,10 @@ function confirmModal(message: any, title?: string, options?: Options) {
   innerConfirm.open(message + '', title, options);
   return new Promise(
     (resolve: (value?: unknown) => void, reject: (reason?: any) => void) => {
-      innerConfirm.on("confirm", () => {
+      innerConfirm.onConfirm(() => {
         resolve();
       });
-      innerConfirm.on("cancel", () => {
+      innerConfirm.onCancel(() => {
         reject();
       });
     }
@@ -43,10 +43,10 @@ function promptModal(message: any, title?: string, options?: Options) {
   innerPromt.open(message + '', title, options);
   return new Promise(
     (resolve: (value?: unknown) => void, reject: (reason?: any) => void) => {
-      innerPromt.on("confirm", (e: CustomEvent) => {
-        resolve(e.detail.value);
+      innerPromt.onConfirm(() => {
+        resolve(innerPromt.input.value);
       });
-      innerPromt.on("cancel", () => {
+      innerPromt.onCancel(() => {
         reject();
       });
     }

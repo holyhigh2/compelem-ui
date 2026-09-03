@@ -1,36 +1,37 @@
-@import "../../../css/_functions.scss";
+@use "../../../css/functions" as fn;
 
 :host {
   display: inline-block;
   --track-height: 1.5rem;
-  --border-color: var(--l-color-border-active);
-  --color: var(--l-color-primary);
+  --border-color: var(--ce-color-border-active);
+  --color: var(--ce-color-primary);
 }
 
-.c-form-toggle {
+.ce-form-toggle {
   position: relative;
   display: flex;
   align-items: center;
   cursor: pointer;
 
-  .label:not(:empty) {
+  .ce-form-toggle-label:not(:empty) {
     margin-left: 0.5rem;
   }
 
-  &.__disabled {
+  &.is-disabled {
     cursor: not-allowed;
 
-    .--track {
-      filter: opacity(0.5);
-      // background-color: color(--l-color-disabled);
+    .ce-form-toggle-track {
+      // filter: opacity(0.5);
+      // background-color: fn.color(--ce-color-disabled-rgb);
+      background-color: fn.color(--ce-color-gray-200-rgb);
 
-      ~ .--thumb {
+      ~.ce-form-toggle-thumb {
         box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 3px;
       }
     }
 
-    .label {
-      color: color(--l-color-placeholder);
+    .ce-form-toggle-label {
+      color: fn.color(--ce-color-placeholder-rgb);
     }
   }
 
@@ -39,86 +40,98 @@
     opacity: 0;
     margin: 0;
     height: 100%;
+    width: 100%;
     cursor: pointer;
+    pointer-events: none;
   }
 
-  input:checked ~ .--track {
-    background-color: color(--color, 0.5);
+  input:checked~.ce-form-toggle-track {
+    background-color: var(--color);
     border-color: transparent;
 
-    ~ .--thumb {
+    ~.ce-form-toggle-thumb {
       width: 1.25rem;
       height: 1.25rem;
       left: calc(100% - var(--track-height) * 0.75);
       top: -0.175rem;
-      background-color: color(--color);
+      // background-color: fn.color(--color);
     }
 
-    .inactive {
+    .is-inactive {
       display: none;
     }
 
-    .active {
+    .is-active {
       display: inline-block;
     }
   }
 
-  .active {
+  .is-active {
+    text-align: left;
     display: none;
   }
 
-  .inactive {
+  .is-inactive {
+    text-align: right;
     display: inline-block;
   }
 
-  .--track {
+  .ce-form-toggle-track {
     display: flex;
     position: relative;
     min-width: 2.75rem;
     height: 0.875rem;
     width: 100%;
-    box-sizing: border-box;
-    background-color: color(--l-color-gray-200, 0.5);
-    border-radius: var(--l-border-radius-full) !important;
-    border: 1px solid rgb(var(--l-color-placeholder) / 0.5);
+    background-color: fn.color(--ce-color-gray-200-rgb, 0.5);
+    border-radius: var(--round-size) !important;
+    border: 1px solid rgb(var(--ce-color-placeholder-rgb) / 0.5);
     padding: 0 0.4rem;
     user-select: none;
+    pointer-events: none;
+    align-items: center;
 
     transition: all 0.2s ease;
 
     ::slotted(*),
-    .active,
-    .inactive {
+    .is-active,
+    .is-inactive {
       color: #fff;
-      font-size: 0.9em;
+      // font-size: var(--ce-font-sm-em);
       overflow: hidden;
       text-overflow: ellipsis;
       width: 90%;
-      line-height: var(--track-height);
+      line-height: var(--ce-lineh-md-em);
     }
 
-    .inactive {
-      color: color(--l-color-text);
+    .is-active,
+    .is-inactive {
+      font-size: var(--ce-font-sm-em);
     }
 
-    .inactive:not(:empty) {
+    .is-inactive {
+      color: fn.color(--ce-color-text-rgb);
+    }
+
+    .is-inactive:not(:empty) {
       margin-left: calc(var(--track-height) * 0.75);
     }
 
-    .active:not(:empty) {
+    .is-active:not(:empty) {
       margin-right: calc(var(--track-height) * 0.75);
     }
   }
-  .--thumb {
+
+  .ce-form-toggle-thumb {
     content: "";
     position: absolute;
+    user-select: none;
     pointer-events: none;
     left: calc(var(--track-height) * -0.125);
     top: -0.175rem;
     width: 1.25rem;
     height: 1.25rem;
     background-color: #fff;
-    border-radius: var(--l-border-radius-full);
+    border-radius: var(--round-size);
     transition: all 0.2s ease-out;
     box-shadow:
       rgb(255, 255, 255) 0px 0px 0px 0px,
@@ -127,26 +140,26 @@
       rgba(0, 0, 0, 0.1) 0px 1px 2px 2px;
   }
 
-  &:not(&.__disabled) {
-    &:hover input:not(:checked) ~ .--track {
-      border: 1px solid color(--border-color, 0.6);
+  &:not(&.is-disabled) {
+    &:hover input:not(:checked)~.ce-form-toggle-track {
+      border: 1px solid var(--border-color);
     }
   }
 
-  .__inset {
-    .--track {
+  .is-inset {
+    .ce-form-toggle-track {
       height: var(--track-height);
     }
 
-    &:not(&.__disabled) {
-      .--track {
+    &:not(&.is-disabled) {
+      .ce-form-toggle-track {
         &:hover {
           border-color: transparent;
         }
       }
     }
 
-    .--thumb {
+    .ce-form-toggle-thumb {
       position: absolute;
       pointer-events: none;
       left: calc(var(--track-height) * 0.25);
@@ -159,10 +172,11 @@
         rgba(0, 0, 0, 0.1) 0px 1px 3px 0px,
         rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
     }
-    input:checked ~ .--track {
-      ~ .--thumb {
+
+    input:checked~.ce-form-toggle-track {
+      ~.ce-form-toggle-thumb {
         left: calc(100% - var(--track-height) * 0.875);
-        top: calc(var(--track-height) * 0.115);
+        top: calc(var(--track-height) * 0.12);
         width: calc(var(--track-height) * 0.75);
         height: calc(var(--track-height) * 0.75);
       }
@@ -170,11 +184,12 @@
   }
 
   /*active 动画*/
-  &:active .__inset {
-    input:not(:checked) ~ .--track ~ .--thumb {
+  &:active .is-inset {
+    input:not(:checked)~.ce-form-toggle-track~.ce-form-toggle-thumb {
       width: calc(var(--track-height) * 0.5 + 3.75px);
     }
-    input:checked ~ .--track ~ .--thumb {
+
+    input:checked~.ce-form-toggle-track~.ce-form-toggle-thumb {
       margin-left: -5px;
       width: calc(var(--track-height) * 0.75 + 5px);
     }

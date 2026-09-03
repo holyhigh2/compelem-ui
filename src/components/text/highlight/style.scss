@@ -1,0 +1,40 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/utils";
+
+:host {
+  display: inline-block;
+}
+
+.ce-heading {
+  &.ce-highlight-level- {
+    &6 {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+    &5 {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+    &4 {
+      font-size: 1.5rem;
+      line-height: 2rem;
+    }
+    &3 {
+      font-size: 1.875rem;
+      line-height: 2.25rem;
+    }
+    &2 {
+      font-size: 2.25rem;
+      line-height: 2.5rem;
+    }
+    &1 {
+      font-size: 3rem;
+      line-height: 1rem;
+    }
+  }
+}
+
+mark {
+  color: var(--hl-color);
+  background-color: var(--hl-bg-color);
+}

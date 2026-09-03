@@ -1,5 +1,4 @@
-import { CompElem, html, tag, Template } from "compelem";
-import style from "./style.scss";
+import { CompElem, tag } from "compelem";
 /**
  * 下拉菜单项
  * @attrs
@@ -10,27 +9,14 @@ import style from "./style.scss";
  *
  * @author holyhigh2
  */
-@tag('l-dropdown-item')
+@tag('ce-dropdown-item')
 export class DropdownItem extends CompElem {
 
   //////////////////////////////////// props
 
   //////////////////////////////////// state
 
-  static get styles(): string[] {
-    return [style];
-  }
   //////////////////////////////////// lifecycles
-  constructor() {
-    super();
-
-  }
-
-  render(): Template {
-    return html`
-    <slot></slot>
-    `;
-  }
 
   //////////////////////////////////// methods
 

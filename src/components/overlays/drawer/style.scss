@@ -1,12 +1,12 @@
-@import "../../../css/_functions.scss";
-@import "../../../css/_mixins.scss";
-@import "../../../css/_utils.scss";
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
+@use "../../../css/_utils.scss";
 
 :host {
   position: fixed;
 }
 
-.c-drawer {
+.ce-drawer {
   padding: 0;
   border: none;
   outline: none;
@@ -18,19 +18,16 @@
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
-  box-shadow:
-    rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-    rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-    rgba(0, 0, 0, 0.1) 0px 0px 25px -5px,
-    rgba(0, 0, 0, 0.1) 0px 0px 10px -6px;
+  box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+    rgba(0, 0, 0, 0.1) 0px 0px 25px -5px, rgba(0, 0, 0, 0.1) 0px 0px 10px -6px;
 
   transition: all 0.2s;
 
-  &.__round {
-    border-radius: var(--l-border-radius-lg);
+  &.ce-drawer-round {
+    border-radius: var(--ce-round-lg);
   }
 
-  &.placement- {
+  &.ce-drawer-placement- {
     &top {
       width: 100% !important;
       top: 0;
@@ -38,7 +35,7 @@
       border-top-right-radius: 0;
       transform: translateY(-100%);
 
-      &.__shake {
+      &.ce-drawer-shake {
         animation-name: shake-top;
       }
     }
@@ -50,7 +47,7 @@
       border-bottom-right-radius: 0;
       transform: translateY(0%);
 
-      &.__shake {
+      &.ce-drawer-shake {
         animation-name: shake-bottom;
       }
     }
@@ -63,7 +60,7 @@
       border-bottom-right-radius: 0;
       transform: translateX(0%);
 
-      &.__shake {
+      &.ce-drawer-shake {
         animation-name: shake-right;
       }
     }
@@ -75,7 +72,7 @@
       border-bottom-left-radius: 0;
       transform: translateX(-100%);
 
-      &.__shake {
+      &.ce-drawer-shake {
         animation-name: shake-left;
       }
     }
@@ -86,12 +83,12 @@
     transition: opacity 0.2s;
   }
 
-  &.__visible {
+  &.ce-drawer-visible {
     &::backdrop {
       opacity: 1;
     }
 
-    &.placement- {
+    &.ce-drawer-placement- {
       &top {
         transform: translateY(0%);
       }
@@ -110,15 +107,14 @@
     }
   }
 
-  .--wrapper {
-    box-sizing: border-box;
+  .ce-drawer-wrapper {
     display: flex;
     flex-direction: column;
     overflow: hidden;
     // padding: 1.35rem;
     height: 100%;
 
-    .--close {
+    .ce-drawer-close {
       position: absolute;
       font-size: 1.5rem;
       right: 0.25rem;
@@ -139,13 +135,13 @@
     }
   }
 
-  &.__shake {
+  &.ce-drawer-shake {
     animation-duration: 0.3s;
     animation-timing-function: cubic-bezier(0.68, -0.55, 0.27, 1.55);
     animation-name: ani-shake;
   }
 
-  slot[name="footer"]::slotted(l-button) {
+  slot[name="footer"]::slotted(ce-button) {
     margin-left: 0.5rem;
   }
 }
