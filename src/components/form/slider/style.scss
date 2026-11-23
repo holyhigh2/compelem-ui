@@ -108,8 +108,15 @@
     // min-height: 1.5rem;
     .ce-form-slider-mark {
       position: absolute;
-      font-size: 0.875rem;
+      font-size: var(--ce-font-sm);
       transform: translateX(-50%);
+      /* ⚠️ 必须 nowrap：末位 mark 是 `left: 100%` + `right: auto` ⇒ 绝对定位
+         盒子的"可用宽度"= 包含块宽 − left = 0，shrink-to-fit 会把盒宽压到
+         **min-content**。没有 nowrap 时 min-content = 最宽一个字（实测 12px）
+         ⇒ 文案在盒内折行（"1 发散" 折成 3 行、盒高 37），再被 translateX(-100%)
+         错位，视觉上就是"最后一个标签糊成一团"。nowrap 后 min-content = 整串
+         文字宽（34px），盒子回到一行并与轨道右端对齐。 */
+      white-space: nowrap;
 
       &[data-perc="0.00"] {
         transform: translateX(0%);

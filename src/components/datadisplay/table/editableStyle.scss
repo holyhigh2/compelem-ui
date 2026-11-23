@@ -1,14 +1,14 @@
 @use "../../../css/functions" as fn;
 
 :host {
-  --table-head-cell-color: #333;
-  --table-head-cell-background: #f7fbff;
-  --table-head-cell-border-bottom: 1px solid #dedede;
-  --table-head-cell-border-right: 1px solid #dedede;
+  --table-head-cell-color: var(--ce-color-text-header, #333);
+  --table-head-cell-background: var(--ce-color-info-light, #f7fbff);
+  --table-head-cell-border-bottom: 1px solid var(--ce-color-border-secondary, #dedede);
+  --table-head-cell-border-right: 1px solid var(--ce-color-border-secondary, #dedede);
 
-  --table-body-cell-background: #fff;
-  --table-body-cell-border-bottom: 1px solid #dedede;
-  --table-body-cell-border-right: 1px solid #dedede;
+  --table-body-cell-background: var(--ce-color-bg, #fff);
+  --table-body-cell-border-bottom: 1px solid var(--ce-color-border-secondary, #dedede);
+  --table-body-cell-border-right: 1px solid var(--ce-color-border-secondary, #dedede);
   --table-body-cell-padding: 12px;
   --table-resize-handle-color: ;
   --table-color-active: #00a7f4;
@@ -123,8 +123,8 @@ header[role="rowgroup"] {
       width: 0;
       height: 0;
       position: absolute;
-      right: 10%;
-      top: 0.5rem;
+      right: 0.25rem;
+      bottom: 0.25rem;
       border-left: 4px solid transparent;
       border-top: 4px solid transparent;
       border-right: 4px solid #777;
@@ -214,7 +214,7 @@ header[role="rowgroup"] {
     width: 16px;
     height: 16px;
     cursor: pointer;
-    background-color: #fff;
+    background-color: var(--ce-color-bg, #fff);
     border: 1px solid #999;
     border-radius: 1px;
     text-align: center;
@@ -241,9 +241,23 @@ header[role="rowgroup"] {
     }
   }
 
-  &.ce-table-in-input {
+  // 编辑态（activeInput 时 renderRoot 加 __in-input；注意曾误写为
+  // ce-table-in-input 导致本块从未生效，2026-09 修正）。
+  &.__in-input {
     .ce-table-selector-caret {
       display: none;
+    }
+
+    // 溢出内容编辑期钳制：长文本单元格进入编辑时内容层会被切换为
+    // visible/auto 并纵向展开，绘制在输入框之上（z-index 1 压不住），
+    // 表现为"输入框被盖住、单元格不可编辑"。编辑期间钳制回 hidden ——
+    // 全文本已在输入框内编辑，无信息损失。
+    .ce-table-cell.active-input {
+      overflow: hidden !important;
+
+      .ce-table-cell-content {
+        overflow: hidden !important;
+      }
     }
   }
 
@@ -339,8 +353,13 @@ header[role="rowgroup"] {
 
   .ce-table-cell-input__text {
     position: absolute;
-    border: none;
-    z-index: 1;
+    // 编辑框高于单元格（内容撑开）时会悬在下一行上，必须有明确的框体视觉，
+    // 与 clickView 全量展示框一致：白底 + 主题色边框。
+    background: var(--ce-color-bg, #fff);
+    border: 2px solid var(--ce-color-primary);
+    box-sizing: border-box;
+    // 置顶：必须压过编辑态下展开溢出的单元格内容层（曾为 1，被盖）
+    z-index: 10;
     resize: none;
     display: none;
 

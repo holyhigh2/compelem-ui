@@ -76,7 +76,7 @@
   }
 }
 
-.c {
+.ce {
   &-input-number {
     .ce-input-control {
       width: 1.25rem;
@@ -100,12 +100,12 @@
         overflow: hidden;
 
         &:hover {
-          background-color: fn.color(--ce-color-gray-200-rgb);
+          background-color: var(--ce-color-border-secondary);
           color: fn.color(--ce-color-text-rgb) !important;
         }
 
         &:active {
-          background-color: fn.color(--ce-color-gray-300-rgb);
+          background-color: var(--ce-color-border);
         }
 
         &:first-child {
@@ -143,8 +143,6 @@
   }
 }
 
-// 历史 c->ce 重命名遗留：上方 .c{} 内的 &-input-date 产出 .c-input-date（与真实
-// ce-input-date 不匹配，规则失效），故图标颜色在此用正确类名 .ce-input-date 声明。
 // ce-input-date 内置日历图标渲染在 ce-input-mask(.ce-input-date) 的 shadow 内，
 // 颜色须与 ce-input-date-range 的 slot 图标（.ce-range-input ce-icon.ce-input-calendar）一致：placeholder 灰。
 .ce-input-date {
@@ -163,10 +161,9 @@
 //必须与模板一致才能命中；勿放回上方 .c{} 嵌套内
 .ce-input-otp {
   display: inline-flex;
-
-  ce-input::part(input) {
-    text-align: center;
-  }
+  // 单字符居中由 InputOTP 默认的 align="center" 驱动（走 Input 的 inline style），
+  // 此处不再用 ::part(input) 声明 text-align —— 外层树规则会压过内层 inline style，
+  // 导致外部传入的 align 无法覆盖（CSS Scoping: 普通声明外层树胜）
 }
 
 .ce-range-input {
@@ -215,9 +212,41 @@
     height: 100%;
 
     //模板切换的类名是 ce-input-none-color
+    // 空态 = 「未设置颜色」标识：棋盘格 + 红斜线（2026-10-31 按使用者要求恢复红斜线，
+    // 此前曾因易被读成校验失败而只留棋盘格 +「默认」字）。
+    // 棋盘底图与 ce-color-picker 的「无颜色」方块用同一张 PNG，保证两处视觉一致。
     &.ce-input-none-color {
-      background-color: transparent !important;
-      background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><line x1="0" y1="100%" x2="100%" y2="0" stroke="red" stroke-width="2"/></svg>');
+      position: relative;
+      overflow: hidden;
+      background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAGUlEQVR42mM48xsC//6CQAYyBGAMmAQZAgDOmXfBdgh5yQAAAABJRU5ErkJggg==) repeat 0 0;
+
+      &::after {
+        content: "";
+        position: absolute;
+        left: -18%;
+        top: calc(50% - 1px);
+        width: 136%;
+        height: 2px;
+        background: var(--ce-color-error, #e5484d);
+        transform: rotate(-45deg);
+      }
+    }
+
+    .ce-input-color-none {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 11px; // font-allow 色板「无」字标记，装饰性（契约第 3 条）
+      line-height: var(--ce-lineh-xs, 1); // 装饰字：显式紧凑
+      // 字色加深以直接叠在棋盘格上：不再垫半透明白底（2026-10-31，
+      // 该白底曾以约 70% 面积盖住格子导致棋盘观感发浅）
+      color: #494f57;
+      text-shadow:
+        0 0 2px #fff,
+        0 0 2px #fff;
+      user-select: none;
+      pointer-events: none;
     }
   }
 }
@@ -313,18 +342,35 @@
 }
 
 //size
+// 取色器是正方形色块，边长与同档控件等高（--ce-control-h-* 为 em，随字号缩放）。
+// 字号必须与 ce-input 同档同源：xs 的 2em 若按默认 16px 解析会比 sm 的 1.75em 还大，
+// lg/xl 也会与 md 撞成同一尺寸。
+:host(ce-input-color[size="xl"]) {
+  height: var(--ce-control-h-xl);
+  width: var(--ce-control-h-xl);
+  font-size: var(--ce-font-xl);
+}
+
 :host(ce-input-color[size="lg"]) {
-  height: 2.5rem;
-  width: 2.5rem;
+  height: var(--ce-control-h-lg);
+  width: var(--ce-control-h-lg);
+  font-size: var(--ce-font-lg);
 }
 
 :host(ce-input-color[size="md"]) {
-  height: 2.125rem;
-  width: 2.125rem;
-
+  height: var(--ce-control-h-md);
+  width: var(--ce-control-h-md);
+  font-size: inherit;
 }
 
 :host(ce-input-color[size="sm"]) {
-  height: 1.5rem;
-  width: 1.5rem;
+  height: var(--ce-control-h-sm);
+  width: var(--ce-control-h-sm);
+  font-size: inherit;
+}
+
+:host(ce-input-color[size="xs"]) {
+  height: var(--ce-control-h-xs);
+  width: var(--ce-control-h-xs);
+  font-size: var(--ce-font-xs);
 }

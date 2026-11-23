@@ -40,12 +40,9 @@ enum DateInputType {
  *
  * @author holyhigh2
  */
-@emits('update:value', 'focus', 'clear', 'change')
+@emits('update:value', 'focus', 'clear', 'change', 'input')
 @tag("ce-input-date")
 export class InputDate extends ControlBox implements IInputRange {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   @query('ce-input')
   input: Input;
 
@@ -76,7 +73,7 @@ export class InputDate extends ControlBox implements IInputRange {
   @query('.ce-input-date-panel') datePanel: Overlay
 
   @csscope(Csscope.GLOBAL)
-  static get globalCss(): string {
+  static get globalCss() {
     return appearanceStyle;
   }
   @csscope(Csscope.INNER)
@@ -150,7 +147,7 @@ export class InputDate extends ControlBox implements IInputRange {
 
   render(): Template {
     return h`
-      <ce-input-mask border="${this.border}" class="ce-input-date" part="input" .mask="${this.inputMask}" .blocks="${this.inputBlocks}" placeholder-char="-" 
+      <ce-input-mask border="${this.border}" align="${this.align}" class="ce-input-date" part="input" .mask="${this.inputMask}" .blocks="${this.inputBlocks}" placeholder-char="-" 
       .clearable="${this.clearable}" .required="${this.required}" .label="${this.label}" .placeholder="${this.placeholder}"
       inside="${this.inside}"
       ?readonly="${this.readonly}" ?disabled="${this.disabled}"  .error="${this.error}" 
@@ -171,7 +168,7 @@ export class InputDate extends ControlBox implements IInputRange {
         </div>
       </ce-input-mask>
       
-      <ce-overlay placement="bottom-end" auto-active close-on-click opacity="0.25" class="ce-input-date-panel" @close="${this.onClose}">
+      <ce-overlay surface placement="bottom-end" auto-active close-on-click opacity="0.25" class="ce-input-date-panel" @close="${this.onClose}">
         <div>
           ${ifTrue(this.firstPopup, () => h`
           <ce-card class="ce-input-time-card" style="padding: var(--ce-spacing-sm);" ref="${this.datePane}" >
@@ -304,6 +301,9 @@ export class InputDate extends ControlBox implements IInputRange {
     this.emit('update:value', { value: this.__innerValue })
   }
   openDatePanel() {
+    // 禁用/加载中态不展开日历浮层：内部 input 虽 ?disabled，但日历图标的
+    // @click 仍会走到这里，必须在入口拦住（与 Select.__showList 同口径）。
+    if (this.disabled || this.loading) return
     this.firstPopup = true
     if (!isBlank(this.__innerValue) && compareDate(this.selectedDate, this.__innerValue) != 0) {
       this.selectedDate = this.selectedDate = formatDate(this.__innerValue, this.pattern)
@@ -318,6 +318,10 @@ export class InputDate extends ControlBox implements IInputRange {
   }
   onClear() {
     this.__innerValue = '';
+    // 清空是值变更：只清 __innerValue 会让 value 仍停在旧日期，
+    // 绑定 value 的宿主（表单、范围组件）下次渲染就把日期写回来
+    this.updateProps({ value: '' })
+    this.emit('input', { value: '' })
     this.emit('clear', { value: '' })
   }
   onBlur(obj: Record<string, any>) {

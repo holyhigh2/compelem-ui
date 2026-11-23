@@ -32,6 +32,9 @@
 
   .ce-board-grid-container {
     display: grid;
+    // 卡片边界来自 1px 描边 + 10px 柔光（xs 阴影），网格若紧贴 scroller 的裁剪边界，
+    // 第一列/最后一列与首尾行的卡片外边界会被切掉；留出与阴影扩散范围一致的内距。
+    padding: 0.625rem;
 
     .is-empty {
       grid-column: 1 / -1;
@@ -44,19 +47,69 @@
     }
   }
 
+  // 数据变动高亮：只高亮变化的那一行字段（.ce-board-card 是字段值容器）。
+  // 行本身可能已有浅色底、子元素也会盖住父级 background，所以用覆盖层做提示：
+  // 快速淡入（约 90ms）→ 短暂停留 → 慢速淡出（约 400ms），闪两次；
+  // 无位移、无横向扫动，不会被误读成加载中的 shimmer；第二遍更淡，两遍之间完全淡出。
   .ce-board-card.changed::after {
-    content: "";
+    content: '';
     position: absolute;
-    height: 100%;
-    width: 100%;
-    background-color: rgba(245, 47, 23, 0.3);
-    border-radius: var(--ce-round-sm);
-    top: 0;
-    left: 0px;
-    opacity: 1;
-    transform: scale(1);
-    transform-origin: center;
-    animation: fade 0.75s ease-out 2;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background-color: fn.color(--ce-color-primary-rgb, 0.2);
+    opacity: 0;
+    animation: board-change-flash 1.5s linear 1;
+  }
+
+  @keyframes board-change-flash {
+    0% {
+      opacity: 0;
+      // 快速淡入（约 90ms）
+      animation-timing-function: cubic-bezier(0.1, 0, 0.4, 1);
+    }
+    6% {
+      opacity: 1;
+    }
+    18% {
+      opacity: 1;
+      // 慢速淡出（约 390ms），匀速衰减
+      animation-timing-function: linear;
+    }
+    44% {
+      opacity: 0;
+    }
+    54% {
+      opacity: 0;
+      animation-timing-function: cubic-bezier(0.1, 0, 0.4, 1);
+    }
+    60% {
+      opacity: 0.7;
+    }
+    70% {
+      opacity: 0.7;
+      animation-timing-function: linear;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ce-board-card.changed::after {
+      animation: board-change-static 1.5s linear 1;
+    }
+  }
+
+  // 减少动态偏好：不做两次淡入淡出，只用一段静态浅色底提示
+  @keyframes board-change-static {
+    0%,
+    88% {
+      opacity: 0.8;
+    }
+    100% {
+      opacity: 0;
+    }
   }
 
   &.is-compacted {
@@ -73,8 +126,13 @@
   }
 
   ce-list-item {
+    // 卡片字段行是「标签+值」的两行项，走紧凑档而非通用列表的 default 档
+    // （default 16px/12px 是为 ce-list 通用两行项设计的，看板里三字段就把卡片撑到 350px+）。
+    // 走 ListItem 预留的公开 token 覆盖口，cssVars 的 fallback 链会消费这两个值。
+    --ce-list-item-padding-block: var(--ce-spacing-sm);
+    --ce-list-item-subtitle-gap: var(--ce-spacing-xs);
     padding-inline: var(--ce-spacing-md);
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
   }
 
   ce-list-item::part(subtitle) {
@@ -86,7 +144,7 @@
   }
 
   .ce-board-item-title {
-    font-size: 0.875rem;
+    font-size: var(--ce-font-sm);
     opacity: 0.75;
     display: inline-flex;
     align-items: center;

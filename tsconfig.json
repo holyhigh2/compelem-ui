@@ -16,8 +16,6 @@
     "jsx": "preserve",
     "experimentalDecorators": true,
     "strict": true,
-    // 组件的 props / states 由 compelem 装饰器在框架内部初始化，
-    // 因此关闭对“属性未在构造函数中赋值”的严格检查（否则会产生大量 TS2564）。
     "strictPropertyInitialization": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -32,7 +30,6 @@
   "include": [
     "src",
     "vite-env.d.ts",
-    "vite.config.ts",
     "vite.lib.config.ts"
   ]
 }

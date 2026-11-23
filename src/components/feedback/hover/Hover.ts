@@ -3,7 +3,7 @@ import { CompElem, emits, event, prop, state, tag, watch } from "compelem";
 
 /**
  * 悬浮
- * @props
+ * @attrs
  *  value {boolean} model属性，单向受控
  *
  * @slots
@@ -13,7 +13,7 @@ import { CompElem, emits, event, prop, state, tag, watch } from "compelem";
  *
  * @author holyhigh2
  */
-@emits('change')
+@emits('change', 'update:value')
 @tag('ce-hover')
 export class Hover extends CompElem<null> {
 
@@ -37,6 +37,10 @@ export class Hover extends CompElem<null> {
   }
   @event('mouseleave.capture')
   onMouseLeave(e: MouseEvent) {
+    // 子元素间移动（如文本 → 容器 padding 区）会对子元素派发 mouseleave，
+    // relatedTarget 仍指向宿主 flat tree 内节点时不算真正离开
+    const rt = e.relatedTarget as Node | null;
+    if (rt && this.contains(rt)) return;
     this.value = this.isHovering = false
     this.__target = e.target
   }

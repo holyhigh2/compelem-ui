@@ -6,7 +6,7 @@ import { AvatarDefault } from "../../../icons/icons";
 import style from "./style.scss?tmpl";
 /**
  * 头像
- * @props
+ * @attrs
  *  size {string} xs/sm/md/lg/xl/xxl，默认md
  *  round {string} 默认circle
  *  color {string} 指定color时不会显示默认图标，默认空

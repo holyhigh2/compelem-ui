@@ -1,5 +1,6 @@
-import { classes, CompElem, csscope, Csscope, forEach, h, ifElse, prop, tag, Template } from "compelem";
+import { classes, CompElem, computed, csscope, Csscope, forEach, h, ifElse, prop, tag, Template } from "compelem";
 import style from "./style.scss?tmpl";
+import { FADE_CSS } from "../../../css/transition";
 
 /**
  * 骨架加载器，用于card/table/panel/article等区域的内容占位加载
@@ -45,7 +46,7 @@ export class SkeletonLoader extends CompElem {
   //////////////////////////////////// styles
   @csscope(Csscope.INNER)
   static get css() {
-    return [style];
+    return [style, FADE_CSS];
   }
 
   /////////////////////////////////// methods
@@ -134,13 +135,25 @@ export class SkeletonLoader extends CompElem {
           pushRow([this.item('text', undefined, true)]);
       }
     }
-    if (!rows.length) rows.push([this.item('text', undefined, true)]);
+    if (!rows.length) pushRow([this.item('text', undefined, true)]);
     return rows;
   }
 
   //////////////////////////////////// lifecycles
+  /**
+   * 预设行结构。
+   *
+   * 必须是 `@computed` 而非 render() 局部变量：它被 ifElse / forEach 回调引用，
+   * 而回调的插值在按类烘焙的 effect 工厂里求值 —— 那里只有 `__comp`，
+   * render() 的局部作用域够不着（报「引用了无法解析的自由标识符 'rows'」）。
+   * 用 computed 还有个好处：缓存住数组引用，不会每次求值都产生新数组。
+   * （不能叫 `rows`，会与 `@prop rows` 撞名。）
+   */
+  @computed get rowList(): SkeletonRow[] {
+    return this.resolveRows()
+  }
+
   render(): Template {
-    const rows = this.resolveRows();
     return h`
       <div class="ce-skeleton" ${classes({
         ['ce-skeleton-anim-' + this.animation]: true,
@@ -149,7 +162,7 @@ export class SkeletonLoader extends CompElem {
         ${ifElse(this.loading,
           () => h`
             <div class="ce-skeleton-wrap">
-              ${forEach(rows, (r, ri) => ri, (r, ri) => h`
+              ${forEach(this.rowList, (r, ri) => ri, (r, ri) => h`
                 <div class="ce-skeleton-row" ${classes({ "ce-skeleton-table": !!r.table })}>
                   ${forEach(r.items, (b, i) => i, (b, i) => h`
                     <div class="ce-skeleton-item" ${classes({ ['ce-skeleton-' + b.v]: true, ['ce-skeleton-' + b.w]: !!b.w, "ce-skeleton-grow": !!b.grow })}></div>
@@ -160,7 +173,8 @@ export class SkeletonLoader extends CompElem {
           `,
           () => h`
             <div class="ce-skeleton-slot"><slot></slot></div>
-          `
+          `,
+          { enter: "fade", leave: "fade" }
         )}
       </div>
     `;

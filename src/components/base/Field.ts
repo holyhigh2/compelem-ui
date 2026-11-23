@@ -55,9 +55,6 @@ export class Field extends CompElem {
   /////////////////////////////////// watches
 
   //////////////////////////////////// lifecycles
-  constructor(...args: any[]) {
-    super(...args)
-  }
   render(): Template {
     return h`<div>
       ${ifElse(isEmpty(this.slots.default), () => h`${this.label}`, () => h`<slot></slot>`)}

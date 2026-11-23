@@ -1,12 +1,35 @@
 @use "../../../css/functions" as fn;
 @use "../../../css/mixins";
+@use "../../../css/row";
 @use "../../../css/utils";
+
+// 折叠/展开几何动画与 ce-list 共用同一组开关（--ce-list-transition-duration /
+// --ce-list-transition-timing-function），保证外壳与行的曲线、时长一致；
+// hover 变色单独走 --ce-list-item-hover-transition-duration，不受折叠开关影响。
+// 默认值全部等于旧行为（0.3s / ease）。
+$_lt: var(--ce-list-transition-duration, 0.3s) var(--ce-list-transition-timing-function, ease);
+$_hover: background-color var(--ce-list-item-hover-transition-duration, 0.3s);
 
 :host {
   color: var(--ce-color-text-secondary);
   display: grid;
-  --list-item-height: 32px;
-  padding-inline: var(--ce-spacing-xl);
+  --list-item-height: 2rem;
+  // 行盒要容纳 CJK 字形度量（约 1.31em）：.ce-list-heading 与 slotted span 都带
+  // overflow:hidden，行盒不足会裁掉字形上下缘。单行项高度由 min-height 档位
+  // 或外部显式高度决定，改行高不改变布局尺寸；置 1 可恢复紧凑行盒。
+  line-height: var(--ce-list-item-line-height, 1.5);
+  // 行内内距：公开 token，可被外层卡片组合 / 主题覆盖
+  padding-inline: var(--ce-list-item-padding-inline, var(--ce-spacing-xl));
+  // 行间内距：由 ListItem 在「两行列表项」（有副标题）时注入
+  // --list-item-padding-block: var(--ce-list-item-padding-block, 1rem)，
+  // 单行项保持 0，避免影响表格/看板工具栏、下拉菜单等紧凑场景
+  padding-block: var(--list-item-padding-block, 0);
+  // 行高**下限**：档位值（--list-item-min-height，由下方 :host([space=...]) 给出）
+  // 可被公开 token --ce-list-item-min-height 整体顶掉（如设置面板的卡片行）。
+  // 默认 auto —— 未声明 space 的场景（listpicker / 看板字段行等自带显式 height）
+  // 不该被强加 32px 下限。min-height 只当下限：两行项实际高度仍由
+  // padding-block + 内容（标题+间距+副标题）与右侧控件三者取最大。
+  min-height: var(--ce-list-item-min-height, var(--list-item-min-height, auto));
   overflow: hidden;
   position: relative;
   --active-color: var(--ce-color-primary);
@@ -79,16 +102,21 @@
   }
 }
 
+// 行高下限档位：只写 --list-item-min-height，由 :host 的 min-height 统一消费。
+// 原先直接写 min-height，外部想覆盖（如设置面板卡片行 46px）只能整条属性覆盖，
+// 且与 :host 的 min-height 形成两条互不知情的规则。
+// 24/32/40 是**单行项**的行高基准；两行项实际高度由 padding-block + 内容决定，
+// 恒大于此值，所以这里只是下限，不会把两行项压矮。
 :host([space="loose"]) {
-  min-height: calc(var(--list-item-height) + 8px);
+  --list-item-min-height: calc(var(--list-item-height) + 8px);
 }
 
 :host([space="default"]) {
-  min-height: var(--list-item-height);
+  --list-item-min-height: var(--list-item-height);
 }
 
 :host([space="compact"]) {
-  min-height: calc(var(--list-item-height) - 8px);
+  --list-item-min-height: calc(var(--list-item-height) - 8px);
 }
 
 :host(ce-list-item[link]),
@@ -104,18 +132,16 @@
   display: grid;
   grid-template-areas: "prepend content append";
   grid-template-columns: max-content 1fr auto;
-  transition: background-color 0.3s, opacity 0.3s, width 0.3s,
-    grid-template-columns 0.3s;
+  transition: $_hover, opacity $_lt, width $_lt, grid-template-columns $_lt;
   color: inherit;
 
   .ce-list-prepend {
     grid-area: prepend;
-    display: flex;
-    align-items: center;
+    @include row.cell;
   }
 
   .ce-list-content {
-    transition: all 0.3s;
+    transition: all $_lt;
     overflow: hidden;
     grid-area: content;
     white-space: nowrap;
@@ -129,9 +155,13 @@
       flex-direction: column;
       justify-content: center;
 
+      // 单行项：标题即条目文字本身，跟随条目尺寸（见下方「主副标题层级」说明）
       .ce-list-heading {
         display: flex;
         align-items: center;
+        font-size: var(--ce-list-item-heading-size, 1em);
+        // 单行项没有「标题/描述」之分，颜色继承条目自身配色（:host 的次文本色）
+        color: var(--ce-list-item-heading-color, inherit);
       }
     }
 
@@ -139,30 +169,83 @@
   }
 
   .ce-list-append {
-    transition: all 0.3s;
+    transition: all $_lt;
     // overflow: hidden;
     grid-area: append;
-    display: flex;
-    align-items: center;
+    @include row.cell;
 
     width: fit-content;
   }
 
+  // ── 主副标题层级 ─────────────────────────────────────────────
+  // 「主标题更大」只在**两行项**（存在副标题）成立，此时 heading 1.125em / subheading
+  // 0.875em（相对条目自身字号，比值 1.29 恒定），层级靠**色阶**而非透明度表达：
+  // 标题 --ce-color-text(gray-700)，副标题 --ce-color-text-secondary(gray-600，
+  // 与 Windows 设置的描述色 #616161 同档）。
+  //
+  // ⚠️ 这里是 --ce-font-*-em 档的**合法用法**（见 css/root.scss 字号契约第 2 条）：
+  // 主副标题必须等比跟随条目字号，属于「相对自身」的派生值，不是字号档位。
+  // 条目字号本身由宿主用 rem 档（--ce-font-sm）设定，不要再写成 em，
+  // 否则 0.875em × 0.875em 双重复合（列表项曾因此从 12.25px 掉到 10.7px）。
+  //
+  // 单行项走 .ce-list-content.ce-list-line1 分支：标题即条目文字本身，回到 1em。
+  // 原来无条件 1.125em，等于把菜单 / 导航 / 工具栏 / listpicker 等全部单行项文字
+  // 放大 12.5% —— 放大对主副层级有意义，对单行项纯属副作用。
+  //
+  // 覆盖入口（消费方无需 ::part() 打洞，也无需各自写 px 断点）：
+  //   --ce-list-item-heading-size / -subheading-size  字号（em 或 rem 均可）
+  //   --ce-list-item-heading-color                   标题色，默认 --ce-color-text
+  //   --ce-list-item-subtitle-color / -subtitle-opacity  副标题色 / 透明度，默认次文本色 / 1
   .ce-list-heading {
-    transition: all 0.3s;
-    font-size: var(--ce-font-lg-em);
+    transition: all $_lt;
+    font-size: var(--ce-list-item-heading-size, var(--ce-font-lg-em));
+    color: var(--ce-list-item-heading-color, var(--ce-color-text));
     @include mixins.text-overflow;
     white-space: nowrap;
+  }
+
+  // 两行项主标题字号 1.125em，单独给行高系数；单行项继承 :host 的 1.5。
+  .ce-list-content:not(.ce-list-line1) .ce-list-heading {
+    line-height: var(--ce-list-item-heading-line-height, 1.35);
   }
 
   .ce-list-subheading {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    transition: all 0.3s;
+    transition: all $_lt;
     @include mixins.text-overflow;
-    font-size: var(--ce-font-sm-em);
+    font-size: var(--ce-list-item-subheading-size, var(--ce-font-sm-em));
     -webkit-line-clamp: var(--list-item-webkit-line-clamp);
-    padding-block: var(--list-item-padding-block);
+    // 与主标题的间距。原为 padding-block（上下各一份，下方那份会额外撑高行高），
+    // 改为单侧 margin-top 后行高只由标题+间距+副标题决定
+    margin-top: var(--list-item-subtitle-gap, 0);
+    // 次文本色 + 不透明度 1。原为「继承主标题色再乘 opacity:.6」：叠在任意继承色上
+    // 都不落到具体色阶（白卡上偏灰、暗色主题下更浅），同一套写法在两种主题下层级不同；
+    // 需要更弱的描述色时用 --ce-list-item-subtitle-opacity 单独压。
+    color: var(--ce-list-item-subtitle-color, var(--ce-color-text-secondary));
+    opacity: var(--ce-list-item-subtitle-opacity, 1);
     line-height: 1.25;
+  }
+
+  // ── 附加行（extra 槽）─────────────────────────────────────
+  // 主/副标题下方的整行区域：内容列（1fr）满宽，槽内子元素默认拉满。
+  // 用于"描述在上、宽控件独占一行"的设置条目；与副标题的间距走公开 token。
+  // 容器无条件渲染（见 ListItem.ts 模板注释），无分配内容时 is-empty 隐藏，
+  // 避免 8px 间距凭空垫高单行项。
+  .ce-list-extra {
+    width: 100%;
+    // 内容列是 white-space:nowrap 的文本语义，附加行是控件区，必须复位，
+    // 否则行内多个控件会被 nowrap 排成一条不换行的长条
+    white-space: normal;
+    margin-top: var(--ce-list-item-extra-gap, var(--ce-spacing-sm, 8px));
+
+    &.is-empty {
+      display: none;
+    }
+
+    ::slotted(*) {
+      width: 100%;
+      box-sizing: border-box;
+    }
   }
 }

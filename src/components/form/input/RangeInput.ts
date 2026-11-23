@@ -34,9 +34,6 @@ import { ControlBox } from "../../../base/ControlBox";
 export type RangeCheckMode = 'none' | 'validate' | 'clamp' | 'fit'
 
 export abstract class RangeInput extends ControlBox {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   //////////////////////////////////// props
   @prop({ type: [Number, String] }) min: number | string;
   @prop({ type: [Number, String] }) max: number | string;

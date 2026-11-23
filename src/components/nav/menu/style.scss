@@ -1,0 +1,378 @@
+@use "../../../css/functions" as fn;
+@use "../../../css/mixins";
+@use "../../../css/row";
+
+/**
+ * ce-menu 样式
+ *
+ * 设计要点：
+ * 1. 行是 grid，列宽变量（--menu-col-*）写在**层** ul 上，子项继承
+ *    ⇒ 同层所有行共享同一套轨道，跨行左/右缘必然对齐。
+ * 2. 列的存废由层级决定，单元格内容的显隐由组件用 `visibility` 控制
+ *    （不能用 display:none —— grid 中隐藏项不占位，后面的单元格会串列）。
+ * 3. 类名不两用：`__x` 只做元素、`--x` 只做修饰符（ce-menu-pane 的同名两用
+ *    曾把 grid/center/灰色文字整套规则命中到 li 上）。
+ */
+:host {
+  position: absolute;
+  top: 0;
+  left: -9999px;
+  z-index: 9999;
+  display: block;
+  font-size: var(--ce-font-md);
+  color: var(--menu-fg);
+
+  // 菜单自身是可换主题的浮层，但默认值必须来自语义 token，才能跟随 [data-theme="dark"]；
+  // 原先写死 #fff / rgba(10,20,28,...) ⇒ 暗色页面里浮层仍是白底黑字。
+  // 需要独立配色时继续覆盖 --menu-* 即可（[theme="dark"] 分支保持不变）。
+  --menu-bg: var(--ce-color-bg);
+  --menu-bg-sub: var(--ce-color-bg);
+  --menu-border: rgb(var(--ce-color-border-rgb) / 0.6);
+  --menu-fg: var(--ce-color-text);
+  --menu-fg-muted: var(--ce-color-text-secondary);
+  --menu-fg-disabled: var(--ce-color-text-desc);
+  --menu-bg-hover: rgb(var(--ce-color-text-rgb) / 0.08);
+  --menu-shadow: 0 0 0 1px var(--menu-border), 0 4px 4px rgba(0, 0, 0, 0.04),
+    0 10px 8px rgba(0, 0, 0, 0.05), 0 20px 24px rgba(0, 0, 0, 0.08);
+  --menu-radius: 8px;
+  --menu-radius-item: 4px;
+  --menu-row-py: 3px;
+  --menu-row-px: 6px;
+  --menu-row-line-height: 1.5;
+  --menu-row-min-height: 0px;
+  --menu-label-gap: 0px;
+  /** description 第二行默认单行省略；设为 normal 时按 label 列宽换行 */
+  --menu-desc-white-space: nowrap;
+  --menu-section-font-size: var(--ce-font-xs);
+  --menu-section-line-height: 1.5;
+  // 分组标题要比菜单项更淡，否则与可点项抢视觉层级（secondary 只比 text 浅一档，几乎看不出）
+  --menu-section-color: rgb(var(--ce-color-text-secondary-rgb) / 0.72);
+  --menu-section-py: 4px;
+  --menu-section-px: 0.25rem;
+  --menu-section-min-height: 0;
+  --menu-check-col: 1.15rem;
+  --menu-icon-col: 1.35rem;
+  --menu-icon-cell-padding: 0.35rem;
+  --menu-icon-cell-justify: center;
+  --menu-label-cell-px: 0.25rem;
+  --menu-divider-margin: 4px;
+  --menu-divider-width: 1px;
+  --menu-divider-inset: 0px;
+  /** 线的相对纵向位移（负值上移），默认 0 不改变原有布局与像素位置 */
+  --menu-divider-line-offset: 0px;
+  --menu-scrollbar-width: auto;
+}
+
+/** 内联模式：由宿主容器排版；relative 保证子菜单仍相对宿主定位 */
+:host([inline]) {
+  position: relative;
+  left: 0;
+  top: 0;
+}
+
+:host([theme="dark"]) {
+  --menu-bg: rgba(30, 34, 41, 0.98);
+  --menu-bg-sub: rgba(38, 43, 51, 0.98);
+  --menu-border: rgba(255, 255, 255, 0.08);
+  --menu-fg: #fff;
+  --menu-fg-muted: rgba(255, 255, 255, 0.55);
+  --menu-fg-disabled: #6b7280;
+  --menu-bg-hover: rgba(255, 255, 255, 0.1);
+  // 暗色下 55% 白本身已足够淡，沿用语义色即可
+  --menu-section-color: var(--menu-fg-muted);
+}
+
+.ce-menu {
+  box-sizing: border-box;
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+.ce-menu__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--menu-bg);
+  box-shadow: var(--menu-shadow);
+  color: var(--menu-fg);
+  -webkit-backdrop-filter: var(--menu-backdrop-filter, none);
+  backdrop-filter: var(--menu-backdrop-filter, none);
+  scrollbar-width: var(--menu-scrollbar-width, auto);
+  overscroll-behavior: var(--menu-overscroll, auto);
+}
+
+/**
+ * header 插槽（根层顶部，搜索框等）。
+ * sticky：根层设了 maxHeight + overflow 时，搜索框不随列表滚走；
+ * 插槽为空时组件把该 li 设为 display:none，默认视觉不变。
+ */
+.ce-menu__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--menu-bg);
+}
+
+.ce-menu__list--sub {
+  position: absolute;
+  z-index: 1;
+  background: var(--menu-bg-sub);
+  /**
+   * 子层是绝对定位的收缩容器，而行的 label 轨道是 `minmax(0,1fr)` —— 绝对定位 +
+   * 1fr 在"收缩适应"下不贡献内在宽度，整个子层会塌成只剩固定列（实测 ~12px，
+   * 看起来"二级菜单点不动"）。`max-content` 让子层按内容撑开（配合行的 nowrap）。
+   * 根层不用这条：它已有 `min-width`（menu minWidth prop）。
+   */
+  width: max-content;
+}
+
+.ce-menu.is-rounded {
+  .ce-menu__list {
+    border-radius: var(--menu-radius);
+  }
+
+  .ce-menu__row {
+    border-radius: var(--menu-radius-item);
+  }
+}
+
+.ce-menu__item {
+  position: relative;
+  display: block;
+  outline: none;
+  color: inherit;
+
+  /**
+   * 分割线挂在 null 项之后的**下一项**上（null 项本身 display:none）。
+   * 用 ::before 而非 border-top：线可以左右内缩（--menu-divider-inset），
+   * 同时不改变整行的 hover 背景宽度。
+   */
+  &.is-divider {
+    margin-top: var(--menu-divider-margin, 4px);
+    padding-top: var(--menu-divider-margin, 4px);
+
+    &::before {
+      content: "";
+      display: block;
+      position: relative;
+      top: var(--menu-divider-line-offset, 0px);
+      height: var(--menu-divider-width, 1px);
+      margin: 0 var(--menu-divider-inset, 0px);
+      background: var(--menu-border);
+    }
+  }
+
+  &.is-disabled {
+    color: var(--menu-fg-disabled);
+
+    .ce-menu__row {
+      cursor: default;
+    }
+  }
+
+  &:not(.is-disabled):not(.is-custom):not(.is-section) {
+    cursor: pointer;
+  }
+
+  &:not(.is-disabled):not(.is-section):hover > .ce-menu__row,
+  &:not(.is-disabled):not(.is-section).is-active > .ce-menu__row {
+    background: var(--menu-bg-hover);
+  }
+
+  &:not(.is-section):focus > .ce-menu__row,
+  &:not(.is-section):focus-visible > .ce-menu__row {
+    background: var(--menu-bg-hover);
+  }
+
+  /**
+   * 分组标题行：不参与交互，行改为普通块流，只保留 label 单元。
+   * 非 label 单元必须 display:none（行已不是 grid，保留会纵向堆叠占位）。
+   */
+  &.is-section {
+    cursor: default;
+
+    > .ce-menu__row {
+      display: block;
+      padding: var(--menu-section-py, 4px) var(--menu-section-px, 0.25rem);
+      min-height: var(--menu-section-min-height, 0);
+      line-height: var(--menu-section-line-height, 1.5);
+      font-size: var(--menu-section-font-size, var(--ce-font-xs));
+      color: var(--menu-section-color, var(--menu-fg-muted));
+      white-space: normal;
+    }
+
+    > .ce-menu__row > .ce-menu__cell:not(.ce-menu__cell--label) {
+      display: none;
+    }
+
+    .ce-menu__cell--label {
+      display: block;
+      padding: 0;
+      overflow: visible;
+    }
+
+    .ce-menu__label-wrap {
+      display: block;
+    }
+
+    .ce-menu__label {
+      overflow: visible;
+      text-overflow: clip;
+    }
+  }
+}
+
+/**
+ * 行网格：六列轨道，宽度全部来自层变量。
+ * 用 minmax(0,1fr) 而非 1fr —— 长文本默认不会把轨道撑破（配合 label 的 ellipsis）。
+ */
+.ce-menu__row {
+  display: grid;
+  grid-template-columns:
+    var(--menu-col-check, 0px) var(--menu-col-icon, 0px) minmax(0, 1fr)
+    var(--menu-col-shortcut, 0px) var(--menu-col-extra, 0px) var(--menu-col-caret, 0px)
+    var(--menu-col-check-end, 0px);
+  align-items: center;
+  column-gap: 0;
+  padding: var(--menu-row-py) var(--menu-row-px);
+  min-height: var(--menu-row-min-height, 0px);
+  white-space: nowrap;
+  line-height: var(--menu-row-line-height, 1.5);
+}
+
+.ce-menu__cell {
+  @include row.cell;
+  overflow: hidden;
+}
+
+.ce-menu__cell--check {
+  justify-content: center;
+}
+
+/**
+ * 定制项自带视觉，勾选/圆点单元格一律不显示。
+ * 单元格本身不再挂渲染期算出的 visibility —— 那一层在 items 晚于首渲染赋值时
+ * 不会被补丁更新，会把已选中的标记一起藏掉；可见性统一交给内层 `.ce-menu__check`
+ *（绑定 showCheck，随行模板重绘）与 `.ce-menu__dot` 控制。
+ */
+.ce-menu__item.is-custom > .ce-menu__row > .ce-menu__cell--check,
+.ce-menu__item.is-custom > .ce-menu__row > .ce-menu__cell--check-end {
+  visibility: hidden;
+}
+
+/**
+ * 行尾选中标记列（checkPosition="end"）。
+ * overflow 放开：宿主把 `--menu-check-col` 设为 0 时，标记可向左覆盖在 label 上，
+ * 行内容不必为勾选位预留宽度。
+ */
+.ce-menu__cell--check-end {
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+.ce-menu__cell--icon {
+  justify-content: var(--menu-icon-cell-justify, center);
+  padding-inline-end: var(--menu-icon-cell-padding, 0.35rem);
+}
+
+.ce-menu__cell--label {
+  padding: 0 var(--menu-label-cell-px, 0.25rem);
+}
+
+.ce-menu__cell--shortcut {
+  justify-content: flex-end;
+  padding-left: 0.75rem;
+  font-size: var(--ce-font-xs);
+  color: var(--menu-fg-muted);
+}
+
+.ce-menu__cell--caret {
+  justify-content: flex-end;
+}
+
+/**
+ * 右侧定制区（输入框等）。
+ * overflow 必须放开 —— 定制内容自己管尺寸，不能被单元格裁掉。
+ */
+.ce-menu__cell--extra {
+  justify-content: flex-end;
+  overflow: visible;
+  padding-left: 0.5rem;
+}
+
+.ce-menu__extra {
+  display: inline-flex;
+  align-items: center;
+}
+
+/** separate 项：整行可点击，但只有最右侧箭头负责展开子菜单 */
+.ce-menu__item.is-selectable-parent > .ce-menu__row > .ce-menu__cell--caret {
+  cursor: pointer;
+}
+
+/**
+ * label 列内堆叠：单行项只有第一行；提供 description 时第二行自然撑高。
+ * 用 flex column + min-width:0 保证长文本仍按 label 轨道做 ellipsis。
+ */
+.ce-menu__label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--menu-label-gap, 0px);
+  min-width: 0;
+  width: 100%;
+}
+
+.ce-menu__label {
+  @include mixins.text-overflow;
+}
+
+.ce-menu__label-html {
+  display: inline;
+}
+
+/** 第二行描述（纯文本），字号/行高可由 --menu-desc-* 覆盖 */
+.ce-menu__desc {
+  @include mixins.text-overflow;
+  white-space: var(--menu-desc-white-space, nowrap);
+  color: var(--menu-fg-muted);
+  font-size: var(--menu-desc-font-size, var(--ce-font-xs));
+  line-height: var(--menu-desc-line-height, 1.35);
+}
+
+.ce-menu__check {
+  display: inline-flex;
+  align-items: center;
+
+  // 尺寸走 token：默认 1em = 行字号（旧行为）；需要与设计稿对齐时由消费方设具体 px，
+  // 不必再传一段带内联样式的 SVG 字符串进来。
+  svg {
+    width: var(--menu-check-size, 1em);
+    height: var(--menu-check-size, 1em);
+    vertical-align: text-bottom;
+  }
+}
+
+.ce-menu__dot {
+  display: block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ce-menu__icon-raw {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ce-menu__caret {
+  display: inline-flex;
+  align-items: center;
+  color: var(--menu-fg-muted);
+}
+
+.ce-menu__i-none {
+  display: none;
+}

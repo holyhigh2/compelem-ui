@@ -112,13 +112,16 @@
     }
   }
 
+  // 徽章内容节点是模板中的 div（非 sup），边框需作用于 >div 才能生效；
+  // 边框色跟随主题背景 token（浅色为白环，暗色主题自动适配）
   &.ce-badge-bordered {
-    sup {
-      border: 2px solid #fff;
+    >div {
+      border: 2px solid var(--ce-color-bg);
     }
   }
 
   >div {
+    white-space: nowrap;
     position: absolute;
     padding-inline: var(--ce-spacing-sm);
     background-color: var(--color);

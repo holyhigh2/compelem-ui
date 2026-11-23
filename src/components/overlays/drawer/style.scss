@@ -4,6 +4,9 @@
 
 :host {
   position: fixed;
+  // 抽屉本体在 top-layer 时 z-index 不参与层序；这里只给
+  // 不支持 Popover API 的降级路径兜底，压过页面 chrome
+  z-index: var(--ce-z-index-overlay);
 }
 
 .ce-drawer {
@@ -15,13 +18,17 @@
   margin: 0;
   max-width: unset;
   max-height: unset;
-  transition-property: all;
+  // 只让绘制属性参与过渡；left/top/width/height 等定位与尺寸属性必须排除。
+  // 否则切换 placement 时 left:100%→0 会与 transform 一起被插值，面板从屏幕
+  // 一侧横穿到另一侧（实测 x 459→0）。示例页的「先关再开」只是绕开这条路，
+  // 一旦 closed 事件与关闭收尾竞态、面板尚可见就切方向就会重现。
+  // 排除后定位瞬间到位，只有 transform 负责从新边缘滑入。
+  transition-property: transform, box-shadow, background-color, border-color,
+    border-radius, color, opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition-duration: 0.2s;
   box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
     rgba(0, 0, 0, 0.1) 0px 0px 25px -5px, rgba(0, 0, 0, 0.1) 0px 0px 10px -6px;
-
-  transition: all 0.2s;
 
   &.ce-drawer-round {
     border-radius: var(--ce-round-lg);
@@ -78,9 +85,21 @@
     }
   }
 
+  // div[popover] 与 dialog 一样有 ::backdrop，但它是非模态的：
+  // backdrop=none 的抽屉必须让页面继续可交互，故把伪元素指针事件关掉
+  //
+  // ⚠️ popover 的 ::backdrop 在 UA 样式里是**完全透明**的（dialog 才有 0.1），
+  // 这里只改 opacity 不会产生任何可见遮罩。必须显式给背景，透明度沿用
+  // ce-overlay 遮罩的 0.25，保持两套浮层观感一致。
   &::backdrop {
+    background-color: rgba(0, 0, 0, 0.25); // color-allow 遮罩
     opacity: 0;
     transition: opacity 0.2s;
+  }
+
+  &.ce-drawer-no-backdrop::backdrop {
+    pointer-events: none;
+    background: transparent;
   }
 
   &.ce-drawer-visible {
@@ -107,32 +126,74 @@
     }
   }
 
-  .ce-drawer-wrapper {
+  // 背景/圆角原先由内层的 ce-panel 提供，改为自渲染三段后由浮层根 div 兜底
+  background-color: var(--ce-panel-bg, #fff);
+  border-radius: var(--ce-panel-radius, var(--ce-round-lg));
+
+  // 三段布局：head(固定) / body(滚动) / foot(固定)
+  // 显隐统一由 layerHost 控制：top-layer 态看 :popover-open，
+  // 降级路径（无 Popover API）看 .ce-drawer-open。
+  // ⚠️ 作者样式写死 display 会盖掉未打开态的隐藏规则 ⇒ 必须显式排除。
+  &:not(:popover-open):not(.ce-drawer-open) {
+    display: none;
+  }
+
+  &:popover-open,
+  &.ce-drawer-open {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    // padding: 1.35rem;
-    height: 100%;
+  }
 
-    .ce-drawer-close {
-      position: absolute;
-      font-size: 1.5rem;
-      right: 0.25rem;
-      cursor: pointer;
+  .ce-drawer-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--ce-color-border, #e6e8eb);
+
+    .ce-drawer-title {
+      margin: 0;
+      font-size: var(--ce-font-md);
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--ce-color-text, #1f2328);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+  }
 
-    > main {
-      padding-bottom: 1rem;
-      flex: 1;
+  // 关闭按钮是 subtle 类型的 ce-button（图标按钮），此处只补层级与配色，
+  // 尺寸 / 内距 / hover 底色由 ce-button 自身的 appearance=subtle 负责
+  .ce-drawer-close {
+    flex: none;
+    cursor: pointer;
+    color: var(--ce-color-text-secondary, #5f5e5a);
 
-      // margin-top: .5rem;
-      overflow: auto;
-      word-break: break-all;
+    &:hover {
+      color: var(--ce-color-text, #1f2328);
     }
+  }
 
-    > footer {
-      text-align: right;
-    }
+  .ce-drawer-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px 16px;
+    word-break: break-all;
+  }
+
+  // 页脚无条件渲染（判空 slot 在首渲染不可靠，见 Drawer.render 注释），
+  // 因此用变量给「不使用页脚」的场景一个关闭通道：
+  // 宿主任意祖先设 --ce-drawer-foot-display:none 即可收起空页脚
+  .ce-drawer-foot {
+    display: var(--ce-drawer-foot-display, block);
+    flex: none;
+    padding: 10px 16px;
+    text-align: right;
+    border-top: 1px solid var(--ce-color-border, #e6e8eb);
   }
 
   &.ce-drawer-shake {

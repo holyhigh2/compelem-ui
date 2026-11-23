@@ -86,8 +86,42 @@ $ce-palette: (
   }
 
   // ② 语义别名双轨（完整色链 + 通道值链）
+  // 表面色：卡片/弹层/下拉/输入框的底色，暗色主题只需翻转这两个变量
+  --ce-color-bg-rgb: 255 255 255;
+  --ce-color-bg: rgb(var(--ce-color-bg-rgb));
+  // 次级容器底：轨道、分组底、hover 底这类「在页面内圈出一块区域」的表面，
+  // 比页面底深一档。禁止组件直接引用 --ce-color-gray-* 充当背景 —— 调色板是
+  // 原始色阶，暗色主题不会反相，容器会在深色页面里保持浅灰白底。
+  --ce-color-bg-secondary-rgb: var(--ce-color-gray-100-rgb);
+  --ce-color-bg-secondary: rgb(var(--ce-color-bg-secondary-rgb));
+  // 自容器浮起的表面：选中块、胶囊高亮。浅色下等同页面底（白），暗色下比次级容器
+  // 再亮一档 —— 让「选中/浮起」在两种主题下都是提亮方向，不会随主题翻转成凹陷。
+  --ce-color-bg-elevated-rgb: var(--ce-color-bg-rgb);
+  --ce-color-bg-elevated: rgb(var(--ce-color-bg-elevated-rgb));
   --ce-color-primary: var(--ce-color-info);
   --ce-color-primary-rgb: var(--ce-color-info-rgb);
+  // 实色（flat）表面上的前景色。单独成对，便于宿主在强调色上做整体替换，
+  // 也不用让各组件重复写死 #fff（暗色主题下强调色仍是中等明度，前景保持白）。
+  --ce-color-on-primary-rgb: 255 255 255;
+  --ce-color-on-primary: rgb(var(--ce-color-on-primary-rgb));
+  // 各语义色作为实心（flat）表面时的配对前景色。必须成对定义而不是统一写死 #fff：
+  // warning 背景（#ffb300）亮度太高，白字只有 1.79:1（远低于 AA 4.5:1），只能用深色字；
+  // 其余语义色在浅色主题下是中等明度，白字符合惯例。深色主题会按需反相（见下）。
+  --ce-color-on-info-rgb: 255 255 255;
+  --ce-color-on-info: rgb(var(--ce-color-on-info-rgb));
+  --ce-color-on-success-rgb: 255 255 255;
+  --ce-color-on-success: rgb(var(--ce-color-on-success-rgb));
+  --ce-color-on-warning-rgb: 31 41 55; // gray-800
+  --ce-color-on-warning: rgb(var(--ce-color-on-warning-rgb));
+  --ce-color-on-error-rgb: 255 255 255;
+  --ce-color-on-error: rgb(var(--ce-color-on-error-rgb));
+  --ce-color-on-text-rgb: 255 255 255;
+  --ce-color-on-text: rgb(var(--ce-color-on-text-rgb));
+  // 提示气泡：深色底 + 浅色字。此前用「--ce-color-text 反相」表达，深色主题下
+  // text 自己变成浅色，反相失效后变成浅底白字（1.05:1）。改为显式成对 token，
+  // 深色主题只把底色提亮一档（gray-700 → gray-600）以与深色页面区分。
+  --ce-tooltip-bg: rgb(var(--ce-color-gray-700-rgb));
+  --ce-tooltip-color: rgb(var(--ce-color-gray-50-rgb));
   --ce-color-text: var(--ce-color-gray-700);
   --ce-color-text-rgb: var(--ce-color-gray-700-rgb);
   --ce-color-text-header: var(--ce-color-gray-900);
@@ -131,19 +165,48 @@ $ce-palette: (
 
   //text
   //fontsize
-  // 0.75rem xs 输入框/按钮/
-  // 0.875 sm/md 菜单项/表单内容
-  --ce-font-nav: 0.8125rem;
-  --ce-font-xxs: 0.5rem;
-  --ce-font-xs: 0.75rem;
-  --ce-font-sm: 0.875rem;
-  --ce-font-md: 1rem;
-  --ce-font-lg: 1.125rem;
-  --ce-font-xl: 1.25rem;
+  // ─── 字号与尺寸契约 ──────────────────────────────────────────────────────
+  // 1) 字号档位只允许引用下面这组 **rem 档**。md = body：任何组件的 md 都等于
+  //    --ce-font-md，全库没有第二套 md 定义。
+  // 2) 全库随 <html> 字号等比缩放。宿主若要固定密度（如 16px 根字号 + 14px
+  //    网格），改 --ce-font-base 一个数即可，其余档位全部派生。
+  // 3) 单位分工：字号档用 rem（相对 document root，跨 shadow 恒定）；盒模型
+  //    （height / padding / gap）用 em（相对控件自身字号，容器密度才能传进
+  //    shadow）；1px 边框、焦点环、阴影、断点保持 px。
+  // 4) *-em 档只用于「相对自身字号」的派生值（列表主副标题、line-height 等），
+  //    严禁当作字号档位写在面板 / 列表项上：em 与父级字号相乘，三层嵌套即
+  //    失控（0.875rem 正文 × 0.875 × 0.875 = 9.4px）。
+  // 5) 读取型文字的最小档位是 --ce-font-sm；--ce-font-xxs / --ce-font-xs
+  //    仅用于徽标、计数器等装饰性文字，不承载正文信息。
+  // 6) 同一操作面内「控件」与「正文」必须同档：表格工具栏 / 字段面板用
+  //    --ce-font-md（表格正文同为 --ce-font-md）。
+  // 7) 校验：node scripts/check.mjs fonts（禁止 font-size 引用 *-em 档、禁止 <12px 字面量、
+  //    禁止把 em 洗进自定义属性再间接引用 —— 变量链会被展开后判定）。
+  --ce-font-base: 1rem;
+  --ce-font-min: 12px; // 读取型文字下限，见 (5)
+  --ce-font-xxs: calc(var(--ce-font-base) * 0.5);
+  --ce-font-xs: max(var(--ce-font-min), calc(var(--ce-font-base) * 0.75));
+  // 导航 / 标签类小字同样承载信息，14px 根字号下会掉到 11.4px / 10.5px，
+  // 必须和 --ce-font-sm 一样在下限处夹住。
+  --ce-font-nav: max(var(--ce-font-min), calc(var(--ce-font-base) * 0.8125));
+  --ce-font-sm: max(var(--ce-font-min), calc(var(--ce-font-base) * 0.875));
+  --ce-font-md: var(--ce-font-base);
+  --ce-font-lg: calc(var(--ce-font-base) * 1.125);
+  --ce-font-xl: calc(var(--ce-font-base) * 1.25);
   --ce-lineh-xs: 1;
   --ce-lineh-sm: 1.25;
   --ce-lineh-md: 1.5;
   --ce-lineh-lg: 1.75;
+
+  // 控件高度五档。值是 em，在「消费该变量的元素」上解析，因此自动等于该控件
+  // 自己字号的倍数：同档按钮与输入框等高，进入更小的容器时一起压缩。
+  // 档位越高字号越大，高度按同一倍数跟随，所以 lg/xl 与 md 同倍数。
+  // 换算到 root16：xs 24、sm 28、md 36、lg 40.5、xl 45。
+  --ce-control-h-xs: 2em;
+  --ce-control-h-sm: 1.75em;
+  --ce-control-h-md: 2.25em;
+  --ce-control-h-lg: 2.25em;
+  --ce-control-h-xl: 2.25em;
 
   --ce-font-xxs-em: 0.5em;
   --ce-font-xs-em: 0.75em;
@@ -158,26 +221,46 @@ $ce-palette: (
 
   //shadow
   --ce-shadow-color: 0 0 0;
+  // 表面边界的「主题化描边环」。浅色主题靠黑色投影区分表面与页面；深色主题里
+  // 黑色投影叠在深底上等于没画（卡片 / 下拉 / 弹层会与页面糊成一片），必须换成
+  // 一圈低透明度白色描边。各档 shadow 都把它放在列表首位，浅色下它是透明的等位项
+  // （0 0 0 0 transparent），不产生任何渲染；深色主题只需覆盖这一个变量。
+  --ce-shadow-ring: 0 0 0 0 transparent;
+  // 菜单/下拉表面的手绘描边环（浅色主题用它获得 1px 硬边）。深色主题置为透明，
+  // 交给 --ce-shadow-ring 统一出白色描边，否则两层描边叠加会发白。
+  --ce-menu-ring: 0 0 0 1px rgb(0 0 0 / 0.06); // color-allow 焦点环阴影
   /**
   * ambient
   * penumbra
   * umbra 
   */
-  --ce-shadow-xs: rgb(var(--ce-shadow-color, 0 0 0) / 0.08) 0px 0px 0px 1px,
+  --ce-shadow-xs: var(--ce-shadow-ring),
+  rgb(var(--ce-shadow-color, 0 0 0) / 0.08) 0px 0px 0px 1px,
   rgb(var(--ce-shadow-color, 0 0 0) / 0.08) 0px 2px 10px 0px,
   rgb(var(--ce-shadow-color, 0 0 0) / 0.08) 0px 1px 4px -2px;
-  --ce-shadow-sm: 0 2px 4px -2px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  --ce-shadow-sm: var(--ce-shadow-ring),
+  0 2px 4px -2px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
   0 4px 5px 0 rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
   0 1px 10px 0 rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
-  --ce-shadow-md: 0 5px 5px -3px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  --ce-shadow-md: var(--ce-shadow-ring),
+  0 5px 5px -3px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
   0 8px 10px 1px rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
   0 3px 14px 2px rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
-  --ce-shadow-lg: 0 8px 10px -5px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  --ce-shadow-lg: var(--ce-shadow-ring),
+  0 8px 10px -5px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
   0 16px 24px 2px rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
   0 6px 30px 5px rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
-  --ce-shadow-xl: 0 11px 15px -7px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  --ce-shadow-xl: var(--ce-shadow-ring),
+  0 11px 15px -7px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
   0 24px 38px 3px rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
   0 9px 46px 8px rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
+  //浮层表面投影：-md 的柔光 + 1px 描边。浮层底色与页面底色接近（同为背景色），
+  //柔光在暗色主题下几乎不可见，边界靠这圈描边维持；描边色取主题边框色，
+  //随明暗主题自动翻转（黑色投影在深色底上不可见）
+  --ce-shadow-overlay: 0 0 0 1px rgb(var(--ce-color-border-rgb, 0 0 0) / 0.75),
+  0 5px 5px -3px rgb(var(--ce-shadow-color, 0 0 0) / 0.08),
+  0 8px 10px 1px rgb(var(--ce-shadow-color, 0 0 0) / 0.1),
+  0 3px 14px 2px rgb(var(--ce-shadow-color, 0 0 0) / 0.15);
 
   --ce-shadow-pane: 0 0 0 1px rgba(255, 255, 255, 0.08),
   0 2px 2px rgba(0, 0, 0, 0.03),
@@ -207,8 +290,13 @@ $ce-palette: (
   --ce-opacity-hover: 0.05;
 
   //zindex
+  // 标尺：notice < overlay(弹层/对话框) < loader < tooltip < toast
+  // 组件内的 1/3/9 属于局部堆叠上下文，不需要接入标尺
   --ce-z-index-notice: 999;
   --ce-z-index-overlay: 2000;
+  --ce-z-index-loader: 9900;
+  --ce-z-index-tooltip: 9960;
+  --ce-z-index-toast: 9999;
 
   //ui（原 --uii-*，收编至统一前缀）
   --ce-ui-handle-width: 3px;
@@ -218,4 +306,54 @@ $ce-palette: (
   //   opacity: 0.035;
   //   background-color: currentColor;
   // }
+}
+
+// ── 暗色主题（显式开关，不跟随系统，避免宿主页面被动变色）──────────
+// 用法：<html data-theme="dark"> 或 <body data-theme="dark">
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ce-color-bg-rgb: 17 24 39; // gray-900
+  // 次级容器底与页面底反向：页面 gray-900 → 容器 gray-800（亮一档），
+  // 浮起表面再亮到 gray-700。三层阶梯保证浅底容器里的文字（gray-200/400）
+  // 始终有足够对比，且选中块的提亮方向与浅色主题一致。
+  --ce-color-bg-secondary-rgb: 31 41 55; // gray-800
+  --ce-color-bg-elevated-rgb: 55 65 81; // gray-700
+  --ce-color-text-rgb: 229 231 235; // gray-200
+  --ce-color-text: rgb(var(--ce-color-text-rgb));
+  --ce-color-text-header-rgb: 249 250 251; // gray-50
+  --ce-color-text-header: rgb(var(--ce-color-text-header-rgb));
+  --ce-color-text-secondary-rgb: 156 163 175; // gray-400
+  --ce-color-text-secondary: rgb(var(--ce-color-text-secondary-rgb));
+  --ce-color-text-desc-rgb: 107 114 128; // gray-500
+  --ce-color-text-desc: rgb(var(--ce-color-text-desc-rgb));
+  --ce-color-placeholder-rgb: 107 114 128;
+  --ce-color-placeholder: rgb(var(--ce-color-placeholder-rgb));
+  --ce-color-disabled-rgb: 31 41 55; // gray-800
+  --ce-color-disabled: rgb(var(--ce-color-disabled-rgb));
+  --ce-color-border-rgb: 55 65 81; // gray-700
+  --ce-color-border: rgb(var(--ce-color-border-rgb));
+  --ce-color-border-secondary-rgb: 31 41 55; // gray-800
+  --ce-color-border-secondary: rgb(var(--ce-color-border-secondary-rgb));
+  --ce-color-border-tertiary-rgb: 31 41 55;
+  --ce-color-border-tertiary: rgb(var(--ce-color-border-tertiary-rgb));
+  --ce-color-border-active-rgb: 96 165 250; // blue-400
+  --ce-color-border-active: rgb(var(--ce-color-border-active-rgb));
+  // 深色主题下 text 与 info 都变成浅色（text = gray-200、宿主常把主色提亮），
+  // 白字落上去只有 1.47 / 2.4:1 —— 实心表面的前景必须反相为深色。
+  --ce-color-on-info-rgb: 17 24 39; // gray-900
+  --ce-color-on-info: rgb(var(--ce-color-on-info-rgb));
+  --ce-color-on-text-rgb: 17 24 39;
+  --ce-color-on-text: rgb(var(--ce-color-on-text-rgb));
+  // 提示气泡在深色主题下提亮一档，与 gray-900 级页面底拉开层级
+  --ce-tooltip-bg: rgb(var(--ce-color-gray-600-rgb));
+  // 深色主题下黑色投影不可见（黑叠黑），表面边界改由一圈低透明度白色描边承担。
+  // 卡片 / 下拉 / 弹层 / 通知等所有使用 xs~xl 投影的表面会自动获得这层边界。
+  --ce-shadow-ring: 0 0 0 1px rgb(255 255 255 / 0.09);
+  // 深色主题下菜单不再自己画黑描边，边界统一由上面的 --ce-shadow-ring 提供
+  --ce-menu-ring: 0 0 0 0 transparent;
+  --ce-color-info-light-rgb: 30 58 138; // blue-900
+  --ce-color-info-light: rgb(var(--ce-color-info-light-rgb));
+  --ce-color-error-light-rgb: 127 29 29; // red-900
+  --ce-color-error-light: rgb(var(--ce-color-error-light-rgb));
 }

@@ -1,4 +1,4 @@
-import { classes, CompElem, csscope, Csscope, h, ifTrue, prop, tag, Template, watch } from "compelem";
+import { classes, CompElem, csscope, Csscope, h, ifTrue, prop, state, tag, Template, watch } from "compelem";
 import { isBoolean, isEmpty } from "myfx";
 import { IColorable } from "../../../interfaces/IColorable";
 import { ColorHelper } from "../../../utils/color";
@@ -43,12 +43,19 @@ export class Divider extends CompElem implements IColorable {
   __watchColor(nv: any, ov: any, sourceName: string) {
     ColorHelper.setColor(nv, this.style, '--color-divider')
   }
-  //////////////////////////////////// lifecycles
+  /////////////////////////////////// lifecycles
+  // 初始 render 早于 slots 填充，且 slot 必须常驻渲染才能收到 slotchange
+  // （slot 若放在 ifTrue 分支里，无内容时永不创建，插槽功能自锁）。
+  // 因此 wrapper 常驻渲染，由响应式 state 切换显隐。
+  @state hasDefaultContent = false;
+  slotChange(slot: HTMLSlotElement, name: string): void {
+    if (!name) this.hasDefaultContent = !isEmpty(this.slots.default);
+  }
   render(): Template {
     return h`
     <div class="ce-divider" ${classes({ "is-vertical": this.vertical, ['ce-divider-inset-align-' + this.insetAlign]: true })}>
       <div class="ce-divider-content">
-      ${ifTrue(!isEmpty(this.slots.default), () => h`<span class="ce-divider-inner-wrapper"><slot></slot></span>`)}
+      <span class="ce-divider-inner-wrapper" ${classes({ "is-hidden": !this.hasDefaultContent })}><slot></slot></span>
       </div>
     </div>
     `;

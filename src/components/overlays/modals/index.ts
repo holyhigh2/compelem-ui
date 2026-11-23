@@ -2,10 +2,11 @@ import { Alert } from "./Alert";
 import { Confirm } from "./Confirm";
 import { Prompt } from "./Prompt";
 
+/** 三项均可省略；省略即沿用组件内置文案与默认行为（esc 默认开启） */
 export interface Options {
-  cancelButtonText: string;
-  confirmButtonText: string;
-  esc: boolean;
+  cancelButtonText?: string;
+  confirmButtonText?: string;
+  esc?: boolean;
 }
 
 let innerAlert: Alert;

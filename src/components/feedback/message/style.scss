@@ -158,12 +158,12 @@
   &-title {
     margin: 0;
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: var(--ce-font-sm);
     line-height: 1.25rem;
   }
 
   &-descr {
-    font-size: 0.875rem;
+    font-size: var(--ce-font-sm);
     line-height: 1.25rem;
     margin: 0;
     overflow: hidden;

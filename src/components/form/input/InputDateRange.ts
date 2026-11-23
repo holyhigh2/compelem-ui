@@ -42,9 +42,6 @@ enum DateInputType {
 @emits('change', 'clear')
 @tag("ce-input-date-range")
 export class InputDateRange extends RangeInput {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   __lastValue: string
   //////////////////////////////////// props
   @prop type = 'date';
@@ -169,11 +166,11 @@ export class InputDateRange extends RangeInput {
         <span class="ce-input-prepend" ${show(!this.inside)}><slot name="prepend"></slot></span>
         <div part="control" class="ce-form-control" ?disabled="${this.disabled}">
           <span class="ce-input-prepend-inside" ${show(this.inside)}><slot name="prepend" ></slot></span>
-          <ce-input-date no-icon name="min-input" tabindex="1" border="0" placeholder="${this.placeholderStart}" .min="${this.min}" readonly show-icon="false" ${model(this.startValue)} trigger-mode="none" type="${this.type}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearStart}" @change="${this.onChangeMin}">
+          <ce-input-date no-icon name="min-input" align="${this.align}" tabindex="1" border="0" placeholder="${this.placeholderStart}" .min="${this.min}" readonly show-icon="false" ${model(this.startValue)} trigger-mode="none" type="${this.type}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearStart}" @change="${this.onChangeMin}">
             ${ifTrue(this.dual, () => h`<ce-icon slot="append" class="ce-input-calendar" svg="c-svg-calendar" size="sm"></ce-icon>`)}
           </ce-input-date>
           <span class="ce-input-separator">${this.separator}</span>
-          <ce-input-date no-icon name="max-input" tabindex="2" border="0" placeholder="${this.placeholderEnd}" .max="${this.max}" readonly show-icon="false" ${model(this.endValue)} trigger-mode="none" type="${this.type}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearEnd}" @change="${this.onChangeMax}">
+          <ce-input-date no-icon name="max-input" align="${this.align}" tabindex="2" border="0" placeholder="${this.placeholderEnd}" .max="${this.max}" readonly show-icon="false" ${model(this.endValue)} trigger-mode="none" type="${this.type}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearEnd}" @change="${this.onChangeMax}">
             <ce-icon slot="append" class="ce-input-calendar" svg="c-svg-calendar" size="sm"></ce-icon>
           </ce-input-date>
           <span class="ce-input-append-inside" ${show(this.inside)}><slot name="append" ></slot></span>
@@ -184,7 +181,7 @@ export class InputDateRange extends RangeInput {
         <div class="ce-message" ${show(this.__rangeError)}>${this.rangeMessage}</div>
       </div>
 
-      <ce-overlay placement="bottom-end" auto-active close-on-click opacity="0.25" class="ce-input-date-panel" trigger=".ce-range-input" trigger-mode="click" @close="${this.onClose}" @beforeopen="${this.onBeforeopen}" >
+      <ce-overlay surface placement="bottom-end" auto-active close-on-click opacity="0.25" class="ce-input-date-panel" trigger=".ce-range-input" trigger-mode="click" @close="${this.onClose}" @beforeopen="${this.onBeforeopen}" >
        ${ifTrue(this.firstPopup, () => h`  
         <ce-card class="ce-input-time-card" style="padding: var(--ce-spacing-sm);" ref="${this.datePane}" >
           <div style="display: flex;column-gap: .5rem;height:22em;">
@@ -201,9 +198,6 @@ export class InputDateRange extends RangeInput {
             <ce-link size="sm" @click="${this.selectToday}">今天</ce-link>
             <ce-link size="sm" @click="${this.selectLastWeek}">过去一周</ce-link>
             <ce-link size="sm" @click="${this.selectLastMonth}">过去一月</ce-link>
-            <!-- <ce-button class="ce-range-swap" appearance="subtle" size="sm" style="margin-left:auto;padding:0;width:1.75rem;height:1.75rem;border-radius:50%" ?disabled="${isBlank(this.startValue) && isBlank(this.endValue)}" @click="${this.swapRange}"> -->
-              <!-- <ce-icon .svg="${Swap}" size="sm"></ce-icon> -->
-            <!-- </ce-button> -->
           </footer>
         </ce-card>
       `)}
@@ -248,7 +242,13 @@ export class InputDateRange extends RangeInput {
   onConfirm() {
     this.datePanel.close()
   }
-  /** 交换 start / end 日期（纯交换，不跑 rangeCheck，避免 fit/clamp 把另一端改写到与 start 相同而丢失数据） */
+  /**
+   * 交换 start / end 日期（纯交换，不跑 rangeCheck，避免 fit/clamp 把另一端改写到与 start 相同而丢失数据）。
+   *
+   * 注：触发它的「交换按钮」当前**未挂到模板上**——原来那段 markup 被放在 HTML 注释里，
+   * 而 0.30 模板分析器禁止注释内出现 ${} 插值（会静默丢弃 → 直接报错），故整块移除。
+   * 需要恢复时把按钮写回 footer（`.ce-range-swap`），方法本身保持可用。
+   */
   swapRange() {
     const sv = this.startValue
     const ev = this.endValue

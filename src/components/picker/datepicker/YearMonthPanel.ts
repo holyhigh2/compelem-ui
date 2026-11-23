@@ -4,12 +4,13 @@ import { AppearanceElem } from "../../../base/Appearance";
 import { Virtualized } from "../../../mixins/Virtualized";
 import { Scroller } from "../../datadisplay/scroller/Scroller";
 import style from "./yearStyle.scss?tmpl";
+import { FADE_CSS } from "../../../css/transition";
 const MIN_YEAR = 1970
 const MAX_YEAR = 2100
 const COLUMN_SIZE = 4
 /**
  * 年月选择面板
- * @props
+ * @attrs
  *  show-month {boolean} 是否显示月选择，默认false
  *  min {string|number} 最小年月，可以是任何合法的年月字符串或年份数字
  *  value {string} 选中的日期，格式为 'yyyy-MM'，受控
@@ -60,10 +61,12 @@ export class YearMonthPanel extends Virtualized(AppearanceElem) {
 
   maxRow = 5
   maxCol = 4
+  /** 选中年的高亮样式表；mounted() 之前为 null（watch 可能先于 mounted 触发） */
+  __updatableStyleSelectedyear: CSSStyleSheet | null = null
   //////////////////////////////////// styles
   @csscope(Csscope.INNER)
   static get css() {
-    return [style];
+    return [style, FADE_CSS];
   }
   get cssVars() {
     return {
@@ -88,7 +91,8 @@ export class YearMonthPanel extends Virtualized(AppearanceElem) {
 
   @watch('selectedyear')
   watchSelectedyear(nv: string) {
-    this.__updatableStyleSelectedyear.replaceSync(`
+    // year 的 immediate watch 可能先于 mounted() 触发，此时样式表尚未创建
+    this.__updatableStyleSelectedyear?.replaceSync(`
       .ce-date-picker-year-cell[data-year="${this.selectedyear}"] .ce-date-picker-item{
         background: var(--ce-color-text-active);
         color: #fff;
@@ -97,9 +101,6 @@ export class YearMonthPanel extends Virtualized(AppearanceElem) {
       `)
   }
   //////////////////////////////////// lifecycles
-  shouldUpdate(): boolean {
-    return document.body.contains(this)
-  }
   mounted(): void {
     this.updateV(size(YearMonthPanel.YEAR_LIST), this.renderRoot!.offsetHeight)
 
@@ -143,7 +144,7 @@ export class YearMonthPanel extends Virtualized(AppearanceElem) {
             </ce-row>
           `)}
         </ce-grid>  
-      `)}
+      `, { enter: "fade", leave: "fade" })}
     </section>
     `;
   }
@@ -161,8 +162,19 @@ export class YearMonthPanel extends Virtualized(AppearanceElem) {
     this.emit('dblclick', { value: this.value })
   }
   onListReady() {
-    if (!this.isMounted) return;
+    // 防抖回调可能晚于销毁到达：销毁后 isMounted 为 false、@query 的 container 读不到元素；
+    // 离场动画的 freeze 窗口里 isMounted 仍为 true，靠 isDestroyed 挡掉
+    if (!this.isMounted || this.isDestroyed || !this.container) return;
 
+    // 首次打开先定位到选中年份，再按新位置铺行，否则首帧会整屏空白
+    if (!this.__positioned) {
+      this.__positioned = true
+      this.__scrollToSelectedYear()
+    }
+    this.__primeVisibleRows()
+  }
+  __primeVisibleRows() {
+    if (!this.container) return
     this.vList = Array.from(this.container.querySelectorAll('.ce-date-picker-v-wrapper'))
 
     //1. 查询行号列表
@@ -178,6 +190,29 @@ export class YearMonthPanel extends Virtualized(AppearanceElem) {
       rowIndexAry.push(rowIndex)
     })
     this.__fillCells(this.vList, rowIndexAry)
+  }
+  __positioned = false
+  __scrollToSelectedYear() {
+    const year = this.selectedyear
+    if (!year) return
+
+    const rowIndex = Math.floor((year - MIN_YEAR) / COLUMN_SIZE)
+    const windowHeight = this.renderRoot?.offsetHeight ?? 0
+    const maxTop = Math.max(this.vScrollHeight - windowHeight, 0)
+    // 顶边对齐到行边界，保证面板内始终是完整的行
+    const top = Math.min(Math.max(rowIndex * this.vRowHeight, 0), maxTop)
+
+    // scroller 的滑块尺寸在布局完成后才有值，未就绪时顺延几帧再定位
+    const tryScroll = (retry: number) => {
+      if (!this.scroller) return
+      if (this.scroller.thumbVHeight > 0) {
+        this.scroller.scrollYTo(top)
+        this.__primeVisibleRows()
+      } else if (retry > 0) {
+        requestAnimationFrame(() => tryScroll(retry - 1))
+      }
+    }
+    tryScroll(3)
   }
   @debounced(50)
   __fillCells(rows: HTMLElement[], rowIndexs: number[]) {

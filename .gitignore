@@ -3,8 +3,10 @@ dist
 dist-*
 report
 .trash
+coverage
 *.local
 .DS_Store
 .vite-dbg*
 todo.*
+.*/
 package-lock.json

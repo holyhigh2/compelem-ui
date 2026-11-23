@@ -1,25 +1,25 @@
 @use "../../../css/functions" as fn;
 
 %p-right-after {
-  border-right-color: fn.color(--ce-color-text-rgb) !important;
+  border-right-color: var(--ce-tooltip-bg, rgb(var(--ce-color-gray-700-rgb))) !important;
   border-width: 5px 5px 5px 0;
   left: -4px;
 }
 
 %p-left-after {
-  border-left-color: fn.color(--ce-color-text-rgb) !important;
+  border-left-color: var(--ce-tooltip-bg, rgb(var(--ce-color-gray-700-rgb))) !important;
   border-width: 5px 0 5px 5px;
   right: -4px;
 }
 
 %p-top-after {
-  border-top-color: fn.color(--ce-color-text-rgb) !important;
+  border-top-color: var(--ce-tooltip-bg, rgb(var(--ce-color-gray-700-rgb))) !important;
   border-width: 5px 5px 0 5px;
   bottom: -4px;
 }
 
 %p-bottom-after {
-  border-bottom-color: fn.color(--ce-color-text-rgb) !important;
+  border-bottom-color: var(--ce-tooltip-bg, rgb(var(--ce-color-gray-700-rgb))) !important;
   border-width: 0 5px 5px 5px;
   top: -4px;
 }
@@ -28,17 +28,54 @@
   pointer-events: none;
   position: absolute;
   left: -9999px;
-  background-color: fn.color(--ce-color-text-rgb);
-  color: fn.color(--ce-color-gray-50-rgb);
-  font-size: small;
+  background-color: var(--ce-tooltip-bg, rgb(var(--ce-color-gray-700-rgb)));
+  color: var(--ce-tooltip-color, rgb(var(--ce-color-gray-50-rgb)));
+  font-size: var(--ce-font-xs);
   padding: 2px 10px;
   border-radius: var(--ce-round-sm);
   opacity: 0;
   transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-  z-index: 9960;
+  z-index: var(--ce-z-index-tooltip, 9960);
 
   &.ce-tooltip-interactive {
     pointer-events: auto;
+
+    // 面板与目标之间留有 GAP 空隙（top/bottom 10px、left/right 5px，展开位移还会占掉
+    // 几像素）。鼠标穿过空隙时既离开了目标、又还没进入面板，onMouseleave 的关闭计时
+    // 一到提示框就消失 —— 表现为"鼠标无法移入提示框"。
+    // 用一条透明接驳区把面板与目标之间的命中区域连起来（只对可交互提示框生效）。
+    &::before {
+      content: "";
+      position: absolute;
+    }
+
+    &.ce-tooltip-placement-top::before {
+      left: 0;
+      right: 0;
+      bottom: -6px;
+      height: 6px;
+    }
+
+    &.ce-tooltip-placement-bottom::before {
+      left: 0;
+      right: 0;
+      top: -8px;
+      height: 8px;
+    }
+
+    &.ce-tooltip-placement-left::before {
+      top: 0;
+      bottom: 0;
+      right: -3px;
+      width: 3px;
+    }
+
+    &.ce-tooltip-placement-right::before {
+      top: 0;
+      bottom: 0;
+      left: -9px;
+      width: 9px;
+    }
   }
 
   &.ce-tooltip-visible {
@@ -147,5 +184,10 @@
 
   &-anchor {
     display: inline-block;
+  }
+
+  // content 插槽内容的克隆落点：不产生额外盒子，克隆内容按表面原本的排版布局
+  &-rich {
+    display: contents;
   }
 }

@@ -1,4 +1,4 @@
-import { clone, compact, each, find, findIndex, first, get, isBlank, isNil, isObject, last, map, merge, range, repeat, size, slice, some, startsWith, trim } from "myfx";
+import { clone, compact, each, find, findIndex, first, get, isBlank, isNil, isObject, isString, last, map, merge, range, repeat, size, slice, some, startsWith, trim } from "myfx";
 
 import { bind, csscope, Csscope, debounced, emits, h, prop, query, state, tag, Template, watch } from "compelem";
 import { ControlBox } from "../../../base/ControlBox";
@@ -33,7 +33,8 @@ interface Range {
 /**
  * 掩码输入框
  * @attrs
- *  mask {array|string|function} 掩码格式，可以是按位设置的正则/静态字符数组，或返回数组的函数，或字符串。字符串格式为
+ *  value {string} 掩码值，model 属性
+ *  mask {string} 掩码格式，字符串格式为
  *  - 0 数字0-9
  *  - a 字母a-zA-Z
  *  - * 任意字符或空
@@ -43,15 +44,16 @@ interface Range {
  *  placeholderChar {string} 占位字符，默认 _
  *  guide {boolean} 指导模式会始终显示掩码，默认false
  *  greedy {boolean} 贪婪模式，启用后会在输入/删除每组最后/第一个字符时自动追加/删除分隔符。默认false
- *  blocks {string} 由,号分割的多组范围符号，用于控制每个“分区”输入值范围。“分区”是由静态字符分割的掩码段，每个段输入完成后会自动进行范围匹配。
- *    支持数字和字符，如果是字符则按照charcode计算范围
+ *  blocks {string} 由,号分割的多组范围符号，用于控制每个“分区”输入值范围。“分区”是由静态字符分割的掩码段。
+ *    支持数字和字符，如果是字符则按照charcode计算范围。输入过程中只记账，失焦时才钳制越界值
  *  skipOptionalChar {string} 跳过可选内容的字符，默认空格
+ *  selectSegment {boolean} 获焦 / 跨分隔符移动时自动选中光标所在的掩码段，默认false
  * @slots
  *  prepend
  *  append
  * @events
  *  focus
- *  blur
+ *  blur 失去焦点前会按掩码重排一次显示值，清掉不符合掩码的内容
  *  input
  *  clear
  *  change
@@ -116,6 +118,8 @@ export class InputMask extends ControlBox {
   __maskedBlocks: string[] = [];
 
   __lastValidBlockSize = 0
+  /** 输入阶段检测到 blocks 越界但未改写（留给失焦兑现），见 `_maskValue` 的 enforce */
+  __rangeDirty = false
 
   @csscope(Csscope.INNER)
   static get css() {
@@ -158,6 +162,7 @@ export class InputMask extends ControlBox {
   }
   @watch("mask", { immediate: true })
   watchMask(nv: string) {
+    if (!nv) return
     let shifting = false;
     let unitStr = "";
     let inUnit = false;
@@ -297,8 +302,14 @@ export class InputMask extends ControlBox {
 
     this.__maskBitList = maskBitList;
     this.nextTick(() => {
-      if (this.__innerValue)
-        this._maskValue(this.__innerValue, 0);
+      // 掩码变化后必须以外部 value 为源重新格式化：__innerValue 是上一次掩码
+      // 运算后的显示值，若旧掩码与值结构不符（如 HH:mm 先按 HH:mm:ss 处理），
+      // 被裁剪过的显示值再套新掩码只会放大错误（09:30 → 23:）。
+      const src = isBlank(this.value) ? this.__innerValue : this.value
+      if (src) {
+        this.__innerValue = src
+        this._maskValue(src, 0);
+      }
     })
 
     //maskholder
@@ -331,7 +342,7 @@ export class InputMask extends ControlBox {
   //////////////////////////////////// lifecycles
   render(): Template {
     return h`
-      <ce-input  border="${this.border}"
+      <ce-input  border="${this.border}" align="${this.align}"
         .clearable="${this.clearable}" .required="${this.required}" .label="${this.label}" .placeholder="${this.placeholder}"
         .error="${this.error}" .error-message="${this.errorMessage}"
         class="ce-input-mask"
@@ -359,7 +370,33 @@ export class InputMask extends ControlBox {
   }
 
   mounted(): void {
+    // 内层 ce-input 的原生 input 要等它自己挂载后才拿得到
+    this.nextTick(() => this._bindComposition());
   }
+  /**
+   * 组合输入的收尾。输入法上屏的文本可能含掩码外字符（中文、全角标点等），
+   * 此处**不套掩码**：立刻重排会把刚上屏的内容清掉，用户会看到"输入法打完就没了"。
+   * 原文先留在框内并透传 input，约束（掩码重排 + blocks 范围）统一在失焦时兑现。
+   */
+  private _onCompositionEnd = (event: Event) => {
+    const el = this.input?.inputRef?.current;
+    if (!el) return;
+    const value = el.value;
+    // 已由 input 路径处理过的浏览器（组合末次事件 isComposing=false）不重复运算
+    if (value === this.__innerValue) return;
+    this.__innerValue = value;
+    this._refreshCloseTag();
+    this.emit('input', { value }, event);
+  };
+  /** 挂一次 compositionend；内层 input 若被重建则重挂（旧元素随影子树一起回收） */
+  private _bindComposition() {
+    const el = this.input?.inputRef?.current;
+    if (!el || el === this.__compositionEl) return;
+    this.__compositionEl?.removeEventListener('compositionend', this._onCompositionEnd);
+    el.addEventListener('compositionend', this._onCompositionEnd);
+    this.__compositionEl = el;
+  }
+  private __compositionEl: HTMLInputElement | HTMLTextAreaElement | null = null;
   //////////////////////////////////// methods
   _matchValue(value: string, curPoint: number, isDel: boolean = false) {
     let bitMatchBuffer: string[]
@@ -445,7 +482,14 @@ export class InputMask extends ControlBox {
     if (code > maxC) return String(range.max);
     return value;
   }
-  _maskValue(value: string, curPoint: number, isDel: boolean = false) {
+  /**
+   * 按掩码重排。
+   *
+   * @param enforce 是否兑现 blocks 范围约束。输入阶段传 `false`：只做格式排布，
+   *   不把越界值改成边界值（时间输入 25 点会被当场改成 23，用户还没输完）。
+   *   越界只做记账（`__rangeDirty`），由失焦时的重排统一改写。
+   */
+  _maskValue(value: string, curPoint: number, isDel: boolean = false, enforce = true) {
     let mbll = this.__maskBitList.length;
     if (mbll < 1) return;
 
@@ -454,8 +498,16 @@ export class InputMask extends ControlBox {
     let valueIndex = 0;
     let maskIndex = 0;
     let unmaskedValue = '';
-    let staticStrLen = this.__startStaticValue.length;
     this.__maskedValue = '';
+    // 光标记账：首次出现「已消费原始字符数 valueIndex == 光标位 curPoint」时，
+    // 锁定当时的输出长度作为目标光标位（= 最后一枚被消费字符在输出串中的后一位）。
+    // 取代旧的 staticStrLen 位置补偿——后者只判位置、不区分该分隔符是用户键入的
+    // （光标已计入，不该补）还是掩码自动插入的（才需补），在替换/重排场景会多补（P0-2）。
+    let caretOut: number | null = null;
+    const lock = () => {
+      if (caretOut === null && valueIndex === curPoint) caretOut = this.__maskedValue.length;
+    };
+    lock();
     let allPassed = true;
 
     let lastBlockStr = ''
@@ -485,6 +537,7 @@ export class InputMask extends ControlBox {
           lastBlockStr += v
           lastMaskedBlockStr += v
           this.__maskedValue += v
+          lock()
           const nextMaskIndex = maskIndex
           //如果有nextBitIndex并且与 maskIndex++相同，且开启greedy模式,且value长度==maskIndex，自动追加
           if (bit.nextBitIndex === nextMaskIndex && this.greedy && value.length === nextMaskIndex && value.length === valueIndex) {
@@ -502,7 +555,7 @@ export class InputMask extends ControlBox {
                 let cIndex = 1
                 let siblingBit: MaskBit
                 while ((siblingBit = this.__maskBitList[nextMaskIndex + cIndex]) && siblingBit.char) {
-                  charStr = charStr + nextBit.char
+                  charStr = charStr + siblingBit.char
                   cIndex++
                 }
                 this.__maskedValue += charStr
@@ -519,62 +572,51 @@ export class InputMask extends ControlBox {
         } else if (v === this.placeholderChar) {
           this.__maskedValue += v
           lastMaskedBlockStr += v
+          lock()
         } else if (this.__staticCharSet.has(v)) {
-          //1. 当前block内容是 空且v==下一个char的内容 —— 使用bitmask填充placeholder并跳到下一个位置
-          //2. 当前block满足最小bit要求 且v==下一个char的内容 —— 跳到下一个位置
-          //3. 当前block不满足最小bit要求 —— 忽略当前v，maskIndex-- √
-          //4. 没有后续char位置 —— 忽略 √
-          //5. 不等于下一个char位置 —— 忽略 √
-          let nextChar = this._getNextDivider(maskIndex)
-          let bitPos = blocks.length - 1
-          if (bitPos < 0) bitPos = 0
-          let isBlockReady = lastBlockStr.length >= this.__minBitInBlock[bitPos]
-          let vStr = v
-          if (nextChar.length > 1) {
-            each(nextChar.substring(1), c => vStr += c)
-          }
-          if (!nextChar || nextChar !== vStr || (lastBlockStr && !isBlockReady)) {
-            maskIndex--
-            continue
-          }
-          if (!lastBlockStr) {
-            let nextCharPos = find(this.__maskBlockStartBitList, b => maskIndex < b)!
-            maskIndex = nextCharPos - vStr.length
-          }
-          if (isBlockReady) {
-            let nextCharPos = find(this.__maskBlockStartBitList, b => maskIndex < b)!
-            maskIndex = nextCharPos - vStr.length
-          }
-
+          //重排模型：分隔符出现在「可编辑位」上，说明本次编辑已打乱掩码结构
+          //（如段内删除后的 123-567-8900）——丢弃该字符：只消费值、不推进掩码位。
+          //maskIndex 在取 bit 时已自增，丢弃须回退，否则会连掩码位一起跳过。
+          //掩码自身的分隔符会在对应 bit 上自动插入，无需在此「提前终结当前段」；
+          //旧逻辑允许提前终结，会让段长脱离掩码定义（P1-3，与 IMask 的 123-5678-900 不符）。
+          maskIndex--
+          lock()
+          continue
         } else if (bit.optional) {
           maskIndex = bit.nextBitIndex!
           valueIndex--
           continue
+        } else {
+          // 不符合掩码的字符只消费值、不推进掩码位：位被吞掉会让后续合法字符
+          // 整体错位（粘贴 a1b2c3d4e5f6 到 000-0000-0000 会排成 1-23-45）
+          maskIndex--
+          lock()
+          continue
         }
       } else if (bit.char) {
-          if (this.__maskBitList[maskIndex - 1]?.exp) {
+          // maskIndex 在取 bit 时已自增，当前位是 maskIndex - 1，前一位是 maskIndex - 2。
+          // 旧写法判断的是当前分隔符位本身（exp 恒为 undefined），导致每段输入到分隔符时
+          // 都不上栈，首段被丢弃、后续段整体前移，再被前一段的 blocks 范围钳制
+          // （如 09:30 按 00:00 掩码被当成 30 分 → 小时钳到 23 → 显示 23:）。
+          if (this.__maskBitList[maskIndex - 2]?.exp) {
             maskedBlocks.push(lastMaskedBlockStr)
             blocks.push(lastBlockStr)
           }
           this.__maskedValue += bit.char
           lastBlockStr = ''
           lastMaskedBlockStr = ''
-          // 跨块自动插入静态分隔符时：若该分隔符位于光标之前（已消费字符数 <= 原始光标位），
-          // 光标须随之后移，避免停留在分隔符前一位。
-          // 修复前依赖脆弱的 block 重建 hyphenLen 计算光标，而该重建会把 "1234" 坍缩成单块 "4"，
-          // 导致 hyphenLen=0、光标停在分隔符前一位。
-          if (!isDel && !this.greedy && valueIndex <= curPoint) {
-            staticStrLen += bit.char.length
+          if (v === this.skipOptionalChar && value.length === valueIndex) {
+            let mbdIndex = blocks.length - 1
+            value = value.substring(0, valueIndex - 1) + (this.__maskBlockDividerList[mbdIndex] ?? '')
+            valueIndex += size(this.__maskBlockDividerList[mbdIndex]) - 1
+          } else if (bit.char !== v) {
+            // 用户在分隔符位置键入了普通字符：不重写 value（会丢弃其后的数字），
+            // 仅回退 valueIndex 让该字符在下一 exp 位被当作普通输入消费（与 guide 路径一致）。
+            valueIndex--
           }
-        if (v === this.skipOptionalChar && value.length === valueIndex) {
-          let mbdIndex = blocks.length - 1
-          value = value.substring(0, valueIndex - 1) + (this.__maskBlockDividerList[mbdIndex] ?? '')
-          valueIndex += size(this.__maskBlockDividerList[mbdIndex]) - 1
-        } else if (bit.char !== v) {
-          // 用户在分隔符位置键入了普通字符：不重写 value（会丢弃其后的数字），
-          // 仅回退 valueIndex 让该字符在下一 exp 位被当作普通输入消费（与 guide 路径一致）。
-          valueIndex--
-        }
+          // 光标记账：分隔符无论由用户键入（已消费）还是掩码自动插入（未消费），
+          // 都在 valueIndex 归位后对齐一次
+          lock()
 
       } else { continue }
     }
@@ -605,8 +647,13 @@ export class InputMask extends ControlBox {
       } else if (i < lastIndex) {
         let newVal = this._checkRange(get(this.__blockRanges, i), block)
         if (blocks[i] !== newVal) {
-          blocks[i] = newVal
-          changed = true
+          if (enforce) {
+            blocks[i] = newVal
+            changed = true
+          } else {
+            // 输入阶段只记账，改写留给失焦
+            this.__rangeDirty = true
+          }
         }
       }
     })
@@ -615,8 +662,12 @@ export class InputMask extends ControlBox {
     if (lastBlockStr && lastBlockStr.length === lastMaxBitInBlock) {
       let newVal = this._checkRange(last(this.__blockRanges), lastBlockStr)
       if (lastBlockStr !== newVal) {
-        changed = true
-        blocks[blocks.length - 1] = newVal
+        if (enforce) {
+          changed = true
+          blocks[blocks.length - 1] = newVal
+        } else {
+          this.__rangeDirty = true
+        }
       }
     }
 
@@ -660,26 +711,29 @@ export class InputMask extends ControlBox {
 
     let displayValue = this.__maskedValue;
 
-    if (this.input) this.input.inputRef.current!.value = displayValue;
+    const displayEl = this.input?.inputRef?.current;
+    if (displayEl) displayEl.value = displayValue;
 
+    const prevInner = this.__innerValue
     this.__innerValue = this.__maskedValue
+    // 非 guide 模式下显示值本身就是可提交值：每次变化都同步到外部，否则在整串
+    // 填满之前 update:value 一次都不发，双向绑定方读到的永远是初始空值
+    if (!this.guide && this.__maskedValue !== prevInner) {
+      this.emit('update:value', { value: this.__maskedValue })
+    }
     if (allPassed) {
       if (!this.__lastPass) {
         this.emit('change', { value: this.__maskedValue })
       }
       this.__lastPass = true
-      this.emit('update:value', { value: this.__maskedValue })
     }
     else if (this.__lastPass) {
-      if (this.__lastPass) {
-        this.emit('change', { value: '' })
-      }
+      this.emit('change', { value: '' })
       this.__lastPass = false
     }
-    if (isDel) {
-      staticStrLen = 0
-    }
-    let currentCIndex = curPoint + staticStrLen
+    // 光标 = 最后一枚被消费的原始字符在输出串中的后一位；
+    // 未命中（光标位于输入末尾之后）时回落到输出末尾
+    let currentCIndex = caretOut ?? this.__maskedValue.length
     //fix cursor pos
     if (currentCIndex < this.__startStaticValue.length) {
       currentCIndex = this.__startStaticValue.length
@@ -700,7 +754,8 @@ export class InputMask extends ControlBox {
       this._setCaret(ci)
     }
   }
-  _maskValueGuide(value: string, curPoint: number, isDel: boolean = false) {
+  /** @param enforce 同 `_maskValue`：输入阶段不兑现 blocks 范围约束，只记账待失焦处理 */
+  _maskValueGuide(value: string, curPoint: number, isDel: boolean = false, enforce = true) {
     let mbll = this.__maskBitList.length;
     if (mbll < 1) return;
 
@@ -709,8 +764,23 @@ export class InputMask extends ControlBox {
     let valueIndex = 0;
     let maskIndex = 0;
     let unmaskedValue = '';
-    let staticStrLen = 0;
+    // guide 模式的显示值恒为完整掩码长度（含占位符）。占位符不参与掩码运算，
+    // 否则每个占位符都会消耗一个掩码位，把光标顶回已填内容之前（P0-1 跨界输入
+    // 光标回退 1 位 → 后续字符两两反序）、整串粘贴光标停在 11 而非 13（P2-4）。
+    // 剔除后按「光标前的占位符个数」回退光标坐标，换算到裸值坐标系。
+    let phBefore = 0;
+    for (let i = 0; i < curPoint && i < value.length; i++) {
+      if (value[i] === this.placeholderChar) phBefore++;
+    }
+    curPoint -= phBefore;
+    value = value.split(this.placeholderChar).join('');
     this.__maskedValue = '';
+    // 光标记账（同 _maskValue）：首次出现「已消费枚数 == 光标位」时锁定输出长度
+    let caretOut: number | null = null;
+    const lock = () => {
+      if (caretOut === null && valueIndex === curPoint) caretOut = this.__maskedValue.length;
+    };
+    lock();
     let allPassed = true;
 
     let lastBlockStr = ''
@@ -737,6 +807,7 @@ export class InputMask extends ControlBox {
           lastBlockStr += v
           lastMaskedBlockStr += v
           this.__maskedValue += v
+          lock()
           const nextMaskIndex = maskIndex
           //如果有nextBitIndex并且与 maskIndex++相同，且开启greedy模式,且value长度==maskIndex，自动追加
           if (bit.nextBitIndex === nextMaskIndex && this.greedy && value.length === nextMaskIndex && value.length === valueIndex) {
@@ -761,33 +832,22 @@ export class InputMask extends ControlBox {
         } else if (v === this.placeholderChar) {
           this.__maskedValue += v
           lastMaskedBlockStr += v
+          lock()
         } else if (this.__staticCharSet.has(v)) {
-          //1. 当前block内容是 空且v==下一个char的内容 —— 使用bitmask填充placeholder并跳到下一个位置
-          //2. 当前block满足最小bit要求 且v==下一个char的内容 —— 跳到下一个位置
-          //3. 当前block不满足最小bit要求 —— 忽略当前v，maskIndex-- √
-          //4. 没有后续char位置 —— 忽略 √
-          //5. 不等于下一个char位置 —— 忽略 √
-          let nextChar = this._getNextDivider(maskIndex)
-          let bitPos = blocks.length - 1
-          if (bitPos < 0) bitPos = 0
-          let isBlockReady = lastBlockStr.length >= this.__minBitInBlock[bitPos]
-          if (!nextChar || nextChar !== v || (lastBlockStr && !isBlockReady)) {
-            maskIndex--
-            continue
-          }
-          if (!lastBlockStr) {
-            this.__maskedValue += repeat(this.placeholderChar, this.__maxBitInBlock[bitPos])
-            let nextCharPos = find(this.__maskBlockStartBitList, b => maskIndex < b)!
-            maskIndex = nextCharPos - 1
-          }
-          if (isBlockReady) {
-            let nextCharPos = find(this.__maskBlockStartBitList, b => maskIndex < b)!
-            maskIndex = nextCharPos - 1
-          }
-
+          //重排模型（同 _maskValue）：分隔符出现在可编辑位上 → 丢弃：只消费值、不推进掩码位。
+          //maskIndex 在取 bit 时已自增，丢弃须回退（否则会吃掉一个应填占位符的掩码位）。
+          //guide 旧逻辑会在此为「被跳过的空段」补占位符并跳转，跨界输入时光标因此回退 1 位。
+          maskIndex--
+          lock()
+          continue
         } else if (bit.optional) {
           maskIndex = bit.nextBitIndex!
           valueIndex--
+          continue
+        } else {
+          // 同 _maskValue：不匹配的字符丢弃且不占位，否则后续字符会错位
+          maskIndex--
+          lock()
           continue
         }
       } else if (bit.char) {
@@ -803,6 +863,8 @@ export class InputMask extends ControlBox {
         if (bit.char !== v) {
           valueIndex--
         }
+        // 光标记账（同 _maskValue）
+        lock()
         // }
       } else { continue }
     }
@@ -829,17 +891,28 @@ export class InputMask extends ControlBox {
       } else if (i < lastIndex) {
         let newVal = this._checkRange(get(this.__blockRanges, i), block)
         if (blocks[i] !== newVal) {
-          blocks[i] = newVal
-          changed = true
+          if (enforce) {
+            blocks[i] = newVal
+            changed = true
+          } else {
+            this.__rangeDirty = true
+          }
         }
       }
     })
     const lastMaxBitInBlock = last(this.__maxBitInBlock)
-    if (lastBlockStr.length === lastMaxBitInBlock) {
-      let newVal = this._checkRange(last(this.__blockRanges), lastBlockStr)
-      if (lastBlockStr !== newVal) {
-        changed = true
-        blocks[blocks.length - 1] = newVal
+    // 补齐空块时 lastBlockStr 已被清空，最后一段的实际文本在 blocks 末尾；
+    // 不从 blocks 取会让最后一段的范围校验（如秒 {0,59}）永远不执行
+    const lastBlockValue = last(blocks) || ''
+    if (lastBlockValue.length === lastMaxBitInBlock) {
+      let newVal = this._checkRange(last(this.__blockRanges), lastBlockValue)
+      if (lastBlockValue !== newVal) {
+        if (enforce) {
+          changed = true
+          blocks[blocks.length - 1] = newVal
+        } else {
+          this.__rangeDirty = true
+        }
       }
     }
     if (changed) {
@@ -852,20 +925,22 @@ export class InputMask extends ControlBox {
 
     let displayValue = this.__maskedValue;
 
-    this.input.inputRef.current!.value = displayValue;
+    // 迟到回调（防抖 / nextTick 落在销毁之后）时 inputRef 已为 null
+    const displayEl = this.input?.inputRef?.current;
+    if (displayEl) displayEl.value = displayValue;
 
+    // 显示镜像恒指向当前显示值（含占位符）；但占位符不是可用值，所以 guide 模式
+    // 仍只在整串填满时才对外提交
+    this.__innerValue = this.__maskedValue
     if (allPassed) {
-      this.__innerValue = this.__maskedValue
       this.__lastPass = true
       this.emit('update:value', { value: this.__maskedValue })
     }
     else if (this.__lastPass) {
       this.__lastPass = false
     }
-    if (isDel) {
-      staticStrLen = 0
-    }
-    let currentCIndex = curPoint + staticStrLen
+    // 光标 = 最后一枚被消费的原始字符在输出串中的后一位；未命中则回落到输出末尾
+    let currentCIndex = caretOut ?? this.__maskedValue.length
     //fix cursor pos
     if (currentCIndex < this.__startStaticValue.length) {
       currentCIndex = this.__startStaticValue.length
@@ -907,6 +982,9 @@ export class InputMask extends ControlBox {
     // guide 模式：清空后恢复占位符显示与光标置首
     if (this.guide && this.__maskHolder) {
       this.__innerValue = this.__maskHolder;
+      // 同 clear()：模板上的 value 属性写不进 dirty 过的 input，必须直接赋值
+      const el = this.input?.inputRef?.current;
+      if (el) el.value = this.__maskHolder;
       const start = this.__startStaticValue.length;
       setTimeout(() => this._setCaret(start), 0);
     }
@@ -997,7 +1075,7 @@ export class InputMask extends ControlBox {
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(apply);
   }
   /** 原生 mouseup 监听：点击进入掩码段时整段选中（用户拖选则不干扰）。 */
-  private _onInnerMouseUp = (e: MouseEvent) => {
+  private _onInnerMouseUp = () => {
     if (!this.selectSegment) return;
     const input = this.input?.inputRef?.current;
     if (!input) return;
@@ -1007,12 +1085,19 @@ export class InputMask extends ControlBox {
   }
   onInput(obj: Record<string, any>) {
     let value = obj.value;
-    let ev = obj.event as InputEvent;
+    let ev = obj.event as InputEvent | undefined;
     // 合成中输入（中文/IME）或粘贴：先交由浏览器处理，待最终 input 再统一掩码，避免错位
     if (ev && (ev.isComposing || ev.inputType === 'insertCompositionText')) return;
+    // 无原生事件：由内层 ce-input 清空后补发的 input。值已是最终结果，
+    // 没有 inputType 与光标位置可依，无法套掩码，只能原样透传。
+    if (!ev) {
+      this._refreshCloseTag()
+      this.emit('input', { value })
+      return
+    }
     let inputType = ev.inputType
-    let isDel = startsWith(inputType, 'delete')
-    let p = obj.event.target.selectionStart;
+    let isDel = isString(inputType) && startsWith(inputType, 'delete')
+    let p = (ev.target as HTMLInputElement)?.selectionStart ?? (value ?? '').length
     if (this.guide) {
       // if (isDel && this.greedy) {
       //   let oldValueLen = value.length
@@ -1026,7 +1111,8 @@ export class InputMask extends ControlBox {
       //   })
       //   p = p - (oldValueLen - value.length)
       // }
-      this._maskValueGuide(value, p, isDel);
+      // enforce=false：输入阶段只排布格式，越界值（25 点）不当场改成 23
+      this._maskValueGuide(value, p, isDel, false);
     } else {
       if (isDel && this.greedy) {
         let delStr = this._changeValue.substring(Math.min(p, this._selectionStart), Math.max(p, this._selectionEnd))
@@ -1042,30 +1128,25 @@ export class InputMask extends ControlBox {
         }
       }
       // this._matchValue(value, p)
-      this._maskValue(value, p, isDel);
+      this._maskValue(value, p, isDel, false);
     }
 
     this._refreshCloseTag()
     this.emit('input', { value: this.__innerValue }, obj.event)
   }
   onBlur(obj: Record<string, any>) {
-    //check blocks
-    let lastIndex = this.__maskBlockStartBitList.length - 1
-    let lastBlockStr = this.__blocks[lastIndex]
-    let changed = false
-    // if (lastBlockStr) {
-    //   let newVal = this._checkRange(last(this.__blockRanges), lastBlockStr)
-    //   if (lastBlockStr !== newVal) {
-    //     changed = true
-    //     this.__blocks[this.__blocks.length - 1] = newVal
-    //   }
-
-    //   if (changed) {
-    //     let newMaskValue = map(this.__blocks, (block, i) => (block || this.__maskedBlocks[i]) + (this.__maskBlockDividerList[i] ?? ''))
-    //     this.input.inputRef.current.value = this.__maskedValue = newMaskValue.join('')
-    //   }
-    // }
-
+    // 失焦是约束的兑现点：组合输入、粘贴、浏览器自动填充都可能把不符合掩码的文本
+    // 直接写进原生 input；输入阶段也未兑现 blocks 范围（__rangeDirty）。两件事都在这里做。
+    const el = this.input?.inputRef?.current
+    if (el && (this.__rangeDirty || el.value !== this.__maskedValue)) {
+      const before = this.__maskedValue
+      if (this.guide) this._maskValueGuide(el.value, el.value.length)
+      else this._maskValue(el.value, el.value.length)
+      this.__rangeDirty = false
+      this._refreshCloseTag()
+      // 范围修正改变了提交值，但 allPassed / lastPass 都没变，内部不会重发 change
+      if (this.__maskedValue !== before) this.emit('change', { value: this.__maskedValue })
+    }
     //check valid
     let allPassed = true
     this.__blocks.forEach((block, i) => {
@@ -1077,7 +1158,7 @@ export class InputMask extends ControlBox {
     if (this.__lastPass != allPassed) {
       this.__lastPass = allPassed
     }
-    this.__innerValue = this.input.inputRef.current?.value!
+    this.__innerValue = this.input?.inputRef?.current?.value ?? ''
     this.emit('blur', { value: this.__innerValue }, obj.event)
   }
   /**
@@ -1094,6 +1175,7 @@ export class InputMask extends ControlBox {
   }
   onFocus(obj: Record<string, any> | string) {
     let value = isObject(obj) ? obj.value : obj;
+    this._bindComposition();
 
     // 段选中：聚焦后把光标所在掩码段整段选中，对齐原生 time/date 交互。
     // 同时挂一次内层 input 的 mouseup 监听（原生监听，免疫 emit-native 通道泄漏），
@@ -1127,6 +1209,7 @@ export class InputMask extends ControlBox {
       // 而非浏览器在程序化赋值后默认放到的占位符最右端。
       const start = this.__startStaticValue.length;
       this._setCaretAfter(start);
+      this.emit('focus', { value });
       return;
     }
 
@@ -1224,10 +1307,15 @@ export class InputMask extends ControlBox {
   }
   clear() {
     // value 为 model prop，禁止 this.value='' 直接赋值（抛 Cannot assign）。
-    // 改为重置内部镜像状态并派发事件，DOM 经 .value="${__innerValue}" 重渲染清空。
     this.__maskedValue = ''
     this.__innerValue = ''
     this.__lastPass = false
+    this.__rangeDirty = false
+    // 必须直接写原生 input：已经键入过的 input 是 dirty 状态，模板上的 value 属性
+    // 再赋 '' 不会改变已显示的内容，而 __innerValue 已被置空 ⇒ 后续 watchValue
+    // 认为「值没变」直接跳过，界面永远停着旧文本
+    const el = this.input?.inputRef?.current
+    if (el) el.value = ''
     this.emit('update:value', { value: '' })
     this.emit('clear', { value: '' })
   }

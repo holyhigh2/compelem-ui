@@ -1,146 +1,295 @@
-.is-overflowed {
-  .ce-portal-editor-widget {
-    overflow: visible;
-  }
+:host {
+  display: block;
+  min-height: 0;
+  --portal-gap: 10px;
+  --portal-columns: 8;
+  --portal-row-height: 100px;
 }
 
-ce-main,
-.ce-portal-editor-row {
-  gap: var(--protal-gap);
-}
-
-ce-aside {
-  width: 260px;
-  max-width: 280px;
-  position: relative;
-  overflow: hidden;
-  border-right: 1px solid #ccc;
-  padding: var(--ce-spacing-sm);
-  display: flex;
-  gap: var(--ce-spacing-md);
-
-  &.is-dragging * {
-    pointer-events: none !important;
-    user-select: none !important;
-  }
-  &.is-dragging:hover {
-    cursor: not-allowed !important;
-  }
-
-  .ce-portal-editor-widget {
-    background-size: 100% 75%;
-    border-radius: var(--ce-round-md);
-    border: 1px solid #f0f0f0;
-    height: 80px;
-    background-color: #fafafa;
-    position: relative;
-    overflow: hidden;
-    cursor: move;
-    transition: background-size 0.2s;
-    &:hover {
-      background-size: 135% 100%;
-      border: 1px solid var(--ce-color-primary);
-    }
-    &::after {
-      pointer-events: none;
-      content: attr(data-size);
-      color: #fff;
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      padding: var(--ce-spacing-xs);
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.2);
-    }
-  }
-  .ce-portal-editor-widget-title {
-    text-align: center;
-    margin-top: var(--ce-spacing-xs);
-    overflow: hidden;
-  }
-}
-ce-main {
-  position: relative;
-  display: flex !important;
-  flex-direction: column;
-  padding: var(--ce-spacing-md);
-}
-.ce-portal-editor-row {
-  flex: 1;
-  display: flex;
-}
-.ce-portal-editor-cell {
-  flex: 1;
-  border-radius: var(--ce-round-md);
-  pointer-events: all;
-
-  &.ce-portal-editor-edit {
-    border: 1px solid #f0f0f0;
-    background: #fafafa;
-  }
-}
-.ce-portal-editor-cell-ghost {
-  position: absolute;
-  left: 0;
-  pointer-events: none;
-  width: 0;
-  height: 0;
-  border-radius: var(--ce-round-md);
-  overflow: hidden;
-  border: 1px solid #f0f0f0;
-  background-color: #eee;
-  transition: all 0.2s;
-  transform: translateX(-100%);
-  background-size: cover;
-  text-indent: 2rem;
-  padding-top: 1rem;
-  z-index: 9;
-}
-.ce-portal-editor-widget {
-  position: absolute;
-  border-radius: var(--ce-round-md);
-  pointer-events: none;
-  transition: all 0.2s;
-  .ce-portal-editor-content {
-    height: 100%;
-    * {
-      pointer-events: none;
-    }
-  }
-}
+.ce-portal,
 .ce-portal-editor {
-  .ce-portal-editor-widget {
-    background-color: #eee;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  // 宿主可覆盖（如设置页面背景后透出页面底）：--ce-portal-bg
+  background-color: var(--ce-portal-bg, #fff);
+}
+
+.ce-portal-main {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.ce-portal-editor .ce-portal-main {
+  padding: 16px;
+}
+
+.ce-portal-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--portal-columns, 8), minmax(0, 1fr));
+  grid-auto-rows: var(--portal-row-height, 100px);
+  gap: var(--portal-gap, 10px);
+  align-content: start;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+// 视图态：行高下限仍是 rowHeight（拖多大就占多大），但**内容更高时整行跟着长**。
+// 卡片靠 `--ce-portal-widget-h` 保住最小高度，内容撑得更高时这一行一起变高 ——
+// 否则矮卡片里的内容只剩「压扁」和「内部滚动条」两条路。
+// 编辑态必须保持固定行高：拖拽落位是按 rowHeight 从像素坐标反推行号的，
+// 行高一旦不等高，落位就会错行。
+.ce-portal-grid:not(.is-editor) {
+  grid-auto-rows: minmax(var(--portal-row-height, 100px), auto);
+}
+
+// 视图态挂件经命名 slot 投影：slot 自身不参与布局，被投影的挂件直接成为 grid item
+.ce-portal-grid > slot[name='widgets'],
+.ce-portal-grid > slot[name='items'] {
+  display: contents;
+}
+
+.ce-portal-grid.is-editor {
+  min-height: 100%;
+
+  &.is-dragging {
+    cursor: grabbing;
+    // 指针拖拽期间要自己抑制文本选中（原生 DnD 有浏览器兜底，这里没有）
+    user-select: none;
+  }
+
+  // 内容不足一屏：行高贵固定，`ceil` 出来的最后一行必然比视口多出一截。
+  // 与其让它变成滚动条，不如把画布锁在视口内、把多出的那点裁掉 ——
+  // 视觉上最后一行一直延伸到画布边缘，和表格软件一致。
+  &.is-fit {
+    height: 100%;
     overflow: hidden;
   }
 }
 
-::slotted(*) {
-  position: absolute;
+// 编辑态占位单元格：每格一个圆角虚线框（定位在 grid 轨道内，格间 gap 自然可见；
+// 行数 = 视口可容纳行 ∪ 内容行，拖拽时再加落白，见 PortalEditor.__gridRows）
+.ce-portal-grid.is-editor .ce-portal-cell {
+  min-width: 0;
+  min-height: 0;
+  border: 1px dashed #d5dbe6;
+  border-radius: var(--ce-round-md, 8px);
+  pointer-events: none;
 }
 
-//uii --------------------
-.uii-splittable-handle {
-  transition: background 0.3s;
-  &:hover,
-  &-active {
-    background-color: rgb(47, 172, 255);
+// 编辑态挂件卡片（ce-portal-item）的样式在 portalItem.scss，由组件自身 :host 承担 ——
+// item 已移到编辑器 light DOM，这里的样式表管不到它。
+
+.ce-portal-ghost {
+  z-index: 2;
+  pointer-events: none;
+  border: 1px dashed var(--ce-color-primary, #2f9bff);
+  border-radius: var(--ce-round-md, 8px);
+  background-color: rgba(47, 155, 255, 0.12);
+
+  &.is-invalid {
+    border-color: #f04438;
+    background-color: rgba(240, 68, 56, 0.12);
   }
 }
-.uii-draggable-ghost {
-  pointer-events: none;
+
+// 空态（ce-empty 宿主）：整行占位 + 居中，保留"虚线空画布"观感；
+// 文字排版交给 ce-empty 自己的 shadow 样式，这里只管容器与配色
+.ce-portal-empty {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: var(--ce-spacing-xl, 16px);
+  box-sizing: border-box;
+  color: var(--ce-color-text-secondary, #475467);
+  background-color: #fcfdff;
+  border: 1px dashed #e4e7ec;
+  border-radius: var(--ce-round-md, 8px);
 }
-.uii-resizable-ghost,
-.uii-draggable-ghost {
-  position: absolute;
-  border-radius: var(--ce-round-md);
+
+// 空态下网格只有一行轨道，这一行要同时满足两件事：
+// 1) 至少容得下标题+描述+按钮（否则会被 .ce-portal 的 overflow:hidden 裁掉一半）；
+// 2) 画布有确定高度时（消费方给 ce-portal 定了高，如 height:100%）吃掉整块高度，
+//    空态块随之撑满，内容（ce-empty 宿主自带 flex 居中）就落在画布垂直中线上；
+//    没有确定高度时 1fr 退化为内容高度，不会出现布局跳动。
+// 编辑态没有空态块（画布由虚线单元格铺满），不涉及这条规则。
+.ce-portal-grid.is-empty {
+  height: 100%;
+  grid-auto-rows: minmax(160px, 1fr);
+}
+
+// 编辑态：左侧挂件库（宽度可拖拽调整，见 PortalEditor 的 uiik resizable）
+ce-aside.ce-portal-palette {
+  width: var(--portal-palette-width, 210px);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  overflow: auto;
+  box-sizing: border-box;
+  background-color: #fafbfd;
+  border-right: 1px solid #e8ebf0;
+}
+
+// 面板调宽拖拽条（uiik resizable 的向东手柄）
+.ce-portal-palette-resizer {
+  flex: none;
+  width: 6px;
+  cursor: col-resize;
+  transition: background-color 0.15s;
+
+  &:hover,
+  &.uii-resizable-handle-active {
+    background-color: var(--ce-color-primary, #2f9bff);
+    opacity: 0.35;
+  }
+}
+
+.ce-portal-palette-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--ce-font-sm);
+  font-weight: 600;
+  color: var(--ce-color-text);
+  padding: 0 2px;
+}
+
+// 撤销 / 重做：图标按钮，禁用态降到 35% 透明度（比换成灰字更不打扰）
+.ce-portal-history {
+  display: flex;
+  gap: 2px;
+}
+
+.ce-portal-history-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ce-round-sm, 4px);
+  background: transparent;
+  color: var(--ce-color-text-secondary);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgb(var(--ce-color-text-rgb) / 0.06);
+    color: var(--ce-color-text);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+.ce-portal-palette-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ce-portal-palette-label {
+  font-size: 11px; // font-allow 调色板标注，装饰性（契约第 3 条）
+  color: var(--ce-color-text-desc);
+  padding: 0 2px;
+}
+
+.ce-portal-palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: var(--ce-color-bg);
+  border: 1px solid var(--ce-color-border-secondary);
+  border-radius: 6px;
+  font-size: var(--ce-font-xs);
+  color: var(--ce-color-text);
+  cursor: grab;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: var(--ce-color-primary, #2f9bff);
+    color: var(--ce-color-primary, #2f9bff);
+  }
+
+  &.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  // 带演示快照的条目：快照在上、名称/尺寸行在下
+  &.has-preview {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+
+    .ce-portal-palette-meta {
+      flex: none;
+      padding: 7px 10px 8px;
+    }
+  }
+}
+
+.ce-portal-palette-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ce-portal-palette-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ce-portal-palette-size {
+  flex: none;
+  font-size: 11px; // font-allow 尺寸标注，装饰性（契约第 3 条）
+  color: #98a2b3;
+}
+
+// 演示快照：按 2 倍宽渲染再缩半（transform-origin 0 0），分辨率无关
+.ce-portal-palette-preview {
+  position: relative;
+  height: 88px;
   overflow: hidden;
   pointer-events: none;
-  background-color: #ccc;
-  opacity: 0.3;
-  transition: all 0.2s !important;
-  &.is-invalid {
-    background-color: red;
-  }
+  user-select: none;
+  background-color: #fafbfd;
+  border-bottom: 1px solid #eef1f5;
+}
+
+// 预览插画（img 字段，SVG data URI）：铺满预览区
+.ce-portal-palette-img {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.ce-portal-palette-preview-inner {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: calc(200% - 16px);
+  transform: scale(0.5);
+  transform-origin: 0 0;
 }

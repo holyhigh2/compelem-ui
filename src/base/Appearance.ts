@@ -1,9 +1,28 @@
-import { CompElem, h, prop, Template, watch } from "compelem";
+import { CompElem, prop, watch } from "compelem";
 import { isNumeric, kebabCase } from "myfx";
 import { IBordered } from "../interfaces/IBordered";
 import { IColorable } from "../interfaces/IColorable";
 import { ILoadable } from "../interfaces/ILoadable";
 import { ColorHelper } from "../utils/color";
+import { AppearanceSize, AppearanceSpace } from "../constants";
+
+// 尺寸/间距词汇表已迁至 src/constants.ts（单一来源）；此处保留兼容导出，旧导入路径不变。
+export { AppearanceSize, AppearanceSpace };
+
+/**
+ * 外观层：两个空的绝对定位层，供 `appearance.scss` 用 `::part(__underlay)` /
+ * `::part(__overlay)` 做 hover / active 的着色与透明度过渡。
+ *
+ * 为什么是纯静态串而不是基类 render：外观的动态性**全部来自宿主属性**
+ * （`[appearance]` / `[hoverable]` / `[active]` / `[disabled]` / `[loading]` …），
+ * 由 CSS 选择器驱动；这两个 div 自身永远是空的。
+ *
+ * 单点维护：子类在 render() 里写 `${html(APPEARANCE_LAYER)}`。改样式只动
+ * `appearance.scss`（本来就是全仓单点）；改 markup / 新增 part 只动这一行。
+ */
+export const APPEARANCE_LAYER =
+    '<div class="ce-appearance-underlay" part="__underlay"></div>' +
+    '<div class="ce-appearance-overlay" part="__overlay"></div>';
 
 /**
  * 外观基类提供组件外观基础属性
@@ -30,22 +49,6 @@ export enum AppearanceType {
     Text = 'text',
     //无背景
     Default = 'default'
-}
-
-export enum AppearanceSize {
-    XS = 'xs',
-    SM = 'sm',
-    MD = 'md',
-    LG = 'lg',
-    XL = 'xl'
-}
-export enum AppearanceSpace {
-    //紧凑
-    Compact = 'compact',
-    //舒适
-    Default = 'default',
-    //宽松
-    Loose = 'loose'
 }
 
 /**
@@ -173,12 +176,12 @@ export class AppearanceElem extends CompElem implements ILoadable, IColorable, I
         ColorHelper.setColor(nv, this.style, '--active-color')
     }
     //////////////////////////////////// lifecycles
-    constructor(...args: any[]) {
-        super(...args)
-    }
-    render(): Template {
-        return h`<div class="ce-appearance-underlay" part="__underlay"></div><div class="ce-appearance-overlay" part="__overlay"></div>`
-    }
+    // 0.30 起**无 own render()**：外观层由子类在自己的 render() 里以
+    // `${html(APPEARANCE_LAYER)}` 嵌入。原先靠 `${super.render()}` 挂基类视图，
+    // 该能力已随 super 支持一并移除（compelem 编译期会拦下 render() 内的 super 表达式）。
+    //
+    // 单点维护：`APPEARANCE_LAYER` 是全仓唯一定义处，改 class / 新增 part 只动这一行。
+    // 同文件时编译器会把它折进建树序列（零运行期开销）；跨文件时落回运行期 `html` 指令。
     //子类可覆盖后实现指定元素应用外观
     get renderEl() {
         return this.renderRoot

@@ -6,6 +6,16 @@
   --color-slider: #2196f3;
   --underline-left: 0;
   --underline-width: 0;
+  --tab-notch-start: 0px;
+  --tab-notch-size: 0px;
+}
+
+// 首屏就位后再启用过渡，避免加载瞬间出现缺口展开动画
+:host(.tab-notch-ready) .ce-nav.ce-nav-appearance-tab .ce-nav-items::before,
+:host(.tab-notch-ready) .ce-nav.ce-nav-appearance-tab .ce-nav-items::after,
+:host(.tab-notch-ready) .ce-nav.ce-nav-appearance-tab .ce-nav-tab-frame {
+  transition: left 0.2s ease-in-out, width 0.2s ease-in-out,
+    top 0.2s ease-in-out, height 0.2s ease-in-out;
 }
 
 .ce-nav {
@@ -13,10 +23,18 @@
     align-items: center;
     display: flex;
 
+    // 轮廓层脱离 flex 流，非 tab 外观下不占间隔
+    .ce-nav-tab-frame {
+      position: absolute;
+      z-index: 1;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
     //匹配默认插槽
     ::slotted(*) {
       font-weight: 500;
-      font-size: 0.875rem;
+      font-size: var(--ce-font-sm);
       line-height: 1.25rem;
       // padding: 0.5rem 0.75rem;
       cursor: pointer;
@@ -42,15 +60,38 @@
       }
 
       ::slotted(:not([unhoverable]):hover) {
-        background-color: fn.color(--ce-color-gray-100-rgb);
+        background-color: var(--ce-color-bg-secondary);
         border-radius: var(--ce-round-md);
       }
     }
 
     &-tab {
       .ce-nav-items {
+        position: relative;
+
+        // 贯通边线拆成开口左右两段，起点/长度由 --tab-notch-* 驱动。
+        // 用 1px border 而非背景矩形：背景矩形落在半像素起点上会在高 DPR 下渲染成 2px
+        &::before,
+        &::after {
+          content: "";
+          position: absolute;
+          z-index: 1;
+          box-sizing: border-box;
+          pointer-events: none;
+          border: 0 solid fn.color(--ce-color-border-rgb);
+        }
+
+        // 激活卡片的 U 形轮廓；与两段边线共用 --tab-notch-*，切换时整套轮廓平移
+        .ce-nav-tab-frame {
+          border: 1px solid fn.color(--ce-color-border-rgb);
+        }
+
+        // 四边透明占位：项尺寸恒定，缺口坐标不受 active 切换影响
+        ::slotted(*) {
+          border: 1px solid transparent !important;
+        }
+
         ::slotted(.active) {
-          border: 1px solid fn.color(--ce-color-border-rgb) !important;
           color: var(--color-nav, var(--ce-color-primary));
         }
 
@@ -63,6 +104,8 @@
     &-underlined {
       .ce-nav-items {
         ::slotted(*) {
+          // ::after 下划线为绝对定位，须以导航项自身为包含块
+          position: relative;
           border-radius: 0 !important;
           transition: color 0.2s ease-out;
 
@@ -92,7 +135,7 @@
         ::slotted(*) {
           overflow: hidden;
           border-radius: var(--ce-round-pill);
-          background-color: fn.color(--ce-color-gray-100-rgb);
+          background-color: var(--ce-color-bg-secondary);
           // opacity: 0.4;
           transition: all 0.3s;
         }
@@ -113,7 +156,7 @@
         }
 
         ::slotted(:hover) {
-          background-color: fn.color(--ce-color-gray-200-rgb);
+          background-color: var(--ce-color-border-secondary);
         }
       }
     }
@@ -124,7 +167,7 @@
         ::slotted(*) {
           overflow: hidden;
           border: 1px solid fn.color(--ce-color-border-secondary-rgb);
-          background: var(--ce-color-background);
+          background: var(--ce-color-bg);
           transition: all 0.3s;
         }
 
@@ -135,7 +178,7 @@
         }
 
         ::slotted(:not(.active):hover) {
-          background-color: fn.color(--ce-color-gray-100-rgb);
+          background-color: var(--ce-color-bg-secondary);
         }
       }
     }
@@ -198,32 +241,67 @@
       }
       &-tab {
         .ce-nav-items {
+          &::before {
+            left: 0;
+            bottom: 0;
+            width: var(--tab-notch-start);
+            height: 1px;
+            border-bottom-width: 1px;
+          }
+
+          &::after {
+            left: calc(var(--tab-notch-start) + var(--tab-notch-size));
+            right: 0;
+            bottom: 0;
+            height: 1px;
+            border-bottom-width: 1px;
+          }
+
+          .ce-nav-tab-frame {
+            left: var(--tab-notch-start);
+            width: var(--tab-notch-size);
+            top: 0;
+            bottom: 0;
+            border-bottom-color: transparent;
+            border-top-left-radius: var(--ce-round-md);
+            border-top-right-radius: var(--ce-round-md);
+          }
+
           ::slotted(*) {
             border-top-left-radius: var(--ce-round-md);
             border-top-right-radius: var(--ce-round-md);
             border-bottom-left-radius: 0;
             border-bottom-right-radius: 0;
-            border-bottom: 1px solid fn.color(--ce-color-border-rgb);
-          }
-
-          ::slotted(.active) {
-            border-bottom: 0 !important;
           }
         }
         &.ce-nav-reversed {
           .ce-nav-items {
+            &::before,
+            &::after {
+              top: 0;
+              bottom: auto;
+              border-top-width: 1px;
+              border-bottom-width: 0;
+            }
+
+            .ce-nav-tab-frame {
+              left: var(--tab-notch-start);
+              width: var(--tab-notch-size);
+              top: 0;
+              bottom: 0;
+              border-top-color: transparent;
+              border-bottom-color: fn.color(--ce-color-border-rgb);
+              border-top-left-radius: 0;
+              border-top-right-radius: 0;
+              border-bottom-left-radius: var(--ce-round-md);
+              border-bottom-right-radius: var(--ce-round-md);
+            }
+
             ::slotted(*) {
               border-bottom-left-radius: var(--ce-round-md);
               border-bottom-right-radius: var(--ce-round-md);
               border-top-left-radius: 0;
               border-top-right-radius: 0;
-              border-bottom: none;
-              border-top: 1px solid fn.color(--ce-color-border-rgb);
-            }
-
-            ::slotted(.active) {
-              border-bottom: 1px solid fn.color(--ce-color-border-rgb) !important;
-              border-top: 0 !important;
             }
           }
         }
@@ -243,44 +321,77 @@
       &-default {
         padding: 0.5rem 0rem;
 
-        .ce-nav-items {
-          ::slotted(*) {
-            margin-left: 0 !important;
-          }
-        }
+        // ⚠️ 不要给 slotted 项钉 margin-left: 0 !important —— 那曾是横排 default
+        //    外观 `::slotted(*:not(:first-child)) { margin-left: 0.5rem }` 项间距的
+        //    垂直抵消规则；横排间距在 0.1.0-alpha（e9962e3）已删，这条成了遗留死
+        //    规则，且 !important 会误杀宿主自己的合法横向 margin（如 margin:auto
+        //    定宽图标项的居中，2026-10-19 活动栏踩到）。需要顶格的宿主自己控制
+        //    margin 即可，库不必强干预。
       }
 
       &-tab {
         .ce-nav-items {
+          &::before {
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: var(--tab-notch-start);
+            border-right-width: 1px;
+          }
+
+          &::after {
+            top: calc(var(--tab-notch-start) + var(--tab-notch-size));
+            bottom: 0;
+            right: 0;
+            width: 1px;
+            border-right-width: 1px;
+          }
+
+          .ce-nav-tab-frame {
+            top: var(--tab-notch-start);
+            height: var(--tab-notch-size);
+            left: 0;
+            right: 0;
+            border-right-color: transparent;
+            border-top-left-radius: var(--ce-round-md);
+            border-bottom-left-radius: var(--ce-round-md);
+          }
+
           ::slotted(*) {
             border-top-left-radius: var(--ce-round-md);
             border-bottom-left-radius: var(--ce-round-md);
             border-top-right-radius: 0;
             border-bottom-right-radius: 0;
-            border-right: 1px solid fn.color(--ce-color-border-rgb) !important;
-            border-bottom: none !important;
-          }
-
-          ::slotted(.active) {
-            border: 1px solid fn.color(--ce-color-border-rgb) !important;
-            border-right: 0 !important;
           }
         }
         &.ce-nav-reversed {
           .ce-nav-items {
+            &::before,
+            &::after {
+              left: 0;
+              right: auto;
+              border-left-width: 1px;
+              border-right-width: 0;
+            }
+
+            .ce-nav-tab-frame {
+              top: var(--tab-notch-start);
+              height: var(--tab-notch-size);
+              left: 0;
+              right: 0;
+              border-left-color: transparent;
+              border-right-color: fn.color(--ce-color-border-rgb);
+              border-top-left-radius: 0;
+              border-bottom-left-radius: 0;
+              border-top-right-radius: var(--ce-round-md);
+              border-bottom-right-radius: var(--ce-round-md);
+            }
+
             ::slotted(*) {
               border-top-left-radius: 0;
               border-bottom-left-radius: 0;
               border-top-right-radius: var(--ce-round-md);
               border-bottom-right-radius: var(--ce-round-md);
-              border-right: none !important;
-              border-left: 1px solid fn.color(--ce-color-border-rgb) !important;
-              border-bottom: none !important;
-            }
-
-            ::slotted(.active) {
-              border: 1px solid fn.color(--ce-color-border-rgb) !important;
-              border-left: 0 !important;
             }
           }
         }

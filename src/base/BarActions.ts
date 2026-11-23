@@ -1,11 +1,10 @@
-import { CompElem, computed, createRef, forEach, h, ifTrue, prop, query, show, state, styles, Template } from "compelem";
+import { CompElem, computed, createRef, prop, query, state } from "compelem";
 import { every, flatMap, includes, isBoolean, isEmpty, map } from "myfx";
 import uii from "uiik";
 import { Button } from "../components/button/Button";
 import { Toggle } from "../components/form/toggle/Toggle";
 import { Overlay } from "../components/overlays/overlay/Overlay";
 import { SortType } from "../constants";
-import { SortDown, SortUp } from "../icons/icons";
 
 enum Control {
     Field = 'field',
@@ -13,6 +12,19 @@ enum Control {
     Filter = 'filter',
     Sort = 'sort',
     Appearance = 'appearance',
+}
+/**
+ * 同步筛选字段列表的高亮。
+ *
+ * 列表项的 active 同时被两处写：ce-list 的选中态、以及右侧条件面板
+ * （ce-overlay auto-active）把触发项设为 active。切换字段时若任一环漏清，
+ * 旧字段就会残留高亮（表现：从 A 切到 B 后 A 仍高亮，需再点一次才消失）。
+ * 按当前字段统一刷一遍，保证列表内只有一个高亮项。
+ */
+export function syncFilterPaneActive(pane: HTMLElement | null | undefined, prop: string) {
+    pane?.querySelectorAll('ce-list-item').forEach(el => {
+        el.toggleAttribute('active', el.getAttribute('value') === prop)
+    })
 }
 /**
  * 操作条动作基类
@@ -23,6 +35,9 @@ export abstract class BarActions extends CompElem {
     //////////////////////////////////// props
     @prop({ type: [Array, Boolean] }) actions: Array<string> | boolean = true
 
+    // 记录面板内容已初始化。只能用整数组赋值更新：数组 mutation 不进更新队列，
+    // 用 push 时读取本字段的 ifTrue 分支不会重渲染，面板内容不落地 ⇒ 浮层量不到尺寸，
+    // 首次打开停在不可见状态（openBy 后 __revealPending 等不到内容）。
     @state overlayInitedList: string[] = []
 
     // 字段相关
@@ -71,117 +86,6 @@ export abstract class BarActions extends CompElem {
         return isBoolean(this.actions) ? this.actions : includes(this.actions, Control.Sort)
     }
 
-    render(): Template {
-        return h`
-        <!-- 字段控制面板 -->
-        <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="field-panel">
-            <div>
-            ${ifTrue(this.overlayInitedList.includes('field-panel'), () => h`
-            <ce-card class="config-card" style="min-width: 14rem;max-width: 18rem;padding: var(--ce-spacing-sm);height:18rem;overflow: hidden;resize: both;max-height: 50vh;" ref="${this.fieldPane}" >
-            <header style="display: flex;justify-content: space-between;align-items: center;margin-bottom:var(--ce-spacing-sm)">
-                <div style="font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);">字段设置</div>
-                <ce-toggle size="sm" style="color: var(--ce-color-primary)" active-text="隐藏全部" inactive-text="显示全部" .value="${this.isAllChecked}" @change="${this.toggleAllField}"></ce-toggle>
-            </header>
-            <div style="overflow:hidden;flex:1;">
-                <ce-scroller style="display: block;height:100%" show-track="false">
-                <ce-list gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs);">
-                    ${forEach(this.allFields, f => f.prop, f => h`
-                    <ce-list-item ripple="false" appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:0" ?unmovable="${!f.movable}">
-                    <ce-icon svg="c-svg-drag" color="Gainsboro" size="xs" ${styles(['cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' }])}></ce-icon>
-                    <span style="overflow: hidden;text-overflow: ellipsis;">${f.name}</span>
-                    <ce-toggle slot="append" ${show(f.hidable)} ?disabled="${!f.hidable}" 
-                    .value="${!this.hiddenList.includes(f.prop)}" 
-                    prop="${f.prop}" size="sm" style="color: var(--ce-color-primary)" 
-                    @change="${this.toggleField}">
-                    </ce-toggle>
-                    </ce-list-item>
-                    `)}
-                </ce-list>
-                </ce-scroller>
-            </div>
-            </ce-card>
-            `)}
-            </div>
-        </ce-overlay>
-        <!-- 排序面板 -->
-        <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="sort-panel">
-            <div>
-            ${ifTrue(this.overlayInitedList.includes('sort-panel'), () => h`
-            <ce-card class="config-card" style="padding: var(--ce-spacing-sm);resize: both;max-height: 50vh;min-width: 14rem;max-width: 16rem;" ref="${this.sortPane}" >
-            <ce-list gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs)">
-                <ce-list-header space="compact" style="font-size:var(--ce-font-sm-em);">
-                排序设置
-                <ce-button appearance="text" color="red" size="sm" style="padding: 0;float: right;" ripple="false" @click="${this.cancelSort}">取消</ce-button>
-                </ce-list-header>
-                ${forEach(this.sortList, (s, i) => i, (s, i) => h`
-                <ce-list-item ripple="false" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-                    <div style="display:flex;width: 100%;justify-content: space-between;">
-                    <span style="text-overflow: ellipsis;overflow: hidden;line-height: 1.5;">
-                        ${i + 1}.&nbsp;${s.name} &nbsp;&nbsp;
-                    </span>
-                    <ce-toggle .value="${s.sort === SortType.Asc}" data-prop="${s.prop}" active-value="asc" inactive-value="desc" size="sm" style="color: var(--ce-color-primary);width: 3.75rem;" @change="${this.toggleSortType}">
-                        <ce-icon slot="active" .svg="${SortUp}" size="lg" style="color: #fff;"></ce-icon>
-                        <ce-icon slot="inactive" .svg="${SortDown}" size="lg" style="color: var(--ce-color-text-desc);"></ce-icon>
-                    </ce-toggle>
-                    </div>
-                    <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delSort}" icon="c-svg-close"></ce-button>
-                </ce-list-item>
-                `)}
-            </ce-list>
-            <ce-button slot="actions" appearance="pale" color="gray" ${show(this.sortList.length < BarActions.MAX_SORT_COUNT)} size="sm" style="margin-top: var(--ce-spacing-sm);" icon="c-svg-plus" @click="${this.openSortFieldPanel}">字段</ce-button>
-            </ce-card>
-            `)}
-            </div>
-        </ce-overlay>
-        <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="sort-field-panel">
-            <div>
-            ${ifTrue(this.overlayInitedList.includes('sort-field-panel'), () => h`
-            <ce-card class="config-card" style="min-width: 14rem;padding: var(--ce-spacing-sm);" >
-            <div style="height: 13rem;overflow:hidden">
-                <ce-scroller style="display: block;height:100%" show-track="false">
-                <ce-list gap=".2rem" selectable multiple style="min-width: 10rem;padding: var(--ce-spacing-xs);" @select="${this.addSortField}">
-                    ${forEach(this.sortableFields, f => f.value, f => h`
-                    <ce-list-item ripple="false" ?active="${this.sortList.some(x => x.prop == f.value)}" hoverable appearance="pale" value="${f.value}" style="font-size:var(--ce-font-sm-em);">
-                    <span style="text-overflow: ellipsis;overflow: hidden;">${f.label}</span>
-                    <ce-icon slot="append" ${show(this.sortList.some(x => x.prop == f.value))} svg="c-svg-check" size="md" style="color: var(--ce-color-primary)"></ce-icon>
-                    </ce-list-item>
-                    `)}
-                </ce-list>
-                </ce-scroller>
-            </div>
-            </ce-card>
-            `)}
-            </div>
-        </ce-overlay>
-        <!-- 筛选面板 -->
-        <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="filter-panel">
-            <div>
-            ${ifTrue(this.overlayInitedList.includes('filter-panel'), () => h`
-            <ce-card class="config-card" style="overflow: hidden;height:18rem;resize: both;max-height: 50vh;min-width: 14rem;padding: var(--ce-spacing-sm);" ref="${this.filterPane}" >
-                <header style="display: flex;justify-content: space-between;align-items: center;margin-bottom:var(--ce-spacing-sm)">
-                <div style="font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);">筛选设置</div>
-                <ce-button appearance="text" color="red" size="sm" style="padding: 0;float: right;" ripple="false" @click="${this.cancelFilter}">取消</ce-button>
-                </header>
-                <div style="overflow:hidden;flex:1;">
-                <ce-scroller style="display: block;height:100%" show-track="false">
-                <ce-list selectable gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs)" @select="${this.openFilterPane}">
-                    ${forEach(this.filterableFields, (s, i) => i, (s, i) => h`
-                    <ce-list-item ripple="false" value="${s.value}" data-type="${s.dataType}" hoverable style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-                        <span style="overflow: hidden;text-overflow: ellipsis;">${s.label}</span> &nbsp;&nbsp; <span style="pointer-events:none;font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);overflow: hidden;text-overflow: ellipsis;">${this.filterList.find(x => x.prop == s.value)?.search}</span>
-                        <ce-icon slot="append" svg="c-svg-chevron-right" style="color: var(--ce-color-text);"></ce-icon>
-                    </ce-list-item>
-                    `)}
-                </ce-list>
-                </ce-scroller>
-                </div>
-            </ce-card>
-            `)}
-            </div>
-        </ce-overlay>
-        `
-    }
-
-
     // 回调接口
     abstract onSetSort(prop: string, sort: string | null): void
     abstract onClearSort(): void
@@ -208,7 +112,7 @@ export abstract class BarActions extends CompElem {
     openField(obj: Record<string, any>) {
         Overlay.closeAll()
         if (!this.overlayInitedList.includes('field-panel')) {
-            this.overlayInitedList.push('field-panel')
+            this.overlayInitedList = [...this.overlayInitedList, 'field-panel']
 
             this.nextTick(() => {
                 // this.bindFieldDrag()
@@ -225,7 +129,7 @@ export abstract class BarActions extends CompElem {
 
         let prop = t.getAttribute('prop')!
 
-        this.onToggleField && this.onToggleField(prop)
+        this.onToggleField?.(prop)
     }
     toggleAllField() {
         if (this.isAllChecked) {
@@ -235,17 +139,17 @@ export abstract class BarActions extends CompElem {
                 if (f.hidable) return f.prop
                 return []
             })
-            this.onToggleAllField && this.onToggleAllField(propAry)
+            this.onToggleAllField?.(propAry)
         } else {
             this.hiddenList = []
-            this.onToggleAllField && this.onToggleAllField([])
+            this.onToggleAllField?.([])
         }
     }
 
     //////////////////////////////////////////////////////////////  排序相关
     openSort(obj: Record<string, any>) {
         if (!this.overlayInitedList.includes('sort-panel')) {
-            this.overlayInitedList.push('sort-panel')
+            this.overlayInitedList = [...this.overlayInitedList, 'sort-panel']
 
             this.nextTick(() => {
                 this.sortPanel.openBy(obj.target as Button)
@@ -256,7 +160,7 @@ export abstract class BarActions extends CompElem {
     }
     openSortFieldPanel(obj: Record<string, any>) {
         if (!this.overlayInitedList.includes('sort-field-panel')) {
-            this.overlayInitedList.push('sort-field-panel')
+            this.overlayInitedList = [...this.overlayInitedList, 'sort-field-panel']
 
             this.nextTick(() => {
                 this.sortFieldPanel.openBy(obj.target as Button)
@@ -298,7 +202,7 @@ export abstract class BarActions extends CompElem {
     openFilter(obj: Record<string, any>) {
         Overlay.closeAll()
         if (!this.overlayInitedList.includes('filter-panel')) {
-            this.overlayInitedList.push('filter-panel')
+            this.overlayInitedList = [...this.overlayInitedList, 'filter-panel']
 
             this.nextTick(() => {
                 this.filterPanel.openBy(obj.target as Button)
@@ -311,7 +215,9 @@ export abstract class BarActions extends CompElem {
         let { item } = obj
 
         let target = item as HTMLElement
-        if (this.onOpenFilter) this.onOpenFilter(target.getAttribute('value')!, target.dataset.type!, target)
+        const prop = target.getAttribute('value')!
+        syncFilterPaneActive(this.filterPane.current, prop)
+        if (this.onOpenFilter) this.onOpenFilter(prop, target.dataset.type!, target)
     }
     cancelFilter() {
         this.filterPanel.close()

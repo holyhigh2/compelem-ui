@@ -1,13 +1,16 @@
 
-import { CompElem, csscope, Csscope, emits, event, h, prop, query, state, tag, Template } from "compelem";
+import { CompElem, csscope, Csscope, emits, h, prop, query, state, tag, Template, watch } from "compelem";
 import { isEmpty } from "myfx";
-import { isCompoundLayer } from "../../../utils/utils";
-import { MenuPane } from "../menupane/MenuPane";
+import { fixedContainingBlock, Menu } from "../menu/Menu";
 /**
  * 右键菜单
  * @attrs
- *  target {string} 目标容器选择器，如果为空。默认parentElement
- *  items {array} 字符串数组/{text:,value:,disabled,iconClass}数组，如果数组内容为非对象/字符串则显示为分割条
+ *  target {string} 目标容器选择器。作用域**先取本组件的根节点**（宿主常把菜单与目标容器放在同一个
+ *   shadow root 里，document.querySelector 会找不到），兜底 document。为空时取 parentComponent，
+ *  再退到 parentElement
+ *  items {array} 字符串数组/{text:,value:,disabled,iconClass}数组，如果数组内容为非对象/字符串则显示为分割条。
+ *   **非必填**：典型用法是 `beforeopen` 里 `setItems()` 现算（内容往往依赖打开这一刻的状态），
+ *   声明成 required 会让这些用法在初始化时收到 "Prop 'items' is required" 并被跳过赋值
  *  theme {string} light/dark
  * @events
  *  select({item,index,el}) 菜单项选中时触发
@@ -17,19 +20,23 @@ import { MenuPane } from "../menupane/MenuPane";
  *
  * @author holyhigh2
  */
-@emits('select', 'beforeopen', 'close')
+@emits('select', 'hover', 'beforeopen', 'close')
 @tag('ce-context-menu')
 export class ContextMenu extends CompElem {
-  #init: boolean;
-  #opened: boolean = false;
-  @query('ce-menu-pane')
-  menuPane: MenuPane
+  #init = false;
+  #opened = false;
+  /** 绑在 targetEl 上的 contextmenu 监听（mounted 建、beforeDestroyed 摘） */
+  #targetAc?: AbortController;
+  /** 打开期间才存在的 document 监听（点外面 / Esc / 滚轮）：open 重建、close 摘 */
+  #docAc?: AbortController;
+  @query('ce-menu')
+  menu: Menu
   //////////////////////////////////// props
   @prop theme = "light"
   @prop({ type: String }) target = ''
-  @prop({ type: Array, required: true }) items: Array<any> = []
+  @prop({ type: Array }) items: Array<any> = []
 
-  @state({ prop: 'items' }) itemList: Array<any>;
+  @state itemList: Array<any> = this.items;
 
   targetEl: HTMLElement | undefined
 
@@ -43,45 +50,150 @@ export class ContextMenu extends CompElem {
   render(): Template {
     return h`
     <nav class="ce-context-menu">
-      <ce-menu-pane @select="${this.onSelect}" @hover="${this.emit}" .items="${this.items}" theme="${this.theme}" round="true" style="position: fixed;"></ce-menu-pane>
+      <ce-menu @select="${this.onSelect}" @hover="${this.onHover}" .items="${this.items}" theme="${this.theme}" round="true" style="position: fixed;"></ce-menu>
     </nav>
     `;
   }
 
-  updated(changed: Record<string, any>): void {
-    if (changed.itemList) {
-      this.menuPane.setItems(this.itemList)
+  /**
+   * ⚠️ 原实现是 `updated(changed) { if (changed.itemList) … }`。
+   * compelem 0.31 起 `updated()` 只在 `forceUpdate()`（恒传 `{}`）里被调用，
+   * 响应式重渲染走 per-point effect、**不再经过它** ⇒ `changed` 永远是空对象
+   * ⇒ 外部换 items 后菜单内容不更新（`#init` 已是 true，`open()` 也不会再推一次）。
+   *
+   * 改为直接 `@watch('itemList')`：`itemList` 是 `@state`，编译器把它编成
+   * `rc.__s.itemList.value` 的 signal effect，写入即回调，语义与原意完全一致。
+   */
+  @watch('itemList')
+  onItemListChange(nv: Array<any>) {
+    // 未渲染时 menu 还不存在，交给 open() 里的惰性 setItems
+    const menu = this.#menuEl();
+    if (menu) menu.setItems(nv)
+  }
+
+  /**
+   * 取内层 `ce-menu`。
+   *
+   * ⚠️ 原 `open()` 用的是 `renderRoot.firstElementChild`，但 render 的根节点是
+   * `<nav class="ce-context-menu">`（见上面 render），`firstElementChild` 拿到的是
+   * 那个 nav、不是菜单 ⇒ `nav.setItems is not a function`。改成按标签取，@query
+   * 已经拿到的优先（省一次查询），未渲染时返回 null 让调用方早退。
+   */
+  #menuEl(): Menu | null {
+    return ((this.menu as Menu | undefined) ||
+      (this.renderRoot?.querySelector?.('ce-menu') as Menu | null) ||
+      null) as Menu | null;
+  }
+
+  //////////////////////////////////// 目标绑定
+  /**
+   * 解析右键监听的目标容器。
+   *
+   * ⚠️ 原实现是 `@event('contextmenu', (c) => c.targetEl || c.parentComponent)`，但
+   * `bindEvents()` 在 `mounted()` **之前**执行（CompElem.ts:559-561），targetFn 求值时
+   * `targetEl` 必然是 undefined ⇒ 传了 `target` 选择器也只会绑到 parentComponent；
+   * 而 `onContextMenu()` 过滤用的却是 `this.targetEl.contains()`（undefined），
+   * 一行 `if (!target?.contains(t)) return` 把所有右键都吃掉 ——「配 target 就弹不出来」。
+   * 改成 mounted 里显式解析 + 绑定，`beforeDestroyed` 里摘除。
+   */
+  #resolveTarget(): HTMLElement | undefined {
+    const sel = (this.target || '').trim();
+    if (sel) {
+      // 作用域先取本组件所在根节点：宿主把菜单与目标容器放进同一个 shadow root 时，
+      // document.querySelector 找不到目标容器（它不在 light DOM 里）
+      const root = this.getRootNode?.() as Document | ShadowRoot | undefined;
+      const scoped =
+        root && typeof (root as any).querySelector === 'function'
+          ? ((root as any).querySelector(sel) as HTMLElement | null)
+          : null;
+      return scoped || (document.querySelector(sel) as HTMLElement | null) || undefined;
     }
+    return ((this.parentComponent as unknown as HTMLElement) || this.parentElement) ?? undefined;
   }
 
   mounted(): void {
-    if (!this.target) {
-      this.targetEl = this.parentComponent || this.parentElement!;
+    this.targetEl = this.#resolveTarget();
+    if (!this.targetEl) {
+      // 配错选择器时原先完全静默，右键没反应也找不到原因
+      console.warn(
+        `[ce-context-menu] target 未解析到元素（target="${this.target}"），右键菜单不会响应`
+      );
+      return;
     }
+    this.#targetAc = new AbortController();
+    this.targetEl.addEventListener('contextmenu', this.#onTargetContextMenu, {
+      signal: this.#targetAc.signal,
+    });
   }
+
+  beforeDestroyed(): void {
+    this.#targetAc?.abort();
+    this.#targetAc = undefined;
+    this.#unbindDoc();
+  }
+
+  #onTargetContextMenu = (e: MouseEvent): void => this.onContextMenu(e);
 
   //////////////////////////////////// methods
   onSelect(obj: Record<string, any>) {
     this.close()
     this.emit('select', obj)
   }
-  // @event('mousedown', () => document.body)
-  onMouseDown(e: MouseEvent) {
-    let t = e.target as HTMLElement;
-    if (t.tagName !== this.tagName) {
-      this.close()
-    }
-    if (this._bodyClick) {
-      document.body.removeEventListener('mousedown', this._bodyClick as any)
-      this._bodyClick = null as any
-    }
+  onHover(obj: Record<string, any>) {
+    this.emit('hover', obj)
   }
-  @event('contextmenu', (thisComp: any) => thisComp.targetEl! || thisComp.parentComponent)
+
+  /**
+   * 点外面关闭。
+   *
+   * ⚠️ 不能靠 `e.target.tagName` 判断"点在菜单内/外"：本组件（及宿主应用）都活在
+   * shadow DOM 里，事件冒泡到监听所在的 document 时 target 已被**重定向**为
+   * 最外层宿主（实测 = `RB-WORKBENCH`），永远不等于 `CE-CONTEXT-MENU` ⇒ 点在菜单
+   * 项上的 mousedown 也会 close()，元素被移到 -9999px，随后的 click 落空 ⇒
+   * 菜单项「点了没反应」。用 composedPath 穿透 shadow 边界做归属判断。
+   */
+  #onDocMouseDown = (e: MouseEvent): void => {
+    const path: EventTarget[] = typeof e.composedPath === 'function' ? e.composedPath() : [];
+    const inside = path.includes(this) || (!!this.renderRoot && path.includes(this.renderRoot));
+    if (inside) return;
+    this.close()
+  }
+
+  #onDocKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape') this.close()
+  }
+
+  /** 滚轮一动菜单就停在原地错位：直接关掉比追着改坐标简单 */
+  #onDocWheel = (): void => this.close()
+
+  /**
+   * 菜单打开期间才挂 document 监听，关掉即摘（AbortController 一次性全摘）。
+   *
+   * 原实现把 `document.body` 的 mousedown 监听存在 `_bodyClick` 里、每次 `open()` 都
+   * `bind` 一个新函数覆写它 —— 旧引用就此丢失，连续打开 N 次会累积 N 个监听（只有
+   * 最后一个能被移除）。Esc 与滚轮则完全没有处理。
+   */
+  #bindDoc(): void {
+    this.#unbindDoc();
+    const ac = new AbortController();
+    this.#docAc = ac;
+    const opt = { signal: ac.signal, capture: true };
+    document.addEventListener('mousedown', this.#onDocMouseDown as EventListener, opt);
+    document.addEventListener('keydown', this.#onDocKeyDown as EventListener, opt);
+    document.addEventListener('wheel', this.#onDocWheel as EventListener, { signal: ac.signal, capture: true, passive: true });
+  }
+
+  #unbindDoc(): void {
+    this.#docAc?.abort();
+    this.#docAc = undefined;
+  }
+
   onContextMenu(e: MouseEvent) {
     if (!(e instanceof MouseEvent)) return;
     let t = e.target as Node;
     let target = this.targetEl
-    if (!target?.contains(t)) {
+    // contains 不含自身：直接右键目标容器空白处时 t === target，旧写法会漏掉
+    if (!target || (t !== target && !target.contains(t))) {
       return;
     }
 
@@ -102,50 +214,46 @@ export class ContextMenu extends CompElem {
   isOpen(): boolean {
     return this.#opened;
   }
-  _bodyClick: Function
   open(e: MouseEvent) {
     e.preventDefault();
     if (isEmpty(this.itemList)) return
+    const list = this.#menuEl()
+    // 未渲染（还没 renderRoot / 还没 upgrade）时不做任何事：
+    // 原先 `renderRoot!.firstElementChild` 会 TypeError
+    if (!list) return
     //渲染菜单
     if (!this.#init) {
-      (this.renderRoot!.firstElementChild as MenuPane).setItems(this.itemList as any);
+      list.setItems(this.itemList as any);
       this.#init = true;
     }
 
     //显示菜单
     const { clientX, clientY } = e;
-    const list = this.renderRoot!.firstElementChild as MenuPane
 
     let ml = 0, mt = 0;
 
-    let pNode = this.parentNode!
-    let con = null
-    while (pNode.nodeName != 'BODY') {
-      if (pNode instanceof ShadowRoot) {
-        pNode = pNode.host
-      }
-      if (isCompoundLayer(pNode as HTMLElement)) {
-        con = pNode
-        break
-      }
-
-      pNode = pNode.parentNode!
-
-    }
+    // 坐标换算：若祖先里有复合层（transform/filter/…），它就是 `fixed` 菜单的包含块，
+    // 此时 left/top 需相对它解析（菜单在 `Menu.open()` 里也按同一包含块做靠边钳制）。
+    // 复用 `fixedContainingBlock`（读 computed style + 穿越 shadow 边界）与
+    // `Menu.open()` 保持同口径；旧的 `isCompoundLayer` 只读内联样式、且
+    // `parentNode` 上溯会被 slot 边界截断，会漏判（详见 Menu.ts 该函数注释）。
+    const con = fixedContainingBlock(this as unknown as HTMLElement);
     if (con) {
-      let rect = (con as HTMLElement).getBoundingClientRect()
-      ml = rect.left
-      mt = rect.top
+      const rect = con.getBoundingClientRect();
+      ml = rect.left;
+      mt = rect.top;
     }
 
     list.open(clientX - ml, clientY - mt)
     this.#opened = true;
 
-    this._bodyClick = this.onMouseDown.bind(this)
-    document.body.addEventListener('mousedown', this._bodyClick as any)
+    this.#bindDoc()
   }
   close() {
-    this.menuPane.close()
+    this.#unbindDoc()
+    // 未渲染过就 close（宿主在挂载前主动关一次）时内层菜单还不存在
+    this.#menuEl()?.close?.()
+    if (!this.#opened) return
     this.#opened = false;
     this.emit("close", {});
   }

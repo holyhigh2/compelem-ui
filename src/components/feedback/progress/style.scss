@@ -158,7 +158,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    color: #fff;
+    color: var(--ce-color-on-primary, #fff);
     padding-inline: var(--ce-spacing-md);
 
     &.ce-progress-align-center {

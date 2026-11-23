@@ -15,9 +15,6 @@ export function TableExtensionCellNote<T extends Constructor<any>>(spuerClass: T
     notes: Record<string, any> = {}
     keyNotes: Record<string, any> = {}
 
-    constructor(...args: any[]) {
-      super(...args)
-    }
 
     ////////////////////////////////////////// 监控鼠标进入
     onMouseEnterNoteContainer(ev: MouseEvent) {
@@ -47,8 +44,12 @@ export function TableExtensionCellNote<T extends Constructor<any>>(spuerClass: T
           const row = this.renderList[rowIndex]
           let rowKey = row ? row[this.rowKey] : null
 
-          this.msgDescr = this.keyNotes[rowKey + '_' + prop] || this.notes[rowIndex + '_' + prop]
+          // 顺序不能反：浮层的默认槽内容会在**首次展开**时才挂进 overlay 的 content，
+          // 那一刻 ce-message 才 mount，并按标签上的属性重新初始化 prop ——
+          // 先写 msgDescr 会让模板刚 patch 进去的 `.descr` 被这次初始化清掉，
+          // 而下次悬停 msgDescr 值没变 ⇒ 不再触发渲染，批注文案永远显示不出来。
           this.msgOverlay.openBy(cell)
+          this.msgDescr = this.keyNotes[rowKey + '_' + prop] || this.notes[rowIndex + '_' + prop]
         }
       }
     }

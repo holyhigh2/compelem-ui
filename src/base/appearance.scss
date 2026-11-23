@@ -3,6 +3,10 @@
 */
 :host {
   position: relative;
+  // 禁用态衰减量。抽出为变量后，"状态下发型容器"（如 ce-radio-group）可声明为 1，
+  // 避免容器与叶子控件同时应用衰减导致 opacity 父子相乘
+  // （0.25 × 0.25 = 0.0625，禁用态几乎不可见）
+  --ce-disabled-opacity: 0.25;
 }
 
 .ce-appearance-overlay,
@@ -21,7 +25,7 @@
 
 :host([appearance][disabled]) {
   cursor: not-allowed !important;
-  opacity: 0.25;
+  opacity: var(--ce-disabled-opacity);
 }
 
 :host([appearance][active]) {
@@ -42,7 +46,11 @@
 
 ///////////////////////////////////////////////// 通用外观
 :host([appearance="flat"]) {
-  color: #fff;
+  // 前景不能写死 #fff：背景来自 --color（可能是语义色，也可能是宿主替换的任意色），
+  // 浅色背景（warning 黄、深色主题下提亮的 info、dark 下的 text 灰）上白字会掉到
+  // 1.5~2.4:1。语义色由 ColorHelper 注入配对的 --on-color（跟随主题）；
+  // 未指定 color 时背景回落到 info，前景同样回落到 on-info。
+  color: var(--on-color, var(--ce-color-on-info));
   border: 0;
   background-color: var(--color, var(--ce-color-info));
 }
@@ -58,27 +66,33 @@
 :host([appearance="outlined"]) {
   color: var(--ce-color-text);
   border: 1px solid var(--ce-color-border);
-  transition: color .2s, border .2s;
+  transition: color .2s, border-color .2s;
 }
 
 :host([appearance="outlined"][active]) {
   border: 1px solid var(--active-color, var(--color, var(--ce-color-info)));
 }
 
+// hover 的方向只能是「加深」，绝不能把文字调浅。
+// 此处曾把 color 与 border 互换（文字→gray-300、边框→gray-700），浅灰字落在浅底上，
+// 对比度从 9.5:1 掉到 1.4:1（远低于 WCAG AA 的 4.5:1），文字基本不可辨认。
+// 与 AppearanceType.Outlined 的设计注释也对不上——原意是「悬浮后显示高透明度背景，
+// 同字体色」，即叠一层雾面，而不是反色。
+//
+// 为什么不用 [hoverable] 分支：compelem 的 Boolean prop 属性反射是单向的，
+// `hoverable = false` 不会移除属性（实测 host 上仍带 hoverable=""），CSS 无法据此区分；
+// 而输入框类外壳（InputDate / InputColor / InputTime）不渲染 APPEARANCE_LAYER，
+// ::part(__underlay) 对它们天然无匹配。因此统一成两条互不干扰的规则：
+// 边框加深对全体生效，雾面对「有层的」自动生效。
 [appearance="outlined"]:not([disabled], [loading]):hover {
-  color: var(--color, var(--ce-color-border));
-  border: 1px solid var(--color, var(--ce-color-text));
+  border-color: var(--ce-color-gray-400);
 }
 
-// [appearance="outlined"][hoverable]:not([disabled], [loading]):hover::part(
-//     __underlay
-//   ),
-// [appearance="outlined"][hoverable]:not([disabled], [loading]):focus::part(
-//     __underlay
-//   ) {
-//   background: var(--color, var(--ce-color-text));
-//   opacity: var(--ce-opacity-underlay);
-// }
+[appearance="outlined"]:not([disabled], [loading]):hover::part(__underlay),
+[appearance="outlined"]:not([disabled], [loading]):focus::part(__underlay) {
+  background: var(--color, var(--ce-color-text));
+  opacity: var(--ce-opacity-underlay);
+}
 :host([appearance="pale"]) {
   color: var(--color, var(--ce-color-text));
   border: 0;

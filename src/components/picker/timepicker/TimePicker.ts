@@ -6,7 +6,7 @@ import { LoopList } from "../../layout/list/LoopList";
 import style from "./style.scss?tmpl";
 /**
  * 时间拾取
- * @props
+ * @attrs
  *  value {string} 默认时间
  *  hideSeconds {boolean} 隐藏秒显示
  * @models

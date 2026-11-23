@@ -1,9 +1,21 @@
 .ce-rate {
   display: inline-flex;
 
+  [part="icon"] {
+    position: relative;
+
+    &:not(:last-child) {
+      padding-right: var(--rate-icon-padding-right);
+    }
+  }
+
+  // 半星遮罩：整尺寸叠在图标上，用 clip-path 裁掉右半边。
+  // 不可改用 overflow/width 缩放 —— SVG 默认 preserveAspectRatio 会把星形整体缩放居中而非裁剪
   &.ce-rate-before {
     position: absolute;
-    overflow: hidden;
+    left: 0;
+    top: 0;
+    clip-path: inset(0 50% 0 0);
     z-index: 1;
   }
 
@@ -25,9 +37,5 @@
     svg[active] path {
       stroke: var(--rate-svg-stroke-active-color);
     }
-  }
-
-  [part="icon"]:not(:last-child) {
-    padding-right: var(--rate-icon-padding-right);
   }
 }

@@ -38,6 +38,12 @@
     overflow: hidden;
     transition: grid-template-rows 0.3s ease;
   }
+  // 组内列表项由默认 slot 承载，间距取自 ce-list 的 --ce-list-item-gap；
+  // 折叠态归零，避免 0fr 轨道还留一条间隔
+  .ce-list-children > slot {
+    row-gap: 0;
+    transition: row-gap 0.3s ease;
+  }
   &.is-expanded {
     ce-icon.ce-list-caret {
       transform: rotateZ(0deg) !important;
@@ -45,6 +51,9 @@
 
     .ce-list-children {
       grid-template-rows: 1fr;
+    }
+    .ce-list-children > slot {
+      row-gap: var(--ce-list-item-gap, 0);
     }
   }
 }

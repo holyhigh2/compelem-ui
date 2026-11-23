@@ -2,12 +2,53 @@ import { classes, createRef, csscope, Csscope, emits, forEach, h, prop, query, q
 import { addTime, compareDate, formatDate, identity, isBlank, isEmpty, isSameDay, padZ, range, sort } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 import { isVisible } from "../../../utils/utils";
+import { settleTransition } from "../../../utils/transition";
 import { Overlay } from "../../overlays/overlay/Overlay";
 import style from "./style.scss?tmpl";
 const NoTransitionClass = 'is-no-transition'
+/** pattern 中的日期占位符，与 myfx formatDate 支持的 token 保持一致 */
+const PATTERN_TOKEN = /y{2,4}|M{1,2}|d{1,2}|H{1,2}|m{1,2}|s{1,2}/g
+const escapeExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/**
+ * 按 pattern 解析日期字符串。
+ *
+ * `new Date(value)` 只认识 ISO / `yyyy/MM/dd` 这类浏览器内置格式，自定义 pattern
+ * （`dd/MM/yyyy`、`yyyy年MM月dd日`）会得到 Invalid Date，导致头部年月与年月面板为空。
+ * pattern 的 token 含义与 formatDate 对齐（yy 按 20xx 处理）。
+ */
+function parseDateByPattern(value: string, pattern: string): Date | null {
+  const keys: string[] = []
+  let source = '^'
+  let last = 0
+  let match: RegExpExecArray | null
+  const exp = new RegExp(PATTERN_TOKEN.source, 'g')
+  while ((match = exp.exec(pattern)) !== null) {
+    if (match.index > last) source += escapeExp(pattern.slice(last, match.index))
+    keys.push(match[0])
+    source += '(\\d{1,4})'
+    last = match.index + match[0].length
+  }
+  if (last < pattern.length) source += escapeExp(pattern.slice(last))
+  const matched = new RegExp(source + '$').exec(value.trim())
+  if (!matched) return null
+
+  let y = 0, m = 0, d = 1, h = 0, mi = 0, s = 0
+  keys.forEach((key, i) => {
+    const n = parseInt(matched[i + 1])
+    switch (key[0]) {
+      case 'y': y = key.length === 2 ? 2000 + n : n; break
+      case 'M': m = n - 1; break
+      case 'd': d = n; break
+      case 'H': h = n; break
+      case 'm': mi = n; break
+      case 's': s = n; break
+    }
+  })
+  return y ? new Date(y, m, d, h, mi, s) : null
+}
 /**
  * 日期拾取
- * @props
+ * @attrs
  *  value {string} 选中的日期，格式为 'yyyy-MM-dd'，受控
  *  days {array} 一周的日期数组，默认 ['一', '二', '三', '四', '五', '六', '日']
  *  today {string|Date} 当日，用来高亮显示，可以是字符串或日期对象
@@ -39,9 +80,9 @@ export class DatePicker extends AppearanceElem {
   @prop({ type: String }) min: string
   @prop({ type: String }) max: string
 
-  @state({ shallow: true }) paneRows = [0, 1, 2, 3, 4, 5]
-  @state({ shallow: true }) paneCols = [0, 1, 2, 3, 4, 5, 6]
-  @state({ shallow: true }) datesQueue: any[] = [] // 存放三个月的日历渲染对象,前月、当月、下月的日期数组
+  @state paneRows = [0, 1, 2, 3, 4, 5]
+  @state paneCols = [0, 1, 2, 3, 4, 5, 6]
+  @state datesQueue: any[] = [] // 存放三个月的日历渲染对象,前月、当月、下月的日期数组
   @state renderDateObj: { y: number, m: number, d: number } = { y: 0, m: 0, d: 0 }
   @state selectedDate = ''
   @state selectedyear = ''
@@ -79,18 +120,16 @@ export class DatePicker extends AppearanceElem {
       this.selectedDate = ''
       return
     }
-    let isValid = new Date(nv)
-    if (isValid.toString().includes('Invalid')) return
+    let isValid = this.__parseValue(nv)
+    if (!isValid) return
     if (compareDate(this.renderDate, isValid, 'M') !== 0) {
       if (this.isMounted)
         this.nextTick(() => {
-          this._gotoMonth(isValid)
+          this._gotoMonth(isValid!)
         })
     }
 
-    let date = formatDate(nv, 'yyyy-MM-dd HH:mm:ss');
-
-    this.selectedDate = date.split(' ')[0]
+    this.selectedDate = formatDate(isValid, 'yyyy-MM-dd')
   }
   @watch(['min', 'max'])
   watchMinMax() {
@@ -114,9 +153,14 @@ export class DatePicker extends AppearanceElem {
   //////////////////////////////////// lifecycles
   propsReady(props: Record<string, any>): void {
     let value = props.value
-    this.renderDate = value ? new Date(value) : new Date();
+    // 按 pattern 解析初始值：自定义 pattern 无法被 new Date() 识别
+    const parsed = this.__parseValue(value, props.pattern ?? this.pattern)
+    this.renderDate = parsed ?? new Date();
     this.renderDate.setDate(1);
     this.renderDateObj = { y: this.renderDate.getFullYear(), m: this.renderDate.getMonth() + 1, d: this.renderDate.getDate() };
+    // 年月面板的初始选中项跟随 value，否则面板会退回当前年月（打开时定位到错误的位置）
+    this.selectedyear = this.renderDateObj.y + ''
+    this.selectedMon = this.renderDateObj.m + ''
 
     this._rerender();
   }
@@ -175,7 +219,7 @@ export class DatePicker extends AppearanceElem {
         `)}
         </div>
       </main>
-      <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="ce-date-picker-ym-panel" >
+      <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="ce-date-picker-ym-panel" >
         <ce-card class="ce-date-picker-ym-card" style="padding: var(--ce-spacing-sm);" ref="${this.ymPane}">
           <ce-year-month-panel month-unit="${this.monthUnit}" .year="${this.selectedyear}" .month="${this.selectedMon}" show-month @change="${this.changeYearMonth}" @dblclick="${this.closePanel}"></ce-year-month-panel>
         </ce-card>
@@ -221,6 +265,14 @@ export class DatePicker extends AppearanceElem {
     }
   }
   //////////////////////////////////// methods
+  /** 解析 value：优先按 pattern 解析，再退回浏览器内置格式（ISO、yyyy/MM/dd 等） */
+  __parseValue(value: string, pattern = this.pattern): Date | null {
+    if (isBlank(value)) return null
+    const byPattern = parseDateByPattern(value, pattern)
+    if (byPattern) return byPattern
+    const native = new Date(value)
+    return Number.isNaN(native.getTime()) ? null : native
+  }
   setValue(value: string | number) {
     this.value = formatDate(value, this.pattern)
   }
@@ -228,8 +280,10 @@ export class DatePicker extends AppearanceElem {
     const todayStr = formatDate(gotoDate, this.pattern)
     const diff = compareDate(this.renderDate, gotoDate, 'M')
     if (diff === 0) {
-      this.value = this.__formatValue(todayStr)
-      this.selectedDate = todayStr
+      // todayStr 已按 pattern 格式化，不能再经 __formatValue 二次格式化（toDate 解不出自定义格式）
+      this.value = todayStr
+      // 选中态样式表按 yyyy-MM-dd 匹配格子，selectedDate 必须保持内部标准格式
+      this.selectedDate = formatDate(gotoDate, 'yyyy-MM-dd')
       if (forceUpdate) {
         let calendars = sort<HTMLElement>(this.calendarMonths, (a, b) => parseFloat(a.style.transform.replace(/translateY\((.*?)\)/, '$1')) - parseFloat(b.style.transform.replace(/translateY\((.*?)\)/, '$1')));
         this._rerender2(calendars)
@@ -318,8 +372,7 @@ export class DatePicker extends AppearanceElem {
       return
     }
 
-    calendars[1].ontransitionend = () => {
-      calendars[1].ontransitionend = null
+    settleTransition(calendars[1], () => {
       if (delta > 0) {
         calendars[0].classList.add(NoTransitionClass)
         setTimeout(() => {
@@ -341,7 +394,7 @@ export class DatePicker extends AppearanceElem {
           }, 50);
         }, 50);
       }
-    };
+    }, 'transform');
 
   }
   _getCalendarPaneRenderObject(year: number, month: number, dates: Array<any>) {

@@ -31,4 +31,47 @@
     position: absolute !important;
     transition: transform 0.2s;
   }
+
+  // 摇杆式滚动条
+  &.has-scrollbar .ce-list-container {
+    width: calc(100% - 16px);
+  }
+
+  .ce-scrollbar {
+    position: absolute;
+    right: 4px;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+
+    .ce-scrollbar-thumb {
+      width: 6px;
+      height: 40px;
+      border-radius: 3px;
+      background: var(--ce-color-border);
+      opacity: 0.4;
+      cursor: grab;
+      pointer-events: auto;
+      transition: opacity 0.2s, background 0.2s;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+
+      &:hover {
+        opacity: 0.6;
+        background: var(--ce-color-text-desc);
+      }
+
+      &.dragging {
+        opacity: 0.8;
+        background: var(--ce-color-info);
+        cursor: grabbing;
+        transition: none;
+      }
+    }
+  }
 }

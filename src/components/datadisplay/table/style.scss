@@ -1,12 +1,16 @@
+@use "../../../css/mixins";
 @use "../../../css/functions" as fn;
 
 :host {
+  display: block;
   --table-color-border: var(--ce-color-border-secondary);
-  --table-color-highlight: #f5f5f5;
+  --table-color-highlight: rgb(var(--ce-color-text-rgb) / 0.06);
   --table-color-border-fixed: var(--ce-color-border);
   // --table-tree-indent: 1em;
-  --table-bgcolor-row: #fff;
-  --table-bgcolor: #f0f0f0;
+  // 固定列/表头需要不透明底色盖住滚动内容，只能取表面色而不是调色板原色
+  // （--ce-color-background 不随暗色主题翻转）。
+  --table-bgcolor-row: var(--ce-color-bg);
+  --table-bgcolor: rgb(var(--ce-color-text-rgb) / 0.06);
 }
 
 .ce-table {
@@ -37,7 +41,7 @@
     position: absolute;
     display: inline-flex;
     z-index: 1;
-    background-color: var(--ce-color-background);
+    background-color: var(--ce-color-bg);
 
     &.is-left {
       left: 0;
@@ -177,7 +181,7 @@
       .ce-table-group-stats {
         .ce-table-cell:not(.ce-table-tree-cell, [column^="__"]) {
           .ce-table-cell-content {
-            font-size: max(12px, var(--ce-font-sm-em));
+            font-size: var(--ce-font-sm);
             text-align: right;
           }
 
@@ -410,9 +414,32 @@
   }
 }
 
+// 视口外的格子跳过渲染与布局。100 列时横向内容宽 12000px、可见区约 1200px，
+// 九成格子白算一遍样式与布局。
+// 格子尺寸由行高和 `--column-width-*` 决定、与内容无关，跳过不影响几何。
+// 代价是隐式 `contain: layout paint`：格内 `position:fixed` 的元素会被裁在格子里，
+// 所以弹层必须挂到 body（`ce-overlay` 已如此）。打印/导出需要完整渲染时，
+// 用 `optimizeRender=false` 关掉，即下面这条 `.is-no-render-opt`。
+.ce-table.is-no-render-opt .ce-table-cell {
+  content-visibility: visible;
+}
+
+// 列窗口外的格子：显式标记为跳过渲染（`hidden` 比 `auto` 多跳过样式重算）。
+// `auto` 的解冻粒度是**整个 .ce-table-v-wrapper 子树** —— 行一滚进视口，一行上百个
+// 格子全部解冻、重算样式；盖上 `hidden` 后它们不再随行解冻，回收一行只需处理
+// 视口内那十几列。几何不受影响：格子宽高来自 `--column-width-*` 与行高。
+.ce-table-cell.is-col-offscreen {
+  content-visibility: hidden;
+}
+
+.ce-table.is-no-render-opt .ce-table-cell.is-col-offscreen {
+  content-visibility: visible;
+}
+
 .ce-table-cell {
   position: relative;
   overflow: hidden;
+  content-visibility: auto;
 
   &.ce-table-tree-cell {
     display: flex !important;
@@ -441,10 +468,6 @@
       }
     }
 
-    ce-icon {
-      // transition: transform 0.3s;
-    }
-
     &.is-expanded {
       ce-icon {
         transform: rotateZ(90deg) !important;
@@ -457,7 +480,11 @@
   }
 
   &[__note] {
-    &::after {
+    // 用 ::before 而不是 ::after：可编辑表格的**填充柄**（editableStyle.scss:183
+    // `.ce-table-selected-cell-bottom.ce-table-selected-cell-right::after`）也是 ::after，
+    // 一个元素只有一个 ::after，两条规则会被**逐条声明合并**成同一个盒子 ——
+    // 选中带批注的格时，绿色 4px 方块 + 黄色边框叠在一起，角标变成一个绿底黄角的怪块。
+    &::before {
       z-index: 2;
       content: "";
       pointer-events: none;
@@ -527,7 +554,7 @@
       }
 
       &.ce-table-group-size {
-        font-size: max(12px, var(--ce-font-sm-em));
+        font-size: var(--ce-font-sm);
         color: var(--ce-color-text-secondary);
       }
     }
@@ -600,11 +627,7 @@
   // background-color: var(--table-bgcolor);
   padding-bottom: var(--table-body-container-padding);
 
-  #vpillar {
-    width: 1px;
-    z-index: -1;
-    position: relative;
-  }
+  @include mixins.virtual-pillar;
 
   .ce-table-v-wrapper {
     width: 100%;
@@ -687,4 +710,23 @@
   border-width: 0 !important;
   border-left-width: 1px !important;
   border-style: dotted !important;
+}
+
+// 缩进与箭头旋转只在一次树形展开周期内过渡。滚动回收会复用物理行并重写
+// data-level / is-expanded，门控外必须保持无过渡，否则每次回收都会播放动画。
+:host([data-tree-anim]) {
+  .ce-table-cell .ce-table-caret {
+    transition: padding-left var(--ce-table-tree-duration, var(--ce-list-transition-duration, .3s)) var(--ce-table-tree-easing, var(--ce-list-transition-timing-function, ease));
+  }
+
+  .ce-table-cell .ce-table-caret ce-icon {
+    transition: transform var(--ce-table-tree-duration, var(--ce-list-transition-duration, .3s)) var(--ce-table-tree-easing, var(--ce-list-transition-timing-function, ease));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host([data-tree-anim]) .ce-table-cell .ce-table-caret,
+  :host([data-tree-anim]) .ce-table-cell .ce-table-caret ce-icon {
+    transition: none;
+  }
 }

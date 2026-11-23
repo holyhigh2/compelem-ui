@@ -39,6 +39,7 @@ import { ColumnProp, ColumnType, DataSelectionOption } from "./types";
  *  trackIndex {boolean} 当type是index/selection时，过滤数据后可跟踪原行号
  *  dataSelection {array} 可选项，可以是字符串数组或对象数组，对象格式如下{label,value}
  *  dataSelectionOption {object} 可选项配置 {check:boolean 输入框内容必须符合选项中的某个值, multiple:boolean 多选}
+ *  picker {boolean} 该列的选值弹层由外部接管：点击 caret 只派发 cellpick 事件，组件不内置弹层。默认false
  *  tree {boolean} 是否为树形列，默认false。table开启tree属性时生效，一个table内只有第一个启用该属性的列生效；type 为index/selection时无效；树形列强制左对齐
  *  stats {boolean|string} 是否开启列统计，开启后会根据dataType自动显示不同的统计指标。也可指定默认指标类型，仅限于dataType为number/date/datetime/time时有效。
  *        number 列可选 mean/max/min/median/sum/range
@@ -69,10 +70,16 @@ export class Column extends Field {
   //////////////////////////////////// props
   @prop({ type: String }) type: string;
   @prop({ type: [Boolean, String] }) indexButton = false
-  @prop({ type: Number, model: true }) width: number;
+  @prop({ type: Number, model: true }) width!: number;
   @prop minWidth: number = 40;
   @prop maxWidth: number = 999999;
   @prop({ type: String, model: true }) align: string;
+  /**
+   * 垂直对齐，可选值：top/center/bottom（对应 flex-start/center/flex-end）。
+   * 通过 CSS 变量 `--column-valign-<prop>` 下发，默认 center；
+   * 单元格级可写内联变量 `--column-valign-<prop>` 就近覆盖（与水平对齐同机制）。
+   */
+  @prop({ type: String, model: true }) valign: string;
   @prop({ type: String, model: true }) headerAlign: string;
   @prop resizable = true;
 
@@ -89,6 +96,12 @@ export class Column extends Field {
   @prop tagAppearance: string = 'flat'
   @prop headerIcon = ''
   @prop multiple = false
+  /**
+   * 空值占位文本：单元格显示值为空串/nil 时展示的占位（如「—」）。
+   * 仅影响渲染（_getCellValue 的返回），不写回数据；编辑框预填仍取原始数据
+   * （Editable.activeInput 读 innerData），所以不会把占位符带进编辑态。
+   */
+  @prop({ type: String }) emptyText = ''
 
   /**
    * 可选项
@@ -99,10 +112,15 @@ export class Column extends Field {
    * multiple:false 多选
    */
   @prop({ type: Object }) dataSelectionOption: DataSelectionOption = { constraint: false, multiple: false };
+  /**
+   * 该列的选值弹层由外部接管：点击单元格右上角的 caret 时只派发 `cellpick` 事件，
+   * 组件内不内置任何弹层。默认 false
+   */
+  @prop({ type: Boolean }) picker = false;
   @prop({ type: String }) link: string;
   @prop({ type: Object }) linkOptions: Record<string, any> = { target: '_self', defaultColor: '-webkit-link' }
 
-  @state({ prop: 'width' }) renderWidth: number = 0;
+  @state renderWidth: number = this.width;
   @state headerHeight = '100%';
   @state hasChild = false;
   @state rootWidth = 0;
@@ -153,6 +171,10 @@ export class Column extends Field {
   // }
   @watch('align', { immediate: false })
   watchAlign(nv: string) {
+    this.__setColumnAlign()
+  }
+  @watch('valign', { immediate: false })
+  watchValign(nv: string) {
     this.__setColumnAlign()
   }
   @watch('type', { immediate: true })

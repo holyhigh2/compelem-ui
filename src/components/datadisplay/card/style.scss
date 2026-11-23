@@ -4,7 +4,14 @@
   display: block;
   border-radius: var(--ce-card-radius);
   background: var(--ce-card-bg);
-  padding: calc(var(--ce-card-padding) / 2);
+  // 内容内距的唯一来源。原为「host 半内距 + 各槽位再叠半内距」两段式：
+  // 水平凑出 --ce-card-padding 但垂直只有一半，且外部覆盖 host padding 时槽位内距仍在
+  padding: var(--ce-card-padding);
+}
+
+// flush：无内距。与 ce-list 组合时由列表项自身提供行边距，卡片只提供表面 / 描边 / 圆角
+:host([flush]) {
+  padding: 0;
 }
 
 :host([link]),
@@ -21,6 +28,12 @@
   border-radius: inherit;
   transition: box-shadow 0.3s, border-width 0.3s, opacity 0.3s;
   z-index: 1;
+
+  // 图上文字：背景图与主题前景色无关，必须走图上专用字色，否则浅色主题下深灰字
+  // 压在深色照片上不可读
+  &.on-image {
+    color: var(--ce-card-image-fg, var(--ce-color-on-text));
+  }
 
   .ce-card-content {
     flex: 1;
@@ -40,7 +53,7 @@
     }
 
     >p {
-      font-size: var(--ce-card-body-size);
+      font-size: var(--ce-card-subtitle-size);
       font-weight: 400;
       line-height: 1.5;
       margin: 0;
@@ -57,15 +70,21 @@
 
     &[visible] {
       padding-bottom: var(--ce-card-gap);
-      padding-inline: calc(var(--ce-card-padding) / 2);
 
       +main {
         padding-top: 0;
       }
     }
 
+    // 卡片无正文（默认/正文槽位均为空）时，header 不保留底部间距。
+    // 原先用 `:has(+ .ce-card-slot.bodyless)` 判断，但 :has() 需要
+    // Chrome105 / Safari15.4 / Firefox121+，旧 Firefox 会整条规则静默失效
+    // （卡片底部多出一截空白）——改为由模板在 header 上落 [bodyless] 标记。
+    &[visible][bodyless] {
+      padding-bottom: 0;
+    }
+
     +div {
-      padding-inline: calc(var(--ce-card-padding) / 2);
       line-height: 1.5;
       font-size: var(--ce-card-body-size);
       flex: 1;
@@ -77,14 +96,15 @@
 
   >main {
     font-size: var(--ce-card-body-size);
-    padding-inline: calc(var(--ce-card-padding) / 2);
   }
 
   >footer {
-    // font-size: var(--ce-card-footer-size);
+    font-size: var(--ce-card-footer-size);
     display: flex;
     align-items: center;
-    padding-top: calc(var(--ce-card-padding) / 2);
+    // 与正文的间距走 --ce-card-gap（与 header 一致），不再挂在 --ce-card-padding 上——
+    // 否则 flush 卡片的动作条会与正文粘连
+    padding-top: var(--ce-card-gap);
     gap: .5rem;
   }
 
@@ -97,9 +117,32 @@
   width: 100%;
   height: 100%;
   z-index: 0;
+  // 图片与遮罩都要被卡片圆角裁掉；inherit 取宿主（host）的圆角
+  border-radius: inherit;
+  overflow: hidden;
 
   ce-img {
     width: 100%;
     height: 100%;
   }
+
+  // 遮罩：与图片亮度无关地保证文字可读。.ce-card-image 自带 stacking context
+  // （absolute + z-index:0），这里的 z-index 只在图片层内部排序，不会盖住内容层
+  &[masked]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: var(--ce-card-image-mask, linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.26))); // color-allow 图片遮罩渐变
+  }
+}
+
+// 浅底图：改用浅色遮罩 + 深色字（同样可被 --ce-card-image-mask / --ce-card-image-fg 覆盖）
+:host([image-mask="light"]) .ce-card.on-image {
+  color: var(--ce-card-image-fg, var(--ce-color-text));
+}
+
+:host([image-mask="light"]) .ce-card-image[masked]::after {
+  background: var(--ce-card-image-mask, linear-gradient(to top, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.55)));
 }

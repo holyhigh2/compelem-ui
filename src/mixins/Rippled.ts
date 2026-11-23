@@ -2,6 +2,8 @@ import { CompElem, Constructor } from "compelem"
 import { isString } from "myfx"
 import { rippleOut, RipplePalette, RippleSheet } from "../directives/ripples/Ripples"
 import { getRGBColorValue } from "../utils/color"
+import { adoptStyleSheets } from "../utils/utils"
+import { settleTransition } from "../utils/transition"
 
 /**
  * 涟漪效果混入，同
@@ -13,7 +15,7 @@ export function Rippled<T extends Constructor<any>>(spuerClass: T) {
         constructor(...args: any[]) {
             super(...args)
 
-            this.shadowRoot!.adoptedStyleSheets.includes(RippleSheet) || (this.shadowRoot!.adoptedStyleSheets = [...this.shadowRoot!.adoptedStyleSheets, RippleSheet])
+            adoptStyleSheets(this.shadowRoot, RippleSheet)
 
             this.addEventListener('mousedown', this.toRipple)
         }
@@ -58,12 +60,9 @@ export function Rippled<T extends Constructor<any>>(spuerClass: T) {
             setTimeout(() => {
                 ripple.style.opacity = '0.2'
                 ripple.style.transform = `translate(${(width - diameter) / 2}px,${(height - diameter) / 2}px) scale3d(1,1,1)`
+                const finish = settleTransition(ripple, () => rippleOut(ripple), 'transform')
+                ripple.ontransitioncancel = () => finish()
             }, 10);
-
-            ripple.ontransitioncancel = ripple.ontransitionend = (e) => {
-                if (e.propertyName !== 'transform') return;
-                rippleOut(ripple)
-            }
 
             rootEl.parentNode?.insertBefore(ripple, rootEl)
         }

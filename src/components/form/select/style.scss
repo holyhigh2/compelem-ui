@@ -59,16 +59,18 @@
       pointer-events: none;
       display: inline-block;
       width: 1rem;
-      font-size: 1rem;
+      font-size: var(--ce-font-md);
       margin-right: -6px;
     }
   }
 
-  >ce-input {
+  // 单选模式下内部不可输入，需隐藏 ce-input-tag>ce-input 的输入区（.ce-form-control），
+  // 否则该容器受 `.ce-input-tag` 的 flex:1 0 80px/min-width:80px 约束保留空占位，
+  // 会把 append 的 caret 图标挤到第二行。
+  // 注意：该输入区位于 ce-input-tag 的嵌套 shadow 内（两层边界），
+  // Select 自身无法通过 ::part 直接命中，故由 InputTag 的 hide-input
+  // 属性在 ce-input 自己的样式表里隐藏（见 input.scss）。
+  ce-input-tag {
     width: 100%;
-
-    &::part(input) {
-      display: none;
-    }
   }
 }

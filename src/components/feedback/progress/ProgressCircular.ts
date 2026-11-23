@@ -5,7 +5,7 @@ import { classes, CompElem, computed, css, csscope, Csscope, h, ifTrue, prop, st
 import style from "./style.scss?tmpl";
 /**
  * 环形进度条
- * @props
+ * @attrs
  *  value {number} 进度数值，支持小数，最大100。默认0
  *  width {number} 进度条宽度
  *  r {number} 圆形半径
@@ -57,11 +57,11 @@ export class ProgressCircular extends CompElem {
     if (nv === ov && nv === undefined) return
     ColorHelper.setColor(nv, this.style, `--color`)
   }
-  @watch("bgColor", { immediate: true })
-  __watchBgColor(nv: any, ov: any) {
-    if (nv === ov && nv === undefined) return
-    ColorHelper.setColor(nv, this.style, `--bg-color`)
-  }
+  // 原先这里有一条 `@watch("bgColor", { immediate: true })`，已删除：
+  // 本组件**没有** bgColor 这个字段（它属于 ProgressLinear），而且它写入的
+  // `--bg-color` 变量全库没有任何消费者（轨道 `<circle class="ce-progress-track">`
+  // 用的是硬编码 `stroke="gray"` + hideTrack 开关）。纯遗留死代码，
+  // 留在编译期会报 E-WATCH-SOURCE（信号不存在，effect 永不触发）。
   @watch('value', { immediate: true })
   watchValue(v: number) {
     if (v > 100) v = 100

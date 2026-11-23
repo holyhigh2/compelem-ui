@@ -8,27 +8,27 @@
 .ce-heading {
   &.ce-highlight-level- {
     &6 {
-      font-size: 1rem;
+      font-size: var(--ce-font-md);
       line-height: 1.5rem;
     }
     &5 {
-      font-size: 1.25rem;
+      font-size: var(--ce-font-xl);
       line-height: 1.75rem;
     }
     &4 {
-      font-size: 1.5rem;
+      font-size: calc(var(--ce-font-base) * 1.5);
       line-height: 2rem;
     }
     &3 {
-      font-size: 1.875rem;
+      font-size: calc(var(--ce-font-base) * 1.875);
       line-height: 2.25rem;
     }
     &2 {
-      font-size: 2.25rem;
+      font-size: calc(var(--ce-font-base) * 2.25);
       line-height: 2.5rem;
     }
     &1 {
-      font-size: 3rem;
+      font-size: calc(var(--ce-font-base) * 3);
       line-height: 1rem;
     }
   }

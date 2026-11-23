@@ -7,13 +7,21 @@
   display: flex;
   align-items: center;
   gap: var(--ce-spacing-sm);
+  width: 100%;
+  min-width: 0;
+
+  dl {
+    min-width: 0;
+  }
 
   .ce-stat-title {
     margin: 0;
-    font-size: var(--ce-font-sm-em);
+    font-size: var(--ce-font-sm);
     line-height: var(--ce-lineh-md-em);
     color: var(--ce-color-gray-500);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .ce-stat-value {
@@ -25,8 +33,11 @@
     justify-content: space-between;
     align-items: flex-end;
     margin-top: var(--ce-spacing-xs);
+    //数值动画（animation-duration）期间等宽数字可消除逐帧宽度抖动
+    font-variant-numeric: tabular-nums;
 
-    .is-desc {
+    .ce-stat-value-desc {
+      margin-inline-start: var(--ce-spacing-xs);
       font-size: var(--ce-font-sm);
       color: var(--ce-color-gray-500);
       font-weight: 500;
@@ -34,6 +45,10 @@
 
     .ce-stat-trend {
       font-size: var(--ce-font-sm);
+      // 环比是「数值的注脚」，必须整体可读：窄格子里一旦被 flex 压缩就会折成
+      // 两行（箭头一行、百分比一行），既拆散了语义又把格子撑高，所以禁止收缩与换行。
+      flex: none;
+      white-space: nowrap;
 
       &.ce-stat-up {
         color: var(--ce-color-success);
@@ -48,6 +63,49 @@
         line-height: var(--ce-lineh-sm);
         height: 1.5em;
       }
+    }
+  }
+
+  // 值在标题上方：看板卡片以数字为第一视觉位，标签退到下方
+  &.is-value-first {
+    dl {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .ce-stat-value {
+      order: 1;
+      margin-top: 0;
+      margin-bottom: var(--ce-spacing-xs);
+    }
+
+    .ce-stat-title {
+      order: 2;
+    }
+  }
+
+  // 环比放到数值下方：窄格子（指标栅格的格子可以窄到 96px）里「数值 + 环比」
+  // 一行本来就放不下，缩小间距也没用 —— 只能换行。独占一行后贴左与数值同起点，
+  // 不再被 space-between 顶到最右边，也就不存在"数字和涨幅隔着半屏"的问题。
+  &.is-trend-below .ce-stat-value {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+
+    .ce-stat-trend {
+      flex: 0 0 100%;
+      margin-top: var(--ce-spacing-xs);
+    }
+  }
+
+  // 红涨绿跌口径（金融/行情习惯）：放在上面默认配色之后，同特异度时覆写
+  &.is-trend-inverse .ce-stat-trend {
+    &.ce-stat-up {
+      color: var(--ce-color-error);
+    }
+
+    &.ce-stat-down {
+      color: var(--ce-color-success);
     }
   }
 }

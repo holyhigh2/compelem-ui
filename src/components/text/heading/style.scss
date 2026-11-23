@@ -1,27 +1,30 @@
 ce-heading {
   display: inline-block;
+  // ColorHelper.setColor 将颜色写入宿主 --color（未设置时回落 currentColor）
+  color: var(--color, currentColor);
   &[level="6"] {
-    font-size: 1rem;
+    font-size: var(--ce-font-md);
     line-height: 1.5rem;
   }
   &[level="5"] {
-    font-size: 1.25rem;
+    font-size: var(--ce-font-xl);
     line-height: 1.75rem;
   }
   &[level="4"] {
-    font-size: 1.5rem;
+    font-size: calc(var(--ce-font-base) * 1.5);
     line-height: 2rem;
   }
   &[level="3"] {
-    font-size: 1.875rem;
+    font-size: calc(var(--ce-font-base) * 1.875);
     line-height: 2.25rem;
   }
   &[level="2"] {
-    font-size: 2.25rem;
+    font-size: calc(var(--ce-font-base) * 2.25);
     line-height: 2.5rem;
   }
-  &[level="6"] {
-    font-size: 3rem;
-    line-height: 1rem;
+  // 原文件误写为第二个 [level="6"]（line-height 1rem），导致 level="1" 无任何字号样式
+  &[level="1"] {
+    font-size: calc(var(--ce-font-base) * 3);
+    line-height: 3.5rem;
   }
 }

@@ -7,7 +7,7 @@ import { List } from "./List";
 import style from "./style-group.scss?tmpl";
 /**
  * 列表组容器
- * @props
+ * @attrs
  *  title {string} 标题
  *  expanded {boolean} 是否展开组，默认true
  *  collapsable {boolean} 是否可折叠，默认true
@@ -75,6 +75,9 @@ export class ListGroup extends AppearanceElem {
   //////////////////////////////////// methods
   toggleExpand() {
     if (!this.collapsable) return
-    this.expanded = !this.expanded
+    // 组件内不能直接给 prop 赋值（E-PROP-ASSIGN）：props 由外部单向传入。
+    // 内部写回必须走 updateProps —— 它直写 __data_ 并更新对应信号，
+    // 是 0.30 里唯一真正落值的通道（`this.expanded = x` 只会被丢弃）。
+    this.updateProps({ expanded: !this.expanded })
   }
 }

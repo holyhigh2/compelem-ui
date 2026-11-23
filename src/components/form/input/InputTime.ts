@@ -28,12 +28,9 @@ import { inputStyleSheet } from "./styleSheets";
  *
  * @author holyhigh2
  */
-@emits('clear', 'update:value', 'change')
+@emits('input', 'clear', 'update:value', 'change')
 @tag("ce-input-time")
 export class InputTime extends BaseInput {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   @query('ce-input')
   input: Input;
 
@@ -56,7 +53,7 @@ export class InputTime extends BaseInput {
   secListEl = createRef<LoopList>()
 
   @csscope(Csscope.GLOBAL)
-  static get globalCss(): string {
+  static get globalCss() {
     return appearanceStyle;
   }
   @csscope(Csscope.INNER)
@@ -93,7 +90,7 @@ export class InputTime extends BaseInput {
 
   render(): Template {
     return h`
-      <ce-input-mask class="ce-input-time" part="input" border="${this.border}" mask="${this.hideSeconds ? '00:00' : '00:00:00'}" guide blocks="${this.hideSeconds ? '{0,23},{0,59}' : '{0,23},{0,59},{0,59}'}" placeholder-char="-" greedy
+      <ce-input-mask class="ce-input-time" part="input" align="${this.align}" border="${this.border}" mask="${this.hideSeconds ? '00:00' : '00:00:00'}" guide blocks="${this.hideSeconds ? '{0,23},{0,59}' : '{0,23},{0,59},{0,59}'}" placeholder-char="-" greedy
       .clearable="${this.clearable}" .required="${this.required}" .label="${this.label}" 
       @input="${this.onInput}"
       @focus="${this.onFocus}"
@@ -112,7 +109,7 @@ export class InputTime extends BaseInput {
           <slot name="append"></slot>
         </div>
       </ce-input-mask>
-      <ce-overlay placement="bottom-end" auto-active close-on-click opacity="0.25" class="ce-input-time-panel">
+      <ce-overlay surface placement="bottom-end" auto-active close-on-click opacity="0.25" class="ce-input-time-panel">
         <ce-card class="ce-input-time-card" style="padding: var(--ce-spacing-xs);" ref="${this.timePane}">
           <ce-row gap="0" style="height: 14rem;overflow: hidden;" @mutate.child.debounce:100="${this.onColChange}">
             <ce-col>
@@ -128,7 +125,7 @@ export class InputTime extends BaseInput {
             `)}
           </ce-row>
           <ce-divider></ce-divider>
-          <footer slot="actions" style="padding-top:.25rem;gap: 1rem;display: flex;justify-content: flex-end;align-items: center;">
+          <footer slot="actions" style="padding-top:.25rem;gap: .5rem;display: flex;justify-content: flex-end;align-items: center;">
             <ce-button appearance="subtle" @click="${this.selectNow}">此刻</ce-button>
             <ce-button appearance="outlined" color="info" @click="${this.closePanel}">确定</ce-button>
           </footer>
@@ -180,6 +177,9 @@ export class InputTime extends BaseInput {
     }, 100);
   }
   openTimePanel() {
+    // 禁用/加载中态不展开时间浮层：内部 input 虽 ?disabled，但时钟图标的
+    // @click 仍会走到这里，必须在入口拦住（与 Select.__showList 同口径）。
+    if (this.disabled || this.loading) return
     // 先同步绑定面板 loop-list 的 select 原生监听（幂等）。
     // 必须在 nextTick 数据推送/滚动之前绑定：nextTick 内的 scrollToSelected 在首开时
     // 可能因 overlay 尚未布局完成而抛错，曾导致末尾的 bindSelectListeners 被跳过，
@@ -234,7 +234,9 @@ export class InputTime extends BaseInput {
 
   }
   onInput(obj: Record<string, any>) {
-    let inputVal = obj.event.target.value
+    // 透传内层 ce-input-mask 的 input：值由面板点选或失焦统一提交（onBlur），
+    // 这里不做解析，只让 ce-input-time 的 @input 可见，包括清空时无原生事件的那次
+    this.emit('input', { value: obj.value })
   }
   onClear() {
     this.selectedHour = this.selectedMin = '';

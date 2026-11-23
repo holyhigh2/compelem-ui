@@ -1,0 +1,27 @@
+@use "../../../css/functions" as fn;
+
+:host {
+  display: inline-block;
+  width: 100%;
+}
+
+.ce-combobox {
+  position: relative;
+  width: 100%;
+
+  .ce-combobox-caret {
+    height: 100%;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    color: fn.color(--ce-color-placeholder-rgb);
+    cursor: pointer;
+  }
+
+  &:not(.is-disabled):hover .ce-combobox-caret,
+  &:focus-within .ce-combobox-caret,
+  &.is-open .ce-combobox-caret {
+    color: fn.color(--ce-color-text-rgb);
+  }
+}

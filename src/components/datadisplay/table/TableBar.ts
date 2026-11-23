@@ -2,6 +2,7 @@ import { CompElem, computed, createRef, css, csscope, Csscope, forEach, h, ifTru
 import { every, flatMap, identity, includes, isArray, isBoolean, isEmpty, isObject, join, last, map, parseJSON, range, remove, size, some, startsWith } from "myfx";
 import uii from "uiik";
 import { SortType } from "../../../constants";
+import { syncFilterPaneActive } from "../../../base/BarActions";
 import { tooltip } from "../../../directives/tooltip/Tooltip";
 import { Check, Drag, SortDown, SortUp } from "../../../icons/icons";
 import { Button } from "../../button/Button";
@@ -39,6 +40,10 @@ export class TableBar extends CompElem {
   @csscope(Csscope.GLOBAL)
   static get globalCss() {
     return css`
+        /* 工具栏是密度上下文：内部控件未显式给字号时按正文档继承 */
+        ce-table-bar {
+          font-size: var(--ce-font-md);
+        }
         .uii-sortable-active{
           color:red;
         }
@@ -70,12 +75,20 @@ export class TableBar extends CompElem {
   @state sortList: Record<string, any>[] = []
   @state groupList: Array<{ prop: string, condition?: string, name: string }> = []
   @state filterList: Record<string, any>[] = []
+  // 可填色字段列表
   @state fillColorList: Record<string, any>[] = []
 
   @state selectionSize = 0
-  selectionTotal = 0
+  // ⚠️ 必须 @state：模板里「已选择 <b>${selectionSize}</b> / ${selectionTotal}」
+  // 的第二个插值若绑裸字段，compelem 细粒度绑定只求值一次 ⇒ 复选后
+  // selectionTotal 由 0 变 3 也不会重渲染，文本恒显示「1 / 0」
+  // （2026-10-15 在 compelem-report-builder 系统配置弹框实测）。
+  @state selectionTotal = 0
 
   @state liteMode = false
+  // 记录面板内容已初始化。只能用整数组赋值更新：数组 mutation 不进更新队列，
+  // 用 push 时读取本字段的 ifTrue 分支不会重渲染，面板内容不落地 ⇒ 浮层量不到尺寸，
+  // 首次打开停在不可见状态（openBy 后 __revealPending 等不到内容）。
   @state overlayInitedList: string[] = []
 
   tableRef: Table
@@ -103,6 +116,20 @@ export class TableBar extends CompElem {
   @computed
   get showControls() {
     return isBoolean(this.controls) ? this.controls : !isEmpty(this.controls)
+  }
+  /**
+   * 内置控制按钮（字段/填色/分组/筛选/排序/冻结/行高）在 reverse=false 时被
+   * 分配到 ce-toolbar 的默认插槽容器 .ce-toolbar-content。该容器是 flex:1
+   * 且没有 justify-content（默认 normal），按钮会紧贴左侧查询/操作按钮，
+   * 右侧留出大片空白。margin-left:auto 让这组按钮在容器内靠右。
+   * reverse=true 时它们进入 slot="left"（.is-left），不需要该规则。
+   *
+   * 注意：.ce-toolbar-content 位于 ce-toolbar 的 shadowRoot 且组件未暴露
+   * ::part，宿主 document 级 CSS 无法命中，只能在组件内修。
+   */
+  @computed
+  get controlsStyle() {
+    return `display:flex;column-gap: var(--ce-spacing-sm);align-items: center;${this.reverse ? '' : 'margin-left:auto;'}`
   }
   @computed
   get showControlField() {
@@ -144,9 +171,30 @@ export class TableBar extends CompElem {
     // }
   }
   mounted(): void {
-    this.tableRef = (this.wrapperComponent?.renderRoot ?? document.body)?.querySelector(this.target) as Table
-    if (this.tableRef) {
+    // ⚠️ 宿主组件的内容可能被 overlay 搬到 document.body（典型：ce-table-bar 嵌在
+    // ce-dialog 里时，整个子树物理搬移出 wrapperComponent.renderRoot）⇒ 从
+    // renderRoot 找不到 target 时必须退文档级查找，否则 tableRef 为 undefined、
+    // _setTableBar 从未调用，复选后 selection slot 等 table 联动全部失效
+    // （2026-10-15 在 compelem-report-builder 系统配置弹框实测）。
+    this.tableRef = (this.wrapperComponent?.renderRoot?.querySelector(this.target) ?? document.querySelector(this.target)) as Table
+    if (!this.tableRef) return
+    if (typeof (this.tableRef as any)._setTableBar !== "function") {
+      // target 命中的是自定义元素但尚未 upgrade：compelem 渲染管线里本 mounted()
+      // 可能跑在子组件的浏览器 upgrade 之前（2026-10-15 探针实证：节点已
+      // isConnected、customElements.get(tag) 已有定义，但 matches(':defined')
+      // 为 false、原型仍是 HTMLElement）⇒ 主动补齐升级后重试（upgrade 幂等，
+      // 对已升级节点是 no-op）。
+      const tag = (this.tableRef as any).tagName?.toLowerCase()
+      if (tag && customElements.get(tag)) customElements.upgrade(this.tableRef)
+    }
+    if (typeof (this.tableRef as any)._setTableBar === "function") {
       this.tableRef._setTableBar(this)
+      // 表格若在本次接线之前就已就绪（_isReady 已翻真），__onReady 发出的自然
+      // 通知已经错过 ⇒ 补发一次就绪回调（与 Table.__onReady 内的调用同源，
+      // 未就绪时则等表格自己的迟到回调推过来，这里不抢跑）。
+      if ((this.tableRef as any)._isReady) this._onContainerReady()
+    } else {
+      console.warn("[ce-table-bar] target 命中的元素不是 Table 实例", this.target, (this.tableRef as any).tagName)
     }
   }
   render(): Template {
@@ -155,52 +203,54 @@ export class TableBar extends CompElem {
       <span slot="${this.reverse ? '' : 'left'}" ${show(this.selectionSize < 1)} style="display:flex;column-gap: var(--ce-spacing-sm);align-items: center;">
         <slot></slot>
       </span>
-      <span slot="${!this.reverse ? '' : 'left'}" ${show(this.selectionSize < 1 && this.showControls)} style="display:flex;column-gap: var(--ce-spacing-sm);align-items: center;">
-        <ce-button ${show(this.showControlField)} ${tooltip({ content: '字段', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${!this.isAllChecked ? 'pale' : 'subtle'}" icon="c-svg-nut" size="${this.size}" color="${!this.isAllChecked ? 'info' : 'rgba(0,0,0,.65)'}" @click="${this.openField}">
+      <span slot="${!this.reverse ? '' : 'left'}" ${show(this.selectionSize < 1 && this.showControls)} style="${this.controlsStyle}">
+        <ce-button ${show(this.showControlField)} ${tooltip({ content: '字段', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${!this.isAllChecked ? 'pale' : 'subtle'}" icon="c-svg-nut" size="${this.size}" color="${!this.isAllChecked ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openField}">
         ${this.liteMode || this.compact ? '' : '字段'}
         </ce-button>
-        <ce-button ${show(this.showControlFillColor && !isEmpty(this.colorableFields))} ${tooltip({ content: '填色', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fillColorList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-fill-color" size="${this.size}" color="${this.fillColorList.length > 0 ? 'info' : 'rgba(0,0,0,.65)'}" @click="${this.openFillColor}">
+        <ce-button ${show(this.showControlFillColor && !isEmpty(this.colorableFields))} ${tooltip({ content: '填色', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fillColorList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-fill-color" size="${this.size}" color="${this.fillColorList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFillColor}">
         ${this.liteMode || this.compact ? '' : '填色'}
         </ce-button>
-        <ce-button ${show(this.showControlGroup && !isEmpty(this.groupableFields))} ${tooltip({ content: '分组', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.groupList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-group" size="${this.size}" color="${this.groupList.length > 0 ? 'info' : 'rgba(0,0,0,.65)'}" @click="${this.openGroup}">
+        <ce-button ${show(this.showControlGroup && !isEmpty(this.groupableFields))} ${tooltip({ content: '分组', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.groupList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-group" size="${this.size}" color="${this.groupList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openGroup}">
         ${this.liteMode || this.compact ? '' : '分组'}
         </ce-button>
-        <ce-button ${show(this.showControlFilter && !isEmpty(this.filterableFields))} ${tooltip({ content: '筛选', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.filterList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-filter-list-light" size="${this.size}" color="${this.filterList.length > 0 ? 'info' : 'rgba(0,0,0,.65)'}" @click="${this.openFilter}">
+        <ce-button ${show(this.showControlFilter && !isEmpty(this.filterableFields))} ${tooltip({ content: '筛选', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.filterList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-filter-list-light" size="${this.size}" color="${this.filterList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFilter}">
         ${this.liteMode || this.compact ? '' : '筛选'}
         </ce-button>
-        <ce-button ${show(this.showControlSort && !isEmpty(this.sortableFields))} ${tooltip({ content: '排序', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.sortList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-sort" size="${this.size}" color="${this.sortList.length > 0 ? 'info' : 'rgba(0,0,0,.65)'}"  @click="${this.openSort}">
+        <ce-button ${show(this.showControlSort && !isEmpty(this.sortableFields))} ${tooltip({ content: '排序', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.sortList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-sort" size="${this.size}" color="${this.sortList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}"  @click="${this.openSort}">
           <span ${show(this.sortList.length > 0)} style="margin-right:var(--ce-spacing-sm);">${this.sortList.length}</span> ${this.liteMode || this.compact ? '' : '排序'}
         </ce-button>
-        <ce-button ${show(this.showControlFixed)} ${tooltip({ content: '冻结', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fixedIndex > 0 ? 'pale' : 'subtle'}" icon="c-svg-pin-fill" size="${this.size}" color="${this.fixedIndex > 0 ? 'info' : 'rgba(0,0,0,.65)'}" @click="${this.openFixed}">
+        <ce-button ${show(this.showControlFixed)} ${tooltip({ content: '冻结', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fixedIndex > 0 ? 'pale' : 'subtle'}" icon="c-svg-pin-fill" size="${this.size}" color="${this.fixedIndex > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFixed}">
         ${this.liteMode || this.compact ? '' : '冻结'}
         </ce-button>
-        <ce-button ${show(this.showControlRowHeight)} appearance="subtle" size="${this.size}" color="rgba(0,0,0,.65)" icon="c-svg-row-height" @click="${this.openRowHeight}" ${tooltip({ content: '行高', placement: 'top' })}></ce-button>
+        <ce-button ${show(this.showControlRowHeight)} appearance="subtle" size="${this.size}" color="var(--ce-color-text-secondary)" icon="c-svg-row-height" @click="${this.openRowHeight}" ${tooltip({ content: '行高', placement: 'top' })}></ce-button>
     
       </span>
 
-      <span slot="${this.reverse ? '' : 'left'}" ${show(this.selectionSize > 0)} style="display:flex;column-gap: var(--ce-spacing-sm);align-items: center;font-size: max(12px, var(--ce-font-sm-em));color: var(--ce-color-text-desc);">
+      <span slot="${this.reverse ? '' : 'left'}" ${show(this.selectionSize > 0)} style="display:flex;column-gap: var(--ce-spacing-sm);align-items: center;font-size: var(--ce-font-sm);color: var(--ce-color-text-desc);">
         已选择 <b style="color:initial;">${this.selectionSize}</b> / ${this.selectionTotal} 条数据
       </span>
-      <span slot="${!this.reverse ? '' : 'left'}" ${show(this.selectionSize > 0)} style="display:flex;column-gap: var(--ce-spacing-sm);align-items: stretch;">
+      ${ifTrue(this.selectionSize > 0, () => h`
+      <span slot="${!this.reverse ? '' : 'left'}" style="display:flex;column-gap: var(--ce-spacing-sm);align-items: stretch;${this.reverse ? '' : 'margin-left:auto;'}">
         <slot name="selection"></slot>
         <ce-divider vertical="true"></ce-divider>
-        <ce-button appearance="subtle" size="${this.size}" color="rgba(0,0,0,.65)" icon="c-svg-times" @click="${this.unselect}"></ce-button>
+        <ce-button appearance="subtle" size="${this.size}" color="var(--ce-color-text-secondary)" icon="c-svg-times" @click="${this.unselect}"></ce-button>
       </span>
+      `)}
     </ce-toolbar>
     <!-- 字段控制面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="field-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="field-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('field-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;max-width: 18rem;padding: var(--ce-spacing-sm);height:18rem;overflow: hidden;resize: both;max-height: 50vh;" ref="${this.fieldPane}" >
         <header style="display: flex;justify-content: space-between;align-items: center;margin-bottom:var(--ce-spacing-sm)">
-          <div style="font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);">字段设置</div>
-          <ce-toggle size="sm" style="color: var(--ce-color-primary)" active-text="隐藏全部" inactive-text="显示全部" .value="${this.isAllChecked}" @change="${this.toggleAllField}"></ce-toggle>
+          <div style="color: var(--ce-color-text-desc);">字段设置</div>
+          <ce-toggle size="sm" style="color: var(--ce-color-primary);--ce-toggle-track-font-size:var(--ce-font-md)" active-text="隐藏全部" inactive-text="显示全部" .value="${this.isAllChecked}" @change="${this.toggleAllField}"></ce-toggle>
         </header>
         <div style="overflow:hidden;flex:1;">
           <ce-scroller style="display: block;height:100%" show-track="false">
             <ce-list gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs);">
               ${forEach(this.tableFields, f => f.prop, f => h`
-              <ce-list-item ripple="false" appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:0" ?unmovable="${!f.movable}">
+              <ce-list-item ripple="false" appearance="pale" style="padding-inline:0" ?unmovable="${!f.movable}">
                 <ce-icon .svg="${Drag}" color="Gainsboro" size="xs" ${styles(['cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' }])}></ce-icon>
                 <span style="overflow: hidden;text-overflow: ellipsis;">${f.name}</span>
                 <ce-toggle slot="append" ${show(f.hidable)} ?disabled="${!f.hidable}" .value="${!this.hiddenList.includes(f.prop)}" prop="${f.prop}" size="sm" style="color: var(--ce-color-primary)" @change="${this.toggleField}"></ce-toggle>
@@ -214,18 +264,18 @@ export class TableBar extends CompElem {
       </div>
     </ce-overlay>
     <!-- 分组面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="group-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="group-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('group-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;max-width: 16rem;padding: var(--ce-spacing-sm);" ref="${this.groupPane}" >
         <ce-list nav gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs)" >
-          <ce-list-header space="compact" style="font-size:var(--ce-font-sm-em);">
+          <ce-list-header space="compact">
             <span>分组设置</span>
             <ce-button appearance="text" color="red" size="sm" style="padding: 0;float: right;" ripple="false" @click="${this.cancelGroup}">取消</ce-button>
           </ce-list-header>
-          ${forEach(this.groupList, s => s.prop, (s, i) => h`
-            <ce-list-item ripple="false" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-              <span style="text-overflow: ellipsis;overflow: hidden;line-height: 1.5;">${i + 1}.&nbsp; ${s.name}</span>
+          ${forEach(this.groupList, s => s.prop, (s) => h`
+            <ce-list-item ripple="false" style="padding-inline:var(--ce-spacing-md)">
+              <span style="text-overflow: ellipsis;overflow: hidden;line-height: 1.5;">${this.groupList.indexOf(s) + 1}.&nbsp; ${s.name}</span>
               <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delGroup}" icon="c-svg-close"></ce-button>
             </ce-list-item>
           `)}
@@ -235,7 +285,7 @@ export class TableBar extends CompElem {
       `)}
       </div>
     </ce-overlay>
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="group-field-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="group-field-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('group-field-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;max-width: 16rem;padding: var(--ce-spacing-sm);" >
@@ -243,7 +293,7 @@ export class TableBar extends CompElem {
           <ce-scroller style="display: block;height:100%" show-track="false">
             <ce-list gap=".2rem" selectable multiple style="min-width: 10rem;padding: var(--ce-spacing-xs);" @select="${this.addGroupField}">
               ${forEach(this.groupableFields, f => f.value, f => h`
-              <ce-list-item ripple="false" ?active="${this.groupList.some(x => x.prop == f.value)}" hoverable appearance="pale" value="${f.value}" style="font-size:var(--ce-font-sm-em);">
+              <ce-list-item ripple="false" ?active="${this.groupList.some(x => x.prop == f.value)}" hoverable appearance="pale" value="${f.value}">
                 <span style="text-overflow: ellipsis;overflow: hidden;line-height: 1.5;">${f.label} </span>
                 <ce-icon slot="append" ${show(this.groupList.some(x => x.prop == f.value))} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
               </ce-list-item>
@@ -256,20 +306,20 @@ export class TableBar extends CompElem {
       </div>
     </ce-overlay>
     <!-- 排序面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="sort-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="sort-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('sort-panel'), () => h`
       <ce-card class="config-card" style="padding: var(--ce-spacing-sm);resize: both;max-height: 50vh;min-width: 14rem;max-width: 16rem;" ref="${this.sortPane}" >
         <ce-list gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs)">
-          <ce-list-header space="compact" style="font-size:var(--ce-font-sm-em);">
+          <ce-list-header space="compact">
             排序设置
             <ce-button appearance="text" color="red" size="sm" style="padding: 0;float: right;" ripple="false" @click="${this.cancelSort}">取消</ce-button>
           </ce-list-header>
-          ${forEach(this.sortList, (s, i) => i, (s, i) => h`
-            <ce-list-item ripple="false" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          ${forEach(this.sortList, (s, i) => i, (s) => h`
+            <ce-list-item ripple="false" style="padding-inline:var(--ce-spacing-md)">
               <div style="display:flex;width: 100%;justify-content: space-between;">
                 <span style="text-overflow: ellipsis;overflow: hidden;line-height: 1.5;">
-                  ${i + 1}.&nbsp;${s.name} &nbsp;&nbsp;
+                  ${this.sortList.indexOf(s) + 1}.&nbsp;${s.name} &nbsp;&nbsp;
                 </span>
                 <ce-toggle .value="${s.sort === SortType.Asc}" data-prop="${s.prop}" active-value="asc" inactive-value="desc" size="sm" style="color: var(--ce-color-primary);width: 3.75rem;" @change="${this.toggleSortType}">
                   <ce-icon slot="active" .svg="${SortUp}" size="lg" style="color: #fff;"></ce-icon>
@@ -285,7 +335,7 @@ export class TableBar extends CompElem {
       `)}
       </div>
     </ce-overlay>
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="sort-field-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="sort-field-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('sort-field-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;padding: var(--ce-spacing-sm);" >
@@ -293,7 +343,7 @@ export class TableBar extends CompElem {
           <ce-scroller style="display: block;height:100%" show-track="false">
             <ce-list gap=".2rem" selectable multiple style="min-width: 10rem;padding: var(--ce-spacing-xs);" @select="${this.addSortField}">
               ${forEach(this.sortableFields, f => f.value, f => h`
-              <ce-list-item ripple="false" ?active="${this.sortList.some(x => x.prop == f.value)}" hoverable appearance="pale" value="${f.value}" style="font-size:var(--ce-font-sm-em);">
+              <ce-list-item ripple="false" ?active="${this.sortList.some(x => x.prop == f.value)}" hoverable appearance="pale" value="${f.value}">
                 <span style="text-overflow: ellipsis;overflow: hidden;">${f.label}</span>
                 <ce-icon slot="append" ${show(this.sortList.some(x => x.prop == f.value))} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
               </ce-list-item>
@@ -306,20 +356,20 @@ export class TableBar extends CompElem {
       </div>
     </ce-overlay>
     <!-- 筛选面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="filter-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="filter-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('filter-panel'), () => h`
       <ce-card class="config-card" style="overflow: hidden;height:18rem;resize: both;max-height: 50vh;min-width: 14rem;padding: var(--ce-spacing-sm);" ref="${this.filterPane}" >
         <header style="display: flex;justify-content: space-between;align-items: center;margin-bottom:var(--ce-spacing-sm)">
-          <div style="font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);">筛选设置</div>
+          <div style="color: var(--ce-color-text-desc);">筛选设置</div>
           <ce-button appearance="text" color="red" size="sm" style="padding: 0;float: right;" ripple="false" @click="${this.cancelFilter}">取消</ce-button>
         </header>
         <div style="overflow:hidden;flex:1;">
         <ce-scroller style="display: block;height:100%" show-track="false">
           <ce-list selectable gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs)" @select="${this.openFilterPane}">
             ${forEach(this.filterableFields, (s, i) => i, (s, i) => h`
-              <ce-list-item ripple="false" value="${s.value}" data-type="${s.dataType}" hoverable style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-                <span style="overflow: hidden;text-overflow: ellipsis;">${s.label}</span> &nbsp;&nbsp; <span style="pointer-events:none;font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);overflow: hidden;text-overflow: ellipsis;">${this.filterList.find(x => x.prop == s.value)?.search}</span>
+              <ce-list-item ripple="false" value="${s.value}" data-type="${s.dataType}" hoverable style="padding-inline:var(--ce-spacing-md)">
+                <span style="overflow: hidden;text-overflow: ellipsis;">${s.label}</span> &nbsp;&nbsp; <span style="pointer-events:none;font-size:var(--ce-font-sm);color: var(--ce-color-text-desc);overflow: hidden;text-overflow: ellipsis;">${this.filterList.find(x => x.prop == s.value)?.search}</span>
                 <ce-icon slot="append" svg="c-svg-chevron-right" style="color: var(--ce-color-text);"></ce-icon>
               </ce-list-item>
             `)}
@@ -331,22 +381,25 @@ export class TableBar extends CompElem {
       </div>
     </ce-overlay>
     <!-- 冻结面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="fixed-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="fixed-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('fixed-panel'), () => h`
       <ce-card class="config-card" style="overflow: hidden;height:18rem;resize: both;min-width: 14rem;max-height: 50vh;padding: var(--ce-spacing-sm);" ref="${this.fixedPane}" >
         <ce-scroller style="display: block;height:100%" show-track="false">
           <ce-list nav gap=".2rem" selectable style="min-width: 10rem;padding: var(--ce-spacing-xs)" @select="${this.onFixed}">
-            <ce-list-header space="compact" style="font-size:var(--ce-font-sm-em);">
+            <ce-list-header space="compact">
               <span>左侧列</span>
               <ce-button appearance="text" color="red" size="sm" style="padding: 0;float: right;" ripple="false" @click="${this.cancelFixed}">取消</ce-button>
             </ce-list-header>
-            ${forEach(this.fixedPropList, identity, (prop, i) => h`
-            <ce-list-item value="${prop}" appearance="pale" hoverable ?active="${this.fixedIndex === i + 1}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-              第${i + 1}列
-              <ce-icon slot="append" ${show(this.fixedIndex === i + 1)} .svg="${Check}" size="md" ttt="1" style="color: var(--ce-color-primary)"></ce-icon>
+            ${forEach(this.fixedPropList, identity, (prop) => {
+              const pos = this.fixedPropList.indexOf(prop) + 1
+              return h`
+            <ce-list-item value="${prop}" appearance="pale" hoverable ?active="${this.fixedIndex === pos}" style="padding-inline:var(--ce-spacing-md)">
+              第${pos}列
+              <ce-icon slot="append" ${show(this.fixedIndex === pos)} .svg="${Check}" size="md" ttt="1" style="color: var(--ce-color-primary)"></ce-icon>
             </ce-list-item>
-            `)}
+            `
+            })}
           </ce-list>
         </ce-scroller>
       </ce-card>
@@ -354,21 +407,21 @@ export class TableBar extends CompElem {
       </div>
     </ce-overlay>
     <!-- 行高面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="rowheight-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="rowheight-panel">
       <div>
       ${ifTrue(this.overlayInitedList.includes('rowheight-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;padding: var(--ce-spacing-sm);" ref="${this.rowHeightPane}" >
         <ce-list nav gap=".2rem" selectable style="min-width: 10rem;padding: var(--ce-spacing-xs)" @select="${this.onRowHeight}">
-          <ce-list-header space="compact" style="font-size:var(--ce-font-sm-em);">设置行高</ce-list-header>
-          <ce-list-item value="compact" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Compact}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-header space="compact">设置行高</ce-list-header>
+          <ce-list-item value="compact" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Compact}" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon svg="c-svg-row-height-s" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>紧凑
             <ce-icon slot="append" ${show(this.rowHeightType === RowHeightType.Compact)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
-          <ce-list-item value="medium" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Medium}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="medium" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Medium}" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon svg="c-svg-row-height-m" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>中等
             <ce-icon slot="append" ${show(this.rowHeightType === RowHeightType.Medium)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
-          <ce-list-item value="loose" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Loose}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="loose" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Loose}" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon svg="c-svg-row-height-l" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>宽松
             <ce-icon slot="append" ${show(this.rowHeightType === RowHeightType.Loose)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
@@ -433,7 +486,10 @@ export class TableBar extends CompElem {
   }
   bindFieldDrag() {
     const that = this
-    uii.newSortable(this.fieldPane.current?.querySelector('ce-list') as HTMLElement, {
+    const list = this.fieldPane.current?.querySelector('ce-list') as HTMLElement
+    // 面板内容未就绪时列表不存在，直接跳过：newSortable(undefined) 会抛错并中断首开
+    if (!list) return
+    uii.newSortable(list, {
       filter: '[unmovable]',
       spill: 'revert',
       handle: 'ce-list-item ce-icon',
@@ -447,7 +503,7 @@ export class TableBar extends CompElem {
   openField(obj: Record<string, any>) {
     Overlay.closeAll()
     if (!this.overlayInitedList.includes('field-panel')) {
-      this.overlayInitedList.push('field-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'field-panel']
 
       this.nextTick(() => {
         this.bindFieldDrag()
@@ -468,7 +524,7 @@ export class TableBar extends CompElem {
     this.fixedIndex = this.tableRef.fixedLeftColumns.length
 
     if (!this.overlayInitedList.includes('fixed-panel')) {
-      this.overlayInitedList.push('fixed-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'fixed-panel']
 
       this.nextTick(() => {
         this.fixedPanel.openBy(obj.target as Button)
@@ -480,7 +536,7 @@ export class TableBar extends CompElem {
   openRowHeight(obj: Record<string, any>) {
     Overlay.closeAll()
     if (!this.overlayInitedList.includes('rowheight-panel')) {
-      this.overlayInitedList.push('rowheight-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'rowheight-panel']
 
       this.nextTick(() => {
         this.rowHeightPanel.openBy(obj.target as Button)
@@ -504,7 +560,7 @@ export class TableBar extends CompElem {
   openFilter(obj: Record<string, any>) {
     Overlay.closeAll()
     if (!this.overlayInitedList.includes('filter-panel')) {
-      this.overlayInitedList.push('filter-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'filter-panel']
 
       this.nextTick(() => {
         this.filterPanel.openBy(obj.target as Button)
@@ -517,14 +573,17 @@ export class TableBar extends CompElem {
     let { item } = obj
 
     let target = item as HTMLElement
+    const prop = target.getAttribute('value')!
+    // 切换字段时统一刷新字段列表高亮，避免旧字段残留 active
+    syncFilterPaneActive(this.filterPane.current, prop)
     // target = target.closest('ce-list')!
-    this.tableRef._openFilter(target.getAttribute('value')!, target.dataset.type!, target, true)
+    this.tableRef._openFilter(prop, target.dataset.type!, target, true)
   }
   //////////////////////////////////////////////////////////////  分组相关
   openGroup(obj: Record<string, any>) {
     Overlay.closeAll()
     if (!this.overlayInitedList.includes('group-panel')) {
-      this.overlayInitedList.push('group-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'group-panel']
 
       this.nextTick(() => {
         this.groupPanel.openBy(obj.target as Button)
@@ -563,7 +622,7 @@ export class TableBar extends CompElem {
   }
   openGroupFieldPanel(obj: Record<string, any>) {
     if (!this.overlayInitedList.includes('group-field-panel')) {
-      this.overlayInitedList.push('group-field-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'group-field-panel']
 
       this.nextTick(() => {
         this.groupFieldPanel.openBy(obj.target as Button)
@@ -576,7 +635,7 @@ export class TableBar extends CompElem {
   openSort(obj: Record<string, any>) {
     Overlay.closeAll()
     if (!this.overlayInitedList.includes('sort-panel')) {
-      this.overlayInitedList.push('sort-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'sort-panel']
 
       this.nextTick(() => {
         this.sortPanel.openBy(obj.target as Button)
@@ -601,7 +660,7 @@ export class TableBar extends CompElem {
   }
   openSortFieldPanel(obj: Record<string, any>) {
     if (!this.overlayInitedList.includes('sort-field-panel')) {
-      this.overlayInitedList.push('sort-field-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'sort-field-panel']
 
       this.nextTick(() => {
         this.sortFieldPanel.openBy(obj.target as Button)

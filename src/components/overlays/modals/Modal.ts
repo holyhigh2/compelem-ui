@@ -1,5 +1,6 @@
 import { CompElem, emits, state } from "compelem";
 import { Options } from ".";
+import { t } from "../../../locale";
 /**
  * 内置模态框基类
  * @author holyhigh2
@@ -9,8 +10,8 @@ export class Modal extends CompElem {
   //////////////////////////////////// props
   @state _title: string = '';
   @state message = '';
-  @state confirmBtnText = '确定';
-  @state cancelBtnText = '取消';
+  @state confirmBtnText = t('actions.confirm');
+  @state cancelBtnText = t('actions.cancel');
   @state visible = false;
   @state esc = true;
 
@@ -27,7 +28,8 @@ export class Modal extends CompElem {
         this.confirmBtnText = options.confirmButtonText
       if (options.cancelButtonText)
         this.cancelBtnText = options.cancelButtonText
-      this.esc = !!options.esc
+      // 未显式给 esc 时保持默认（true）：`!!options.esc` 会把「只传文案」的调用静默关掉 ESC
+      if (options.esc !== undefined) this.esc = options.esc
     }
 
     this.visible = true;
@@ -37,20 +39,20 @@ export class Modal extends CompElem {
   }
   onConfirmClick() {
     this.emit('confirm')
-    if (this.#confirmCbk) this.#confirmCbk()
+    this.#confirmCbk?.()
     this.close()
   }
   onCancelClick() {
     this.emit('cancel')
-    if (this.#cancelCbk) this.#cancelCbk()
+    this.#cancelCbk?.()
     this.close()
   }
-  #confirmCbk: Function
-  #cancelCbk: Function
-  onConfirm(cbk: Function) {
+  #confirmCbk: () => void
+  #cancelCbk: () => void
+  onConfirm(cbk: () => void) {
     this.#confirmCbk = cbk
   }
-  onCancel(cbk: Function) {
+  onCancel(cbk: () => void) {
     this.#cancelCbk = cbk
   }
 }

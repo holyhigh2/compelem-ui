@@ -1,7 +1,12 @@
+/**
+ * 触发元素要留在宿主原本的排版流里：ce-overlay 的渲染根会被 portal 到 body，
+ * nav 与浮层容器都不造盒（display:contents），slot 里的触发元素才能继续作为
+ * ce-dropdown 宿主的 flex 子项参与外层布局（行盒基线会把触发器顶高几像素）。
+ */
 .ce-dropdown {
-  display: inline-block;
-  position: relative;
+  display: contents;
 
-  &-anchor {
+  > ce-overlay {
+    display: contents;
   }
 }

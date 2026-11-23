@@ -33,7 +33,7 @@ export class Alert extends Modal {
         .esc="${this.esc}"
         ${model(this.visible, 'visible')}
       >
-        <ce-card title="${this._title}" style="width:100%">
+        <ce-card title="${this._title}" style="width:100%;box-sizing:border-box">
           ${ifTrue(!!this.message, () => h`<div style="padding-block: 1rem;">${this.message}</div>`)}
           <slot></slot>
           <ce-button slot="actions" appearance="pale" @click="${this.onConfirmClick}">${(this.confirmBtnText)}</ce-button>

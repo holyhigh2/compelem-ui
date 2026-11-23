@@ -1,10 +1,17 @@
 import { setDefaults } from "compelem";
 import { values } from "myfx";
 import { appearanceStyleSheet, resetStyleSheet } from "./css/styleSheets";
+// registerIconsSubset 需要本地引用这两个符号（下方 export 语句只负责对外暴露，不引入本地绑定）
+import { registerIcons, type IconFactory } from "./icons/registry";
+// 标签→类映射（HTMLElementTagNameMap）与事件类型；export * 保证声明产物保留该引用
+export * from './types/components';
+// API 词汇表（尺寸/语义色/事件名/slot 名），组件消费方做字面量联合校验用
+export { AppearanceSize, AppearanceSpace, SemanticColor, ComponentEvent, ComponentSlot } from "./constants";
 //components
 export { Board } from "./components/datadisplay/board/Board";
 export { BoardBar } from "./components/datadisplay/board/BoardBar";
 export { Panel } from "./components/datadisplay/panel/Panel";
+export { PanelGroup } from "./components/datadisplay/panel/PanelGroup";
 export { Scroller } from "./components/datadisplay/scroller/Scroller";
 export { Stat } from "./components/datadisplay/stat/Stat";
 export { Column } from "./components/datadisplay/table/Column";
@@ -21,8 +28,7 @@ export { Tree } from "./components/datadisplay/tree/Tree";
 export { Link } from "./components/link/Link";
 export { ContextMenu } from "./components/nav/contextmenu/ContextMenu";
 export { Dropdown } from "./components/nav/dropdown/Dropdown";
-export { DropdownItem } from "./components/nav/dropdown/DropdownItem";
-export { MenuPane } from "./components/nav/menupane/MenuPane";
+export { Menu } from "./components/nav/menu/Menu";
 
 export { Badge } from "./components/feedback/badge/Badge";
 export { Empty } from "./components/feedback/empty/Empty";
@@ -40,6 +46,27 @@ export { Portal } from "./components/datadisplay/portal/Portal";
 export { PortalEditor } from "./components/datadisplay/portal/PortalEditor";
 export { PortalWidget } from "./components/datadisplay/portal/PortalWidget";
 export { PortalWidgetEditor } from "./components/datadisplay/portal/PortalWidgetEditor";
+
+// 门户布局工具（唯一实现）：宿主若需在传给 `<ce-portal>` 之前自行清洗布局，
+// 必须复用这里的几何规整，而不是再写一份 —— 两份规则一旦分叉，就会出现
+// 「宿主认为合法、组件认为非法」的静默偏差。
+export {
+  LAYOUT_VERSION as PORTAL_LAYOUT_VERSION,
+  MAX_ROWS as PORTAL_MAX_ROWS,
+  compactItems as compactPortalItems,
+  findFreeCell as findPortalFreeCell,
+  makePortalItemId,
+  normalizeLayout as normalizePortalLayout,
+  parseWidgetSize,
+  resolveColumns as resolvePortalColumns,
+  widgetKey as portalWidgetKey,
+} from "./components/datadisplay/portal/layout";
+export type {
+  ColumnCountOptions as PortalColumnCountOptions,
+  LayoutItem as PortalLayoutItem,
+  PortalLayout as PortalLayoutData,
+  WidgetSize as PortalWidgetSize,
+} from "./components/datadisplay/portal/layout";
 export { Aside } from "./components/layout/container/Aside";
 export { Container } from "./components/layout/container/Container";
 export { Footer } from "./components/layout/container/Footer";
@@ -69,6 +96,7 @@ export { Tabs } from "./components/nav/tabs/Tabs";
 
 export { Checkbox } from "./components/form/checkbox/Checkbox";
 export { CheckboxGroup } from "./components/form/checkbox/CheckboxGroup";
+export { Combobox } from "./components/form/combobox/Combobox";
 export { Form } from "./components/form/Form";
 export { FormItem } from "./components/form/FormItem";
 export { Input } from "./components/form/input/Input";
@@ -85,6 +113,7 @@ export { InputTimeRange } from "./components/form/input/InputTimeRange";
 export { RangeInput } from "./components/form/input/RangeInput";
 export { Radio } from "./components/form/radio/Radio";
 export { RadioGroup } from "./components/form/radio/RadioGroup";
+export { Segmented } from "./components/form/segmented/Segmented";
 export { Select } from "./components/form/select/Select";
 export { Slider } from "./components/form/slider/Slider";
 export { Toggle } from "./components/form/toggle/Toggle";
@@ -103,6 +132,7 @@ export { Avatar } from "./components/icons_images/avatar/Avatar";
 export { AvatarGroup } from "./components/icons_images/avatar/AvatarGroup";
 export { Icon } from "./components/icons_images/icon/Icon";
 export { Img } from "./components/icons_images/img/Img";
+export { SvgThumb } from "./components/icons_images/svgthumb/SvgThumb";
 
 export { Dialog } from "./components/overlays/dialog/Dialog";
 export { Drawer } from "./components/overlays/drawer/Drawer";
@@ -118,13 +148,23 @@ export { Highlight } from "./components/text/highlight/Highlight";
 export * from "./directives/ripples/Ripples";
 export * from "./directives/splits/Splits";
 export * from "./directives/tooltip/Tooltip";
+export * from "./directives/a11y/Activatable";
 
 export * from './components/overlays/modals/index';
 export * from './components/overlays/toast/toast';
 
 export * from './icons/icons';
+export { registerIcons, getIcon, hasIcon, iconCount, type IconFactory } from './icons/registry';
 
 export * from "./utils/utils";
+export * from "./locale";
+
+// 表格导出（Excel）。`utils/excel.ts` 内 `exceljs` 已改为**动态 `import()`**
+// （可选运行时依赖），不再进入库主入口的静态依赖图 —— 包缺失时仅 `console.warn`
+// 并安全退出，不影响库主入口加载。导出是库的公开能力，使用方应能从 `compelem-ui`
+// 直接取到 `exportExcel`，不必知道内部路径。该接口返回 `Promise<void>`
+// （动态 import 天然异步），调用方通常 fire-and-forget，无需 await。
+export * from "./utils/excel";
 
 (() => {
     setDefaults({
@@ -152,4 +192,13 @@ const defaultCss = () => {
     setDefaults({
         css: [resetStyleSheet, appearanceStyleSheet, ...values(IconSets), ...Styles]
     })
+}
+
+/**
+ * 按需注册图标子集：只注册 icons 参数中列出的图标工厂。
+ * 避免全量注册80+个图标带来的内存和启动开销。
+ * @param icons 形如 { Search, Close } 的图标映射，只传实际用到的图标
+ */
+export function registerIconsSubset(icons: Record<string, IconFactory>): void {
+    registerIcons(icons);
 }

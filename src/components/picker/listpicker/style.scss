@@ -7,8 +7,15 @@
   color: fn.color(--ce-color-text-header-rgb);
   overflow: hidden;
   padding-inline: var(--ce-spacing-sm);
-  background: #fff;
+  background: var(--ce-color-bg, #fff);
   display: block;
+
+  // 基线行高已在 reset.scss 提到安全值（--ce-lineh-md=1.5），选项标题的拉丁降部
+  // 不再被裁；此处的显式声明仅作为「主动采用标准正文档」的语义化兜底，
+  // 不再是过去对抗 :host{line-height:1} 的修复补丁。
+  ce-list-item {
+    line-height: var(--ce-lineh-md, 1.5);
+  }
 }
 
 .ce-list-picker {
@@ -16,7 +23,7 @@
   display: flex;
   flex-direction: column;
   gap: .5rem;
-  background-color: var(--ce-color-background);
+  background-color: var(--ce-color-bg);
   padding-block: var(--ce-spacing-sm);
   height: inherit;
   max-height: inherit;
@@ -27,11 +34,13 @@
     // height: 100%;
     padding-right: .5rem;
 
-    #vpillar {
-      width: 1px;
-      z-index: -1;
-      position: relative;
-    }
+    // 横向最小宽度：虚拟列表的行是回收复用的，横向没有内容把 ce-list 撑开，
+    // 缺了下限会塌成约 9px 导致选项文字全被裁切（实测）。默认 100px 只求
+    // 保证最短选项显示全；可用 --ce-list-picker-min-width 覆盖（如 Select
+    // 的 minWidth prop 场景）。不要把此值等同于触发器输入框宽度。
+    min-width: var(--ce-list-picker-min-width, 100px);
+
+    @include mixins.virtual-pillar;
 
     ce-list-item {
       width: 100%;
@@ -102,7 +111,7 @@
       // display: inline-block;
       display: flex;
       width: 1rem;
-      font-size: 1rem;
+      font-size: var(--ce-font-md);
       margin-right: var(--ce-spacing-lg);
 
       ce-checkbox {

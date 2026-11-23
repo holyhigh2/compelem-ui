@@ -1,34 +1,38 @@
 @use "../../../css/functions" as fn;
 
 ////////////////////////////////// size
+// 字号：五档全部走 rem 档（root.scss 字号契约第 1 条：md = --ce-font-md，
+// 全库没有第二套 md 定义）。密度由宿主改 --ce-font-base 统一控制，不靠上下文继承。
+// gap 用 em 相对分页自身字号；页码按钮是 ce-button，二者在同档下自动对齐。
 :host([size="xs"]) {
   --ce-pagination-gap: .375em;
-  --ce-pagination-fs: .75em;
+  --ce-pagination-fs: var(--ce-font-xs);
 }
 
 :host([size="sm"]) {
   --ce-pagination-gap: .375em;
-  --ce-pagination-fs: .8125em;
+  --ce-pagination-fs: var(--ce-font-sm);
 }
 
 :host([size="md"]) {
   --ce-pagination-gap: .5em;
-  --ce-pagination-fs: .875em;
+  --ce-pagination-fs: var(--ce-font-md);
 }
 
 :host([size="lg"]) {
   --ce-pagination-gap: .625em;
-  --ce-pagination-fs: 1em;
+  --ce-pagination-fs: var(--ce-font-lg);
 }
 
 :host([size="xl"]) {
   --ce-pagination-gap: .75em;
-  --ce-pagination-fs: 1.125em;
+  --ce-pagination-fs: var(--ce-font-xl);
 }
 
 :host {
   display: inline-flex;
-  font-size: var(--ce-pagination-fs, .875em);
+  --ce-pagination-fs: var(--ce-font-md);
+  font-size: var(--ce-pagination-fs);
   --ce-pagination-gap: .5em;
   color: var(--ce-color-text);
   // 居中/右对齐时撑满父容器，使 align 生效

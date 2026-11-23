@@ -10,29 +10,35 @@
     --ce-card-padding: 1rem;
     --ce-card-gap: 0.625rem;
     --ce-card-radius: var(--ce-round-md, 0.75rem);
-    --ce-card-bg: rgb(var(--ce-color-background-rgb, 255 255 255));
-    --ce-card-header-size: var(--ce-font-lg, 1.125rem);
+    // 表面色必须跟随 --ce-color-bg-rgb（暗色主题翻转的是它）；
+    // --ce-color-background-rgb 是调色板原色，暗色下仍是白色。
+    --ce-card-bg: rgb(var(--ce-color-bg-rgb, 255 255 255));
+    --ce-card-header-size: var(--ce-font-lg);
+    --ce-card-subtitle-size: var(--ce-font-sm);
     --ce-card-subtitle-opacity: 0.6;
-    --ce-card-body-size: var(--ce-font-sm, 0.875rem);
-    --ce-card-footer-size: var(--ce-font-sm, 0.875rem);
+    --ce-card-body-size: var(--ce-font-md);
+    --ce-card-footer-size: var(--ce-font-sm);
     //panel
     --ce-panel-padding: 1rem;
     --ce-panel-gap: 0.75rem;
     --ce-panel-gap-expanded: 1rem;
     --ce-panel-radius: var(--ce-round-md, 0.75rem);
-    --ce-panel-bg: rgb(var(--ce-color-background-rgb, 255 255 255));
-    --ce-panel-header-size: var(--ce-font-lg, 1.125rem);
+    --ce-panel-bg: rgb(var(--ce-color-bg-rgb, 255 255 255));
+    --ce-panel-header-size: var(--ce-font-lg);
+    --ce-panel-subtitle-size: var(--ce-font-sm);
     --ce-panel-subtitle-opacity: 0.6;
-    --ce-panel-body-size: var(--ce-font-sm, 0.875rem);
-    --ce-panel-footer-size: var(--ce-font-sm, 0.875rem);
+    --ce-panel-body-size: var(--ce-font-md);
+    --ce-panel-footer-size: var(--ce-font-sm);
     //icon
-    --ce-icon-unit: 1em;
+    // 图标基准：1.2 = 1 / 墨迹占比（24-viewBox 图标约 0.833）。与文字并排时
+    // 视觉墨迹才与汉字等重；纯图标控件在组件内覆盖为 1.35。
+    --ce-icon-unit: 1.2em;
     //skeleton
     --ce-skeleton-base: rgb(var(--ce-color-border-secondary-rgb, 229 231 235));
-    --ce-skeleton-highlight: rgb(var(--ce-color-background-rgb, 244 245 247));
+    --ce-skeleton-highlight: rgb(var(--ce-color-bg-rgb, 244 245 247));
     --ce-skeleton-radius: var(--ce-round-md, 0.35rem);
     --ce-skeleton-gap: 0.75rem;
-    --ce-skeleton-text-height: var(--ce-font-sm, 0.875rem);
+    --ce-skeleton-text-height: var(--ce-font-sm);
     --ce-skeleton-title-height: 1.25rem;
     --ce-skeleton-avatar-size: 2.5rem;
     --ce-skeleton-image-height: 6rem;

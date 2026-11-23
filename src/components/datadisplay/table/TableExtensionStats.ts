@@ -1,9 +1,9 @@
-import { Constructor, Template } from "compelem";
+import { Constructor } from "compelem";
 import { clone, each, filter, find, get, groupBy, isDefined, isString, keys, map, size, subtract, walkTree } from "myfx";
-import { DataType, STATS_METRICS, STATS_METRICS_BASE } from "../../../constants";
+import { DataType, STATS_METRICS, STATS_METRICS_BASE, type StatMetric } from "../../../constants";
 import { ColumnFoot } from "./ColumnFoot";
 import { Table } from "./Table";
-import { CellPos, MetricType, TableEvents } from "./types";
+import { CellPos, MetricType, StatCalcFn, TableEvents } from "./types";
 
 /**
  * table扩展混入，提供列统计功能
@@ -20,9 +20,6 @@ export function TableExtensionStats<T extends Constructor<any>>(spuerClass: T) {
     extStatsMap: Record<string, any> = {}
     extStatsFunctions: Record<string, any> = {}
 
-    constructor(...args: any[]) {
-      super(...args)
-    }
 
     ////////////////////////////////////////// methods
     __updateStats(obj: Record<string, any>, statProp?: string) {
@@ -53,13 +50,7 @@ export function TableExtensionStats<T extends Constructor<any>>(spuerClass: T) {
       }
 
     }
-    _setStat(statsColStatMap: Record<string, string>, metricsBase: Record<string, {
-      k: string;
-      v: Function;
-    }>, metrics: Record<string, Record<string, {
-      k: string;
-      v: Function;
-    }>>, statProp?: string) {
+    _setStat(statsColStatMap: Record<string, string>, metricsBase: Record<string, StatMetric>, metrics: Record<string, Record<string, StatMetric>>, statProp?: string) {
       const rd = this.renderList.filter((d: Record<string, any>) => !d._groupRoot)
       this.__calcStat(rd, this.statsColValueMap, this._calcFn, statsColStatMap, metricsBase, metrics)
 
@@ -105,19 +96,13 @@ export function TableExtensionStats<T extends Constructor<any>>(spuerClass: T) {
       let eventObj = { values: (this.statsColValueMap), stats: (statsColStatMap), labels }
       this.__updateStats(eventObj, statProp)
     }
-    __calcStat(data: Record<string, any>[], statsColValueMap: Record<string, string | number>, _calcFn: Function, statsColStatMap: Record<string, string>, metricsBase: Record<string, {
-      k: string;
-      v: Function;
-    }>, metrics: Record<string, Record<string, {
-      k: string;
-      v: Function;
-    }>>) {
+    __calcStat(data: Record<string, any>[], statsColValueMap: Record<string, string | number>, _calcFn: StatCalcFn, statsColStatMap: Record<string, string>, metricsBase: Record<string, StatMetric>, metrics: Record<string, Record<string, StatMetric>>) {
       if (!!_calcFn) {
         data = clone(data)
         this._columnFootMap.forEach((cf: ColumnFoot) => {
           if (cf.stats && cf.stats !== MetricType.None) {
             let dataType = this._fieldMap.get(cf.prop)?.dataType!
-            let colData = dataType === DataType.Number ? map(data, d => parseFloat(get(d, cf.prop))) : map(data, d => get(d, cf.prop))
+            let colData = dataType === DataType.Number ? map(data, d => parseFloat(get<string>(d, cf.prop))) : map(data, d => get<string | number>(d, cf.prop))
             let v = _calcFn(cf.prop, colData, data)
             statsColValueMap[cf.prop] = v + ''
           }
@@ -212,7 +197,7 @@ export function TableExtensionStats<T extends Constructor<any>>(spuerClass: T) {
       return clone(this.statsColValueMap);
     }
 
-    setStats(calcFn: (colProp: string, colData: Array<string | number>, data: Record<string, any>[]) => string | Template) {
+    setStats(calcFn: StatCalcFn) {
       this._calcFn = calcFn
     }
   }

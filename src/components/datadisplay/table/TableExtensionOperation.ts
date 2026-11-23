@@ -2,6 +2,7 @@ import { Constructor } from "compelem";
 import { clone, each, eachRight, find, isEmpty, range, size, test, throttle, trimStart } from "myfx";
 import { THRESHOLD } from "uiik";
 import { KeyboardKey } from "../../../constants";
+import { beginDrag } from "../../../utils/dragSession";
 import { ColumnConfigPane } from "./ColumnConfigPane";
 import { getContextMenuItems } from "./contextmenu";
 import { CellPos, TableEvents } from "./types";
@@ -41,9 +42,6 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
     topSelectedCellRowIndex: number = -1
     bottomSelectedCellRowIndex: number = -1
 
-    constructor(...args: any[]) {
-      super(...args)
-    }
 
     ////////////////////////////////////////// 右键菜单
     onContextMenuSelect(obj: Record<string, any>) {
@@ -79,6 +77,41 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
       }
       this.emit('contextmenuselect', { item, index, el })
     }
+    /**
+     * 按坐标反查表格单元（2026-10-28 修，2026-10-30 恢复）。
+     *
+     * 为什么不能只靠 `e.target.closest('.ce-table-cell')`：合并区里除"内容格"以外的
+     * 副本格带 `pointer-events: none`（要给内容层与填充柄让路），右键 / 按下时 target
+     * 会落到行容器 `ce-table-column-scroll` 上 ⇒ closest 拿不到格子 ⇒ 三行合并区只有
+     * 中间那行能弹菜单，其余两行右键毫无反应。
+     *
+     * 为什么不用 `_getCellDom`：它定义在 `Editable`（子类），本扩展同时混入**基础
+     * Table**（只读预览用的 `ce-table`），那里没有这个方法 —— 直接调会抛
+     * `is not a function`。这里改用「可见行矩形 + 列矩形」反查，两套表都能用。
+     *
+     * ⚠️ 跳过 `data-row-index="-1"`（库里的**测量行**，不在可视区内）。
+     */
+    __cellAtPoint(e: MouseEvent): HTMLElement | null {
+      const body = this.tableBody as HTMLElement | undefined
+      const rows = body?.querySelectorAll('.ce-table-row')
+      if (!rows || !rows.length) return null
+      const x = e.clientX
+      const y = e.clientY
+      for (const row of Array.from(rows) as HTMLElement[]) {
+        if (row.getAttribute('data-row-index') === '-1') continue
+        const rb = row.getBoundingClientRect()
+        if (rb.height <= 0 || y < rb.top || y > rb.bottom) continue
+        const cells = row.querySelectorAll('.ce-table-cell')
+        for (const cell of Array.from(cells) as HTMLElement[]) {
+          const cb = cell.getBoundingClientRect()
+          if (cb.width <= 0) continue
+          if (x >= cb.left && x <= cb.right) return cell
+        }
+        return null
+      }
+      return null
+    }
+
     onContextMenu(e: MouseEvent) {
       if (!this.extended) return
       let t = e.target as HTMLElement
@@ -89,7 +122,9 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
       }
       e.stopPropagation();
 
-      let cellEl = t.closest('.ce-table-cell')
+      // 合并区副本格（pointer-events:none）会让 target 落到行容器上，closest 拿不到格子
+      // ⇒ 按坐标兜一层；仍拿不到才算真的按在表体外
+      let cellEl = t.closest('.ce-table-cell') || this.__cellAtPoint(e)
       if (!cellEl) {
         e.preventDefault()
         return
@@ -103,7 +138,7 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
         this.onStartSelect(e)
         this.contextMenu.open(e)
       }
-      this._onContextMenu && this._onContextMenu({ items: this.contextMenu.itemList, cells: this.__selectedCells })
+      this._onContextMenu?.({ items: this.contextMenu.itemList, cells: this.__selectedCells })
     }
     doExpandRow() {
       const row = this.renderList[this.topSelectedCellRowIndex]
@@ -120,8 +155,7 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
       this.toggleRowSelection(rowKeys, true)
     }
     doFilterByCellValue() {
-      let prop = this.getRenderColumns()[this.leftSelectedCellColIndex].prop
-      let val = this.__getRenderValue(prop, this.topSelectedCellRowIndex)
+      // 右键菜单 filterByCellValue 仍挂在这里，但按值筛选并未实现（旧实现取了值却没用）
       // this._setFilter(prop, FilterType.Time, this.filterCondition)
     }
     doFillColorCol() {
@@ -207,6 +241,33 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
       let { mouseMove, mouseUp } = handles ? handles : this.__getSelectDragHandles(e)
 
       let startTd = t.closest<HTMLElement>('.ce-table-cell')
+      if (!startTd
+        && this.rightSelectedCellColIndex >= 0
+        && this.bottomSelectedCellRowIndex >= 0) {
+        // 选区右下角格在样式里带 `pointer-events:none`（只放行 content 与 ::after）：
+        // 按在它身上但没按中 content 时，e.target 是行内滚动容器，closest 拿不到格子
+        // ⇒ 走到这里会把按下整个吞掉并清空选区（用户表现为"再框选没反应"）。
+        // 按坐标回退解析为选区右下角格，恢复普通框选语义
+        // （是否进入填充拖拽仍由 onBeforeSelect 的角格命中区判定把关）。
+        // ⚠️ `_getCellDom` 定义在 `Editable`（子类）：本扩展同时混入**基础 Table**
+        // （只读预览用的 `ce-table`），那里没有这个方法 —— 不能用 `this._getCellDom(...)`
+        // 直接调，否则按空处时会抛 `is not a function`。
+        const getCellDom = (this as any)._getCellDom
+        const rbCell = (typeof getCellDom === 'function'
+          ? getCellDom.call(this, this.bottomSelectedCellRowIndex, this.rightSelectedCellColIndex)
+          : null) as HTMLElement | null
+        const rbBox = rbCell?.getBoundingClientRect()
+        if (rbCell && rbBox
+          && e.clientX >= rbBox.x && e.clientX <= rbBox.x + rbBox.width
+          && e.clientY >= rbBox.y && e.clientY <= rbBox.y + rbBox.height) {
+          startTd = rbCell
+        }
+      }
+      if (!startTd) {
+        // 合并区副本格同样按不中内容层：在"只认右下角"那层之后再加一层通用坐标兜底
+        //（仍拿不到才算真的按在空白处，此时才清空选区）
+        startTd = this.__cellAtPoint(e)
+      }
       if (!startTd) {
         this.__clearSelector()
         return
@@ -222,14 +283,12 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
       let checking = false;
       let rowHeight = this.vRowHeight;
       let maxRowIndex = this.renderList.length
-      let moved = false;
       let scroller = this.scroller
       let root = this.renderRoot;
       let rect = root.getBoundingClientRect();
       let sx = e.clientX, sy = e.clientY
       let posMap: Record<number, number> = {};
       let startPos = this.fixedLeftConHead.previousElementSibling ? this.fixedLeftConHead.previousElementSibling.offsetWidth : 0;
-      let startPosRight = 0;
       // let propMap: Record<number, string> = {}
       let fixedRightCols: any = []
       each(this.getRenderColumns(), (c: Record<string, any>, i: number) => {
@@ -266,17 +325,17 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
         this._reStats(1)
       }
 
-      let throttledMove = throttle(mouseMove!, 100);
-      // mouseUp(e, checking, startCellPos, endCellPos);
-      if (e.button === 0) {
-        document.onmousemove = function (e: MouseEvent) {
-          let cx = e.clientX,
-            cy = e.clientY;
+      const throttledMove = throttle(mouseMove!, 100);
+      beginDrag(this as unknown as Element, { pointerId: (this as any).__bodyPointerId, clientX: e.clientX, clientY: e.clientY }, {
+        onMove: (ev) => {
+          // 只响应左键拖动（与按下时 `e.button === 0` 的口径一致）
+          if (ev.buttons !== 1) return
+          let cx = ev.clientX,
+            cy = ev.clientY;
           if (Math.abs(cx - sx) < THRESHOLD && Math.abs(cy - sy) < THRESHOLD) return;
 
-          moved = true;
-          let xInTable = e.clientX - rect.x
-          let yInTable = e.clientY - rect.y
+          let xInTable = ev.clientX - rect.x
+          let yInTable = ev.clientY - rect.y
 
           let moveX = xInTable + scroller.x;
           let moveY = yInTable + scroller.y - headerHeight;
@@ -303,7 +362,7 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
           });
           endCellPos.colIndex = colIndex;
           endCellPos.rowIndex = rowIndex;
-          throttledMove(e, startCellPos, endCellPos, moveX, moveY);
+          throttledMove(ev, startCellPos, endCellPos, moveX, moveY);
 
           //自动边界滚动
           if (xInTable < SCROLLER_EDGE) {
@@ -315,13 +374,12 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
           } else if (yInTable > rect.height - SCROLLER_EDGE) {
             scroller.scrollYBy(10);
           }
-        };
-      }
-
-      window.onblur = document.onmouseup = () => {
-        window.onblur = document.onmousemove = document.onmouseup = null;
-        mouseUp(e, checking, startCellPos, endCellPos);
-      };
+        },
+        onEnd: () => {
+          throttledMove.cancel()
+          mouseUp(e, checking, startCellPos, endCellPos);
+        }
+      })
     }
     __lastStartPos: CellPos
     __lastEndPos: CellPos
@@ -360,7 +418,7 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
 
       this.__renderSelector()
 
-      this.onSelectorChange && this.onSelectorChange()
+      this.onSelectorChange?.()
     }
     __clearSelector() {
       this.__selectedCells = []
@@ -401,6 +459,22 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
           }
 
           that.__locateSelector(startPos, endPos)
+
+          //__locateSelector 只更新选中状态/索引字段并重绘，既不派发 select 事件，
+          //也不写 selectedCellsPos；而 Sn 行拖拽、Sn 列拖拽、填充拖拽三条路径
+          //都额外调用了 _selectedCells。行体框选是主路径却遗漏了这一步，
+          //导致「框选结束后触发 select({cellsPos})」的文档约定在行体框选下失效
+          //（selectedCellsPos 也恒为 null）。此处补齐以与其余路径一致。
+          //
+          //⚠️⚠️ `_selectedCells` / `selectedCellsPos` 只存在于 `Editable`（子类），
+          //   本扩展却同时混入**基础 Table** —— 只读预览用的 `<ce-table>` 就是一个
+          //   基础 Table（`ReportDoc` 预览不开放编辑）。在那里直接调会抛
+          //   `that._selectedCells is not a function`（2026-10-21 预览界面报障，
+          //   栈顶就在本行），且发生在 document 的 mouseup 上 ⇒ 拖选后整页报错。
+          //   基础表本来就没有「单元格坐标矩阵」语义（`TableEvents` 里也没有 select），
+          //   所以只在方法存在时补发。
+          const syncSelectedCells = (that as any)._selectedCells
+          if (typeof syncSelectedCells === 'function') syncSelectedCells.call(that, startPos, endPos)
         },
       };
     }
@@ -450,7 +524,43 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
       }
     }
     ////////////////////////////////////////// 键盘
+    /**
+     * 这次键盘事件是否发生在本组件**之外**的输入态里（别的输入框 / textarea /
+     * contenteditable），是则全局键盘处理一律让路。
+     *
+     * ⚠️ 为什么必须有这条守卫：`onGlobalKeydown` 绑在 `document.body` 上
+     * （`@event('keydown', () => document.body)`，见 `Editable.onGlobalKeydown`），
+     * 整页任何位置的按键都会进来。只要表里**有选区**，宿主页面里别的输入框就会遭殃：
+     *   · `Ctrl+C` 被这里改成"复制表格"（宿主输入框里的选区被抢走 ⇒ 复制不出来）；
+     *   · 可打印字符被当成"开始编辑单元格"（`activeInput("")` 直接把焦点搬进表格，
+     *     宿主输入框丢掉正在输入的那个字符）。
+     * 实测：AI 助手输入框里敲 `/`，焦点会跳到 `.ce-table-cell-input__text`、`/` 丢失；
+     * `Ctrl+C` 会走一次 `doCopy()`。
+     *
+     * 判定方式：沿 `composedPath()` 往外走，遇到自己就停；途中第一个"输入态"元素
+     * 只要不是**本站自己的单元格编辑器**（`inputCell`），即判为外部输入态。
+     * 用 `composedPath` 而不是 `document.activeElement`：后者在外层只能拿到宿主
+     * 元素（如 `ce-input` 的多行模式），真实焦点在内层 `<textarea>` 上。
+     */
+    __isForeignEditableKey(e: KeyboardEvent): boolean {
+      const path: EventTarget[] =
+        typeof (e as any).composedPath === "function" ? ((e as any).composedPath() as EventTarget[]) : []
+      // `inputCell` 只存在于 Editable 一侧（Table 没有编辑框）⇒ 宽容取值
+      const own = (this as any).inputCell as HTMLElement | null | undefined
+      for (const node of path) {
+        if ((node as any) === this) break
+        const el = node as HTMLElement
+        if (!el || !el.tagName) continue
+        // 本站自己的单元格编辑器：放行（表内编辑态照旧由各自的 if 链处理）
+        if (own && el === own) break
+        const tag = el.tagName
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable) return true
+      }
+      return false
+    }
     onGlobalKeydown(e: KeyboardEvent) {
+      // 表外输入态（AI 输入框 / 公式栏 / 设置对话框…）里按键不属于表格
+      if (this.__isForeignEditableKey(e)) return
       if (isEmpty(this.__selectedCells)) return
 
       if (e.ctrlKey && e.key.toLocaleLowerCase() === "c") {

@@ -1,6 +1,5 @@
 @use "../../../css/functions" as fn;
 @use "../../../css/_utils";
-@use "../../../css/mixins";
 
 :host {
   display: block;
@@ -10,8 +9,39 @@
   overflow: hidden;
 }
 
+// 面板组内成员（对齐 vuetify expansion-panels）：去独立阴影、直角、加分隔线
+:host([grouped]) {
+  border-radius: 0;
+  border: thin solid var(--ce-panel-group-border, var(--ce-color-border-secondary, #e5e7eb));
+
+  .ce-panel {
+    box-shadow: none !important;
+  }
+}
+
+// 关闭按钮：绝对定位在头部右侧，不参与 header 的布局流
+.ce-panel-close {
+  position: absolute;
+  inset-inline-end: var(--ce-panel-padding);
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  cursor: pointer;
+  color: var(--ce-color-text-desc);
+  transition: color .2s;
+
+  &:hover {
+    color: var(--ce-color-text);
+  }
+}
+
 .ce-panel {
   height: inherit;
+
+  &.is-disabled {
+    ce-button {
+      cursor: not-allowed;
+    }
+  }
 
   &.ce-panel-flush {
     .ce-panel-header {
@@ -37,6 +67,12 @@
     padding-inline: var(--ce-panel-padding);
     font-size: var(--ce-panel-header-size);
     z-index: 0;
+    // 关闭按钮绝对定位，避免给 header 引入 flex 布局而与折叠态的整体按钮打架
+    position: relative;
+    // 头部右下角的关闭按钮占用右侧留白，标题不压到它
+    &.ce-has-close {
+      padding-inline-end: calc(var(--ce-panel-padding) + 1.25rem);
+    }
 
     >ce-button {
       --ce-opacity-underlay: 0.05;
@@ -58,7 +94,8 @@
       font-family: inherit;
       font-weight: bolder;
       margin: 0;
-      @include mixins.text-md;
+      font-size: var(--ce-panel-header-size);
+      line-height: var(--ce-lineh-md);
       width: 100%;
       display: inline-flex;
       align-items: center;
@@ -79,6 +116,7 @@
 
   >footer {
     padding-inline: var(--ce-spacing-md);
+    font-size: var(--ce-panel-footer-size);
   }
 
   &.ce-panel-collapsible {
@@ -90,12 +128,15 @@
     }
 
     .ce-panel-body {
-      overflow: hidden;
+      // 常驻 min-height: 0：grid 项的自动最小尺寸才会归零，
+      // 0fr → 1fr 两个方向都能插值（只在折叠态取消最小尺寸会导致展开瞬间跳到内容高度）
+      min-height: 0;
       transition: all 0.3s;
     }
 
     .ce-panel-arrow {
-      transform: 0 !important;
+      // 展开态箭头朝上（对齐 vuetify expansion-panels）
+      transform: rotateZ(180deg) !important;
       transition: transform 0.3s;
     }
 
@@ -123,7 +164,8 @@
       }
 
       .ce-panel-arrow {
-        transform: rotateZ(-90deg) !important;
+        // 折叠态箭头朝下
+        transform: rotateZ(0deg) !important;
       }
     }
   }

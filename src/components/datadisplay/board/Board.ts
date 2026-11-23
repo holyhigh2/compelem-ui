@@ -1,5 +1,5 @@
 import { classes, CompElem, computed, css, Csscope, csscope, debounced, emits, forEach, h, html, ifElse, ifTrue, prop, query, QueryCache, show, state, styles, tag, Template, watch } from "compelem";
-import { clone, compact, filter, find, flatMap, formatNumber, get, has, identity, intersect, isArray, isBlank, isEmpty, isNil, isObject, map, size } from "myfx";
+import { clone, compact, filter, find, flatMap, formatNumber, get, has, identity, intersect, isArray, isBlank, isEmpty, isNil, isObject, isString, map, size } from "myfx";
 import { DataType } from "../../../constants";
 import { FieldContainer, FieldContainerEvents } from "../../../mixins/FieldContainer";
 import { Field } from "../../base/Field";
@@ -30,7 +30,7 @@ let BoardConfigPane: ColumnConfigPane
  *  inlineLabel {boolean} 行模式显示label
  *  labelWidth {number} label宽度，默认自动 
  *  showCompact {boolean} 卡片项是否紧凑显示，默认false
- *  titleField {string} 卡片标题字段prop
+ *  titleField {string} 卡片标题字段prop，默认 title
  *  showFields {array} 卡片显示字段prop列表
  * @events
  *  load({cancel()}) 滚动到底部时触发，调用cancel取消加载条显示
@@ -49,7 +49,7 @@ let BoardConfigPane: ColumnConfigPane
  *  title 卡片标题定义
  * @author holyhigh2
  */
-@emits(FieldContainerEvents.Ready, FieldContainerEvents.FieldChange, 'load', 'rendertitle', 'clickcard', 'scrollend')
+@emits(FieldContainerEvents.Ready, FieldContainerEvents.FieldChange, FieldContainerEvents.Hide, FieldContainerEvents.ConfigChange, 'load', 'rendertitle', 'clickcard', 'scrollend')
 @tag('ce-board')
 export class Board extends FieldContainer(CompElem) {
   //////////////////////////////////// props
@@ -64,8 +64,11 @@ export class Board extends FieldContainer(CompElem) {
   @prop showLabelMargin = true
   @prop inlineLabel = false
   @prop showCompact = false;
-  @prop({ type: String, required: true }) titleField: string;
-  @prop({ type: Array }) showFields: Array<string>;
+  // 默认指向数据里最常见的标题字段 title：不给默认值时不传 title-field 卡片就会
+  // 顶着一个空标题（且容器仍预留标题高度），属于"必须配否则半残"的硬性要求。
+  // 数据确实没有 title 字段时，传 title-field 覆盖即可。
+  @prop({ type: String }) titleField: string = 'title';
+  @prop({ type: Array }) showFields!: Array<string>;
   @prop({ type: String }) groupField = '';
   @prop grouped = false;
   @prop rowKey = "id";
@@ -74,7 +77,7 @@ export class Board extends FieldContainer(CompElem) {
   @state filterData: typeof this.data | undefined = undefined
   @state sortOrders: Array<{ prop: string, sort: string }> = [] //排序状态
   @state innerData: typeof this.data = []
-  @state({ prop: 'showFields' }) __showFields: typeof this.showFields = []
+  @state __showFields: typeof this.showFields = this.showFields
 
   @state loading = false
 
@@ -111,10 +114,17 @@ export class Board extends FieldContainer(CompElem) {
       this.updateData(this.filterData!)
     }, 100);
   }
-  @watch('data')
+  /**
+   * 注意：模板中通过 .data 传入的首帧数据会作为初始 prop 值（#initProps），
+   * 非 immediate 的 watch 不会触发，导致 innerData 恒为空、看板空白。
+   * 因此此处必须 immediate，保证首屏即渲染。
+   */
+  @watch('data', { immediate: true })
   watchRenderList(nv: typeof this.data) {
-    this.innerData = clone(nv)
-    this.checkLoad(true)
+    this.innerData = clone(nv ?? [])
+    if (nv && nv.length > 0) {
+      this.checkLoad(true)
+    }
   }
   /////////////////////////////////// computed
   @computed
@@ -139,7 +149,13 @@ export class Board extends FieldContainer(CompElem) {
     )
   }
   render(): Template {
-    let nullId = 0
+    // keyFn 必须是纯函数：ForEach 在同一轮更新内最多调用它两轮（探测轮只走脏索引 / 构建轮走全部项），
+    // 且两轮共享外部状态 —— 原先的 'null_' + (nullId++) 会让同一索引在两轮拿到不同的 key，
+    // 导致 DOM 断言错乱（实测 4 项数据渲染出 5 个节点，含空节点、顺序错乱）。
+    // 现改为位置确定的 key，并给「数据行」「空位」两个命名空间加前缀以保证互不相交
+    // （keyFn 的返回值不落 DOM，只用于 ForEach 内部的 key 序列比较，加前缀无副作用）。
+    // 另注意 ForEach.ts:190 在 keyFn 返回 nil 时会静默跳过该项，
+    // 所以缺 rowKey 字段的行必须落到空位分支，不能返回 undefined —— 否则整行无声消失。
     return h`
       <div
         part="root"
@@ -160,11 +176,12 @@ export class Board extends FieldContainer(CompElem) {
             ?no-margin="${!this.showLabelMargin}"
             @mutate.child.debounce:100="${this.onListReady}"
           >
-            ${forEach(this.renderList, (data, ri) => data ? data[this.rowKey] : 'null_' + (nullId++), (data, ri) => h`
+            ${forEach(this.renderList, (data, ri) => (data && !isBlank(data[this.rowKey])) ? 'row:' + data[this.rowKey] : 'slot:' + ri, (data, ri) => h`
               <ce-card
                 part="card"
                 ${classes({ '--empty': isNil(data) })}
                 data-row-key="${data ? data[this.rowKey] : ''}"
+                data-state="${data?.[CARD_TAG] ?? ''}"
                 shadow="xs"
                 @click="${this.onCardClick}"
               >
@@ -194,7 +211,7 @@ export class Board extends FieldContainer(CompElem) {
                   </div>
                   <div style="display: flex;justify-content: space-between;align-items: center;" ${show(this.showProgress)}>
                     ${ifElse(isBlank(data[PROG_TAG_ERROR]), () => h`
-                      <ProgressLinear
+                      <ce-progress-linear
                         active
                         slot="actions"
                         height="${this.progressHeight}"
@@ -203,7 +220,7 @@ export class Board extends FieldContainer(CompElem) {
                         color="${data[PROG_TAG_COLOR] ?? DEFAULT_PROG_COLOR}"
                       >
                         <span>${data[PROG_TAG_LABEL] ?? data[PROG_TAG_VALUE]}</span>
-                      </ProgressLinear>
+                      </ce-progress-linear>
                       <span class="ce-board-percent">${data[PROG_TAG_UNIT] ?? ''}</span>
                     `, () => h`<span ${html(data[PROG_TAG_ERROR])}></span>`)}
                   </div>
@@ -265,7 +282,8 @@ export class Board extends FieldContainer(CompElem) {
       this.__onReady()
     }
     this.nextTick(() => {
-      this.scroller.calcBounding()
+      // 路由切走时 nextTick 才执行，scroller 已随销毁解析为 null
+      this.scroller?.calcBounding()
     })
   }
   #lastDataSize = 0
@@ -361,23 +379,34 @@ export class Board extends FieldContainer(CompElem) {
     }
 
     let f = this._fieldMap.get(field)
-    let color
-    if (!isSet && this.tagMap.has(field)) {
-      color = this.tagMap.get(field)
-      if (isObject(color)) {
-        color = color[content]
+    // tag 判定必须依据字段声明的数据类型，不能用 tagMap.has(field)：
+    // tagMap 只承载配色，字段声明 data-type="tag" 但未配 tag-colors 时其值就是
+    // undefined，has() 仍为 true ⇒ 会渲染出 color="undefined"，ce-tag 收到非法
+    // 色值后既没有底色、文字也退回灰阶，标签形同失效。同理，字段类型从 tag 改回
+    // 文本后 tagMap 的旧配色残留，也会让文本被误渲染成 tag。
+    let isTag = !isSet && this.dataTypeMap.get(field) === DataType.Tag
+    let color: string | undefined
+    if (isTag) {
+      let colors = this.tagMap.get(field)
+      // 配色可以是单个色名（所有值同色），也可以是 值→色 的映射；
+      // 映射里没命中当前值时同样没有合法色名，交由下方省略 color 属性。
+      if (isString(colors)) {
+        color = colors
+      } else if (isObject(colors)) {
+        color = colors[String(content)]
       }
-
+    }
+    if (isTag) {
       if (f?.pattern) {
         content = formatNumber(content, f.pattern)
       }
-      content = `<ce-tag size="md" pill color="${color}" >${content}</ce-tag>`
+      content = `<ce-tag size="md" pill${color ? ` color="${color}"` : ''}>${content}</ce-tag>`
     } else {
       if (f?.pattern) {
         content = formatNumber(content, f.pattern)
       }
     }
-    return `<div class="ce-board-card"><div style="min-height: 1.75em;" ${isTitle ? 'title' : ''}>${(content)}</div></div>`
+    return `<div class="ce-board-card"><div style="min-height: 1.25em;" ${isTitle ? 'title' : ''}>${(content)}</div></div>`
   }
   appendData(data: Array<Record<string, any>>) {
     let sameData = intersect(this.innerData, data, (d: Record<string, any>) => d && d[this.rowKey])
@@ -451,10 +480,11 @@ export class Board extends FieldContainer(CompElem) {
             }
           }
           if (changed) {
+            // 连续刷新时类名可能还在（1s 档位尤为明显）：先摘掉并强制重排，
+            // 让同一元素上的脉冲动画每次都能从头播放，而不是被浏览器忽略。
+            cardItem.classList.remove('changed')
+            void cardItem.offsetWidth
             cardItem.classList.add('changed')
-            setTimeout(() => {
-              cardItem.classList.remove('changed')
-            }, 1000);
           }
 
         }

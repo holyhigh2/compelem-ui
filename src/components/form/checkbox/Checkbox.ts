@@ -21,17 +21,14 @@ import style from "./style.scss?tmpl";
 @emits('change', 'update:checked')
 @tag("ce-checkbox")
 export class Checkbox extends FormControl {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   //////////////////////////////////// props
   @prop indeterminate = false;
   @prop({ type: String }) value = '';
   @prop({ type: Boolean, model: true }) checked = false;
 
-  @state({ prop: 'checked' }) __checked = false
+  @state __checked = this.checked
   @state label = '';
-  @state({ prop: 'indeterminate' }) __indeterminate = false
+  @state __indeterminate = this.indeterminate
 
   @query('input')
   input: HTMLInputElement;
@@ -101,25 +98,41 @@ export class Checkbox extends FormControl {
 
     if (isBlank(this.value) && !isEmpty(this.slots.default)) {
       this.label = this.slots.default[0].textContent!
+      // input 的 value 属性是创建期静态插值（this.value || this.label 此时均为空），
+      // label 在 mounted 才可得，这里补写一次，保证表单提交与 change 事件携带正确值
+      if (this.input && isBlank(this.input.value)) this.input.value = this.label
     }
   }
   //////////////////////////////////// methods
   onChange(e: Event) {
     let t = e.target as HTMLInputElement
+    const val = this.value || this.label
+    // 达上限兜底：原生 input 已先翻转，这里把原生态回滚并直接返回（不发 change），
+    // 保证视觉、状态、事件三者一致。常规情况下 disabled 已让这条分支不可达
+    if (t.checked && this.#checkboxGroup && !this.#checkboxGroup._canCheck(val)) {
+      t.checked = false
+      return
+    }
 
     this.__checked = this.checked = t.checked
-    this.emit('change', { value: t.value, checked: t.checked }, e)
+    this.emit('change', { value: val, checked: t.checked }, e)
+    // 原生点击路径同步通知所属 CheckboxGroup（此前只有编程接口 toggleCheck 会通知，
+    // 导致 group.value 永不更新、update:value 事件缺失）
+    if (this.#checkboxGroup) this.#checkboxGroup.onCheckChange(val, t.checked)
   }
   toggleCheck(checked?: boolean) {
-    if (this.__checked === checked) return;
+    const next = isDefined(checked) ? checked! : !this.__checked
+    if (this.__checked === next) return;
 
-    if (isDefined(checked)) {
-      this.__checked = this.checked = checked!
-    } else {
-      this.__checked = this.checked = !this.__checked
-    }
-    this.emit('change', { value: this.input.value, checked: this.__checked })
-    if (this.#checkboxGroup) this.#checkboxGroup.onCheckChange(this.input.value, this.checked)
+    const val = this.value || this.label
+    // 达上限前置守卫：DOM 路径由 group 下发的 disabled 拦住，这里覆盖 toggleCheck 等编程路径。
+    // 放在置位之前，避免"先点亮再回滚"带来的事件抖动与状态闪烁
+    if (next && this.#checkboxGroup && !this.#checkboxGroup._canCheck(val)) return
+
+    this.__checked = this.checked = next
+    this.emit('change', { value: val, checked: next })
+    // 必须传 next：this.checked 是 prop，setter 赋值只 emit 不落值，读出来是旧值
+    if (this.#checkboxGroup) this.#checkboxGroup.onCheckChange(val, next)
   }
   setIndeterminate(value: boolean) {
     this.__indeterminate = value

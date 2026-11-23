@@ -17,18 +17,16 @@
   }
 
   .ce-form-radio-label {
-    ce-card {
-      &[checked] {
-        border-width: 1px;
-        border-style: solid;
-        border-color: var(--color);
-      }
+    ::slotted(ce-card[checked]) {
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--color);
     }
 
     .ce-form-radio-title {}
 
     .ce-form-radio-subtitle {
-      font-size: 0.875rem;
+      font-size: var(--ce-font-sm);
       line-height: 1.25rem;
       margin: 0;
       color: rgb(var(--ce-color-text-secondary-rgb) / 1);
@@ -113,7 +111,9 @@
     cursor: not-allowed;
 
     .ce-form-radio-label {
-      color: fn.color(--ce-color-placeholder-rgb);
+      // 与 ce-input disabled 文本同色（--ce-color-text-secondary，灰阶 600），
+      // 原 placeholder 色过浅，禁用态几乎看不清
+      color: fn.color(--ce-color-text-secondary-rgb);
     }
 
     .ce-form-radio-box {
@@ -122,14 +122,21 @@
       }
 
       .ce-form-radio-box {
-        outline-width: 0 !important;
+        // 保留外环但改用次级色，避免 outline-width:0 直接隐藏导致原点消失
+        outline-color: fn.color(--ce-color-text-secondary-rgb);
+        outline-width: 1px;
 
         &::before {
           filter: opacity(0.5);
         }
 
+        // 选中态原点也使用次级色，保证禁用态下仍清晰可见
+        &::after {
+          background-color: fn.color(--ce-color-text-secondary-rgb);
+        }
+
         &:hover {
-          color: fn.color(--ce-color-placeholder-rgb) !important;
+          color: fn.color(--ce-color-text-secondary-rgb) !important;
         }
       }
     }
@@ -161,23 +168,30 @@
   }
 }
 
+// 组内间距：与 ce-checkbox-group 统一为 flex + gap（水平 1rem / 垂直 0.5rem）。
+// 旧方案 ::slotted(*:not(:first-child)) + margin 在 inline 换行时每行末项右侧仍留
+// 外边距，且垂直/水平要写两套 margin 规则；改成 flex + gap 后行距与换行由布局接管。
 .ce-form-radio-group {
-  ::slotted(ce-radio) {
-    display: block;
-  }
-
-  ::slotted(*:not(:first-child)) {
-    margin-top: 0.75rem;
-  }
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.5rem;
 
   &.ce-form-radio-inline {
-    ::slotted(ce-radio) {
-      display: inline-block;
-    }
-
-    ::slotted(*:not(:first-child)) {
-      margin-top: 0;
-      margin-left: 0.75rem;
-    }
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 1rem;
   }
+}
+// 禁用态衰减量控制（见 base/appearance.scss 的 --ce-disabled-opacity）：
+// ce-radio-group 只是"状态下发容器"，disabled 会下沉给每个 ce-radio，
+// 由 ce-radio 自身的 .is-disabled（文字/外环/原点改用次级色 + cursor）表达。
+// 若 group 再叠一层 opacity，父子相乘 0.25 × 0.25 = 0.0625，禁用态几乎不可见。
+:host(ce-radio-group) {
+  --ce-disabled-opacity: 1;
+}
+
+// 自定义属性会沿 DOM 继承，叶子控件必须显式恢复自身衰减值，
+// 否则 ce-radio（作为 group 的 light DOM 子节点）会继承到 group 的 1 而完全不衰减
+:host(ce-radio) {
+  --ce-disabled-opacity: 0.25;
 }

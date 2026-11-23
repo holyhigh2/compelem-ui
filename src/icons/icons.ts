@@ -5,6 +5,7 @@
  */
 
 import { h } from "compelem"
+import type { IconFactory } from "./registry"
 
 export const Compelem = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g transform="scale(0.24)"><path fill="currentColor" transform="matrix(1 0 0 1 13.3436 13)" d="M33.5899 5.1821Q45.786 3.8759 55.731 11.0507Q57.3956 12.326 59.4551 11.9316Q61.5338 11.6564 62.7113 9.9212Q63.9866 8.2567 63.5922 6.1971Q63.3169 4.1184 61.5818 2.9409Q48.5301 -6.4752 32.525 -4.761Q16.5195 -3.0468 5.7603 8.9199Q-5 20.8878 -5 36.978Q-5 53.0681 5.7603 65.0359Q16.5196 77.0027 32.525 78.7169Q48.5301 80.4311 61.5818 71.0149Q63.3169 69.8375 63.5922 67.7587Q63.9866 65.6992 62.7113 64.0346Q61.5338 62.2995 59.455 62.0242Q57.3956 61.6299 55.731 62.9052Q45.786 70.08 33.5899 68.7738Q21.3942 67.4676 13.1966 58.35Q5 49.2336 5 36.978Q5 24.7223 13.1966 15.6059Q21.3941 6.4883 33.5899 5.1821Z" fill-rule="evenodd"/><path fill="currentColor" opacity=".5" transform="matrix(1 0 0 1 32.7522 32)" d="M19.2992 2.8054Q25.9764 3.376 30.0715 8.6773Q30.75 9.6099 31.8977 9.7238Q33.0369 9.9034 33.929 9.1724Q34.8616 8.4939 34.9754 7.3463Q35.1551 6.207 34.4241 5.315Q28.852 -1.8984 19.7675 -2.6746Q10.6832 -3.4509 3.9669 2.7122Q-2.75 8.876 -2.75 17.9901Q-2.75 27.1041 3.9669 33.2679Q10.6832 39.431 19.7675 38.6548Q28.852 37.8785 34.4241 30.6651Q35.1551 29.7731 34.9754 28.6339Q34.8616 27.4862 33.929 26.8077Q33.0369 26.0767 31.8977 26.2563Q30.75 26.3702 30.0715 27.3029Q25.9764 32.6041 19.2992 33.1747Q12.6219 33.7453 7.6856 29.2155Q2.75 24.6864 2.75 17.9901Q2.75 11.2937 7.6856 6.7646Q12.6219 2.2348 19.2992 2.8054Z" fill-rule="evenodd"/><circle fill="currentColor" transform="matrix(1 0 0 1 45.5 45.5)" cx="4.5" cy="4.5" r="4.5"/><circle fill="currentColor" opacity=".5" transform="matrix(1 0 0 1 65 26)" cx="2" cy="2" r="2"/><circle fill="currentColor" opacity=".5" transform="matrix(1 0 0 1 65 70)" cx="2" cy="2" r="2"/></g></svg>`
 export const Close = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="-6 -6 24 24"><path fill="currentColor" d="m7.314 5.9l3.535-3.536A1 1 0 1 0 9.435.95L5.899 4.485L2.364.95A1 1 0 1 0 .95 2.364l3.535 3.535L.95 9.435a1 1 0 1 0 1.414 1.414l3.535-3.535l3.536 3.535a1 1 0 1 0 1.414-1.414L7.314 5.899z"/></svg>`
@@ -87,6 +88,7 @@ export const TrendUp = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1e
 
 export const EyeClosed = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M20.69 11.7c-.12-.26-2.86-6.45-8.69-6.45a7.7 7.7 0 0 0-1.66.18a.75.75 0 0 0 .32 1.46A6.6 6.6 0 0 1 12 6.75c4.18 0 6.58 4.1 7.17 5.25a13.3 13.3 0 0 1-1.26 2a.75.75 0 0 0 .59 1.21a.75.75 0 0 0 .59-.29a13.4 13.4 0 0 0 1.6-2.59a.78.78 0 0 0 0-.63M6.53 5.47a.75.75 0 0 0-1.06 1.06l.92.92a13.2 13.2 0 0 0-3.08 4.26a.76.76 0 0 0 0 .59c.12.26 2.86 6.45 8.69 6.45a7.93 7.93 0 0 0 4.39-1.3l1.08 1.08a.75.75 0 0 0 1.06 0a.75.75 0 0 0 0-1.06Zm3.83 6l2.21 2.22a1.81 1.81 0 0 1-1.81-.4a1.74 1.74 0 0 1-.4-1.87ZM12 17.25c-4.19 0-6.58-4.11-7.17-5.25a12 12 0 0 1 2.62-3.49l1.79 1.79a3.24 3.24 0 0 0 4.46 4.46l1.61 1.61a6.5 6.5 0 0 1-3.31.88"/></svg>`
 export const EyeOpened = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 18.75c-5.83 0-8.57-6.19-8.69-6.45a.78.78 0 0 1 0-.6c.12-.26 2.86-6.45 8.69-6.45s8.57 6.19 8.69 6.45a.78.78 0 0 1 0 .6c-.12.26-2.86 6.45-8.69 6.45M4.83 12c.59 1.15 3 5.25 7.17 5.25s6.58-4.1 7.17-5.25c-.59-1.15-3-5.25-7.17-5.25S5.42 10.85 4.83 12"/><path fill="currentColor" d="M12 15.25A3.25 3.25 0 1 1 15.25 12A3.26 3.26 0 0 1 12 15.25m0-5A1.75 1.75 0 1 0 13.75 12A1.76 1.76 0 0 0 12 10.25"/></svg>`
+export const Play = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M10.01 5.887c-1.667-.972-3.76.23-3.76 2.16v7.906c0 1.93 2.093 3.132 3.76 2.16l6.777-3.954c1.653-.964 1.653-3.354 0-4.318z"/></svg>`
 //
 export const Pin = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 256 256"><path fill="currentColor" d="m235.32 81.37l-60.69-60.68a16 16 0 0 0-22.63 0l-53.63 53.8c-10.66-3.34-35-7.37-60.4 13.14a16 16 0 0 0-1.29 23.78L85 159.71l-42.66 42.63a8 8 0 0 0 11.32 11.32L96.29 171l48.29 48.29A16 16 0 0 0 155.9 224h1.13a15.93 15.93 0 0 0 11.64-6.33c19.64-26.1 17.75-47.32 13.19-60L235.33 104a16 16 0 0 0-.01-22.63M224 92.69l-57.27 57.46a8 8 0 0 0-1.49 9.22c9.46 18.93-1.8 38.59-9.34 48.62L48 100.08c12.08-9.74 23.64-12.31 32.48-12.31A40.1 40.1 0 0 1 96.81 91a8 8 0 0 0 9.25-1.51L163.32 32L224 92.68Z"/></svg>`
 export const PinFill = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 256 256"><g fill="currentColor"><path d="m229.66 98.34l-57.27 57.46c11.46 22.93-1.72 45.86-10.11 57a8 8 0 0 1-12 .83L42.34 105.76A8 8 0 0 1 43 93.85c29.65-23.92 57.4-10 57.4-10l57.27-57.46a8 8 0 0 1 11.31 0L229.66 87a8 8 0 0 1 0 11.34" opacity="0.2"/><path d="m235.32 81.37l-60.69-60.68a16 16 0 0 0-22.63 0l-53.63 53.8c-10.66-3.34-35-7.37-60.4 13.14a16 16 0 0 0-1.29 23.78L85 159.71l-42.66 42.63a8 8 0 0 0 11.32 11.32L96.29 171l48.29 48.29A16 16 0 0 0 155.9 224h1.13a15.93 15.93 0 0 0 11.64-6.33c19.64-26.1 17.75-47.32 13.19-60L235.33 104a16 16 0 0 0-.01-22.63M224 92.69l-57.27 57.46a8 8 0 0 0-1.49 9.22c9.46 18.93-1.8 38.59-9.34 48.62L48 100.08c12.08-9.74 23.64-12.31 32.48-12.31A40.1 40.1 0 0 1 96.81 91a8 8 0 0 0 9.25-1.51L163.32 32L224 92.68Z"/></g></svg>`
@@ -115,6 +117,7 @@ export const WindowMax = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="
 export const Enlarge = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m15 9l5-5m0 0v4m0-4h-4M9 15l-5 5m0 0v-4m0 4h4"/></svg>`
 export const Reduce = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m4 20l5-5m0 0v4m0-4H5M20 4l-5 5m0 0V5m0 4h4"/></svg>`
 export const EllipsisH = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 22 22"><path fill="currentColor" d="M4.75 12a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 0 0-3.5 0m5.5 0a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 0 0-3.5 0m7.25 1.75a1.75 1.75 0 1 1 0-3.5a1.75 1.75 0 0 1 0 3.5"/></svg>`
+export const EllipsisV = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 19.25a1.75 1.75 0 1 0 0-3.5a1.75 1.75 0 0 0 0 3.5m0-5.5a1.75 1.75 0 1 0 0-3.5a1.75 1.75 0 0 0 0 3.5m1.75-7.25a1.75 1.75 0 1 1-3.5 0a1.75 1.75 0 0 1 3.5 0"/></svg>`
 
 export const SectionDivider = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.75 4.5a.75.75 0 0 1 .75.75c0 1.009-.181 2.613 1.197 2.725C4.993 8 5.377 8 5.95 8h11.6c.968 0 2.318.11 2.425-1.197c.042-.516.025-1.036.025-1.553a.75.75 0 0 1 1.5 0c0 .558.016 1.118-.03 1.675c-.03.38-.098.736-.27 1.073c-.73 1.435-2.215 1.502-3.62 1.502H5.92c-.792 0-1.69.071-2.418-.3c-.89-.453-1.393-1.302-1.472-2.275C1.984 6.368 2 5.808 2 5.25a.75.75 0 0 1 .75-.75m-1 7.5a.75.75 0 0 1 .75-.75h19a.75.75 0 0 1 0 1.5h-19a.75.75 0 0 1-.75-.75m4.17 2.5h11.66c.535 0 .98 0 1.345.03c.973.08 1.822.582 2.275 1.472c.172.337.24.693.27 1.073c.046.557.03 1.117.03 1.675a.75.75 0 0 1-1.5 0c0-1.026.205-2.61-1.198-2.725C18.507 16 18.123 16 17.55 16H5.95c-.572 0-.957 0-1.253.025C3.32 16.137 3.5 17.74 3.5 18.75a.75.75 0 0 1-1.5 0c0-.558-.016-1.118.03-1.675c.03-.38.098-.736.27-1.073c.453-.89 1.302-1.393 2.275-1.472c.365-.03.81-.03 1.345-.03" clip-rule="evenodd"/></svg>`
 export const Group = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.125 6.25c-.55 0-1 .45-1 1s.45 1 1 1h.01c.55 0 1-.45 1-1s-.45-1-1-1zm4 .25c-.41 0-.75.34-.75.75s.34.75.75.75h12c.41 0 .75-.34.75-.75s-.34-.75-.75-.75zm-1 5.75c0-.55.45-1 1-1h.01c.55 0 1 .45 1 1s-.45 1-1 1h-.01c-.55 0-1-.45-1-1m1 4c-.55 0-1 .45-1 1s.45 1 1 1h.01c.55 0 1-.45 1-1s-.45-1-1-1zm3.25-4c0-.41.34-.75.75-.75h8c.41 0 .75.34.75.75s-.34.75-.75.75h-8c-.41 0-.75-.34-.75-.75m.75 4.25c-.41 0-.75.34-.75.75s.34.75.75.75h8c.41 0 .75-.34.75-.75s-.34-.75-.75-.75z"/></svg>`
@@ -135,6 +138,13 @@ export const FillColor = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="
 </svg>
 `
 
+export const AdjustH = () => h`<svg data-slot="icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M18.75 12.75h1.5a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM12 6a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 6ZM12 18a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 18ZM3.75 6.75h1.5a.75.75 0 1 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM5.25 18.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 0 1.5ZM3 12a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 3 12ZM9 3.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM12.75 12a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0ZM9 15.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z"></path>
+</svg>`
+export const Sparkles = () => h`<svg data-slot="icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path clip-rule="evenodd" fill-rule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"></path>
+</svg>`
+
 export const AlignJustify = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.5" d="M3 10h18M3 6h18M3 14h18M3 18h18"/></svg>`
 export const AlignLeftBlock = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" fill-opacity="0.16" d="M22 6.6v1.8a1.6 1.6 0 0 1-1.6 1.6H7.6A1.6 1.6 0 0 1 6 8.4V6.6A1.6 1.6 0 0 1 7.6 5h12.8A1.6 1.6 0 0 1 22 6.6m-8 9v1.8a1.6 1.6 0 0 1-1.6 1.6H7.6A1.6 1.6 0 0 1 6 17.4v-1.8A1.6 1.6 0 0 1 7.6 14h4.8a1.6 1.6 0 0 1 1.6 1.6"/><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.5" d="M2 2v20m12-6.4v1.8a1.6 1.6 0 0 1-1.6 1.6H7.6A1.6 1.6 0 0 1 6 17.4v-1.8A1.6 1.6 0 0 1 7.6 14h4.8a1.6 1.6 0 0 1 1.6 1.6m8-9v1.8a1.6 1.6 0 0 1-1.6 1.6H7.6A1.6 1.6 0 0 1 6 8.4V6.6A1.6 1.6 0 0 1 7.6 5h12.8A1.6 1.6 0 0 1 22 6.6"/></g></svg>`
 export const AlignCenterBlock = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" fill-opacity="0.16" d="M16 17.4v-1.8a1.6 1.6 0 0 0-1.6-1.6H9.6A1.6 1.6 0 0 0 8 15.6v1.8A1.6 1.6 0 0 0 9.6 19h4.8a1.6 1.6 0 0 0 1.6-1.6m4-9V6.6A1.6 1.6 0 0 0 18.4 5H5.6A1.6 1.6 0 0 0 4 6.6v1.8A1.6 1.6 0 0 0 5.6 10h12.8A1.6 1.6 0 0 0 20 8.4"/><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.5" d="M12 2v3m0 5v4m0 5v3m4-6.4v1.8a1.6 1.6 0 0 1-1.6 1.6H9.6A1.6 1.6 0 0 1 8 17.4v-1.8A1.6 1.6 0 0 1 9.6 14h4.8a1.6 1.6 0 0 1 1.6 1.6m4-9v1.8a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 8.4V6.6A1.6 1.6 0 0 1 5.6 5h12.8A1.6 1.6 0 0 1 20 6.6"/></g></svg>`
@@ -149,40 +159,56 @@ export const CopySelectFill = () => h`<svg xmlns="http://www.w3.org/2000/svg" wi
 export const Paste = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M8.5 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2.5"/><path d="M8 6.4V4.5a.5.5 0 0 1 .5-.5c.276 0 .504-.224.552-.496C9.2 2.652 9.774 1 12 1s2.8 1.652 2.948 2.504c.048.272.276.496.552.496a.5.5 0 0 1 .5.5v1.9a.6.6 0 0 1-.6.6H8.6a.6.6 0 0 1-.6-.6Z"/></g></svg>`
 export const SelectAllDuo = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 256 256"><g fill="currentColor"><path d="M176 80v96H80V80Z" opacity="0.2"/><path d="M104 40a8 8 0 0 1 8-8h32a8 8 0 0 1 0 16h-32a8 8 0 0 1-8-8m40 168h-32a8 8 0 0 0 0 16h32a8 8 0 0 0 0-16m64-176h-24a8 8 0 0 0 0 16h24v24a8 8 0 0 0 16 0V48a16 16 0 0 0-16-16m8 72a8 8 0 0 0-8 8v32a8 8 0 0 0 16 0v-32a8 8 0 0 0-8-8m0 72a8 8 0 0 0-8 8v24h-24a8 8 0 0 0 0 16h24a16 16 0 0 0 16-16v-24a8 8 0 0 0-8-8M40 152a8 8 0 0 0 8-8v-32a8 8 0 0 0-16 0v32a8 8 0 0 0 8 8m32 56H48v-24a8 8 0 0 0-16 0v24a16 16 0 0 0 16 16h24a8 8 0 0 0 0-16M40 80a8 8 0 0 0 8-8V48h24a8 8 0 0 0 0-16H48a16 16 0 0 0-16 16v24a8 8 0 0 0 8 8m136 104H80a8 8 0 0 1-8-8V80a8 8 0 0 1 8-8h96a8 8 0 0 1 8 8v96a8 8 0 0 1-8 8m-8-96H88v80h80Z"/></g></svg>`
 export const Select = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 256 256"><path fill="currentColor" d="M152 40a8 8 0 0 1-8 8h-32a8 8 0 0 1 0-16h32a8 8 0 0 1 8 8m-8 168h-32a8 8 0 0 0 0 16h32a8 8 0 0 0 0-16m64-176h-24a8 8 0 0 0 0 16h24v24a8 8 0 0 0 16 0V48a16 16 0 0 0-16-16m8 72a8 8 0 0 0-8 8v32a8 8 0 0 0 16 0v-32a8 8 0 0 0-8-8m0 72a8 8 0 0 0-8 8v24h-24a8 8 0 0 0 0 16h24a16 16 0 0 0 16-16v-24a8 8 0 0 0-8-8M40 152a8 8 0 0 0 8-8v-32a8 8 0 0 0-16 0v32a8 8 0 0 0 8 8m32 56H48v-24a8 8 0 0 0-16 0v24a16 16 0 0 0 16 16h24a8 8 0 0 0 0-16m0-176H48a16 16 0 0 0-16 16v24a8 8 0 0 0 16 0V48h24a8 8 0 0 0 0-16"/></svg>`
+/** 删除行（表格右键菜单） */
+export const DeleteRow = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024"><path fill="currentColor" d="M307.2 752.941176c0-36.141176 30.117647-60.235294 60.235294-60.235294h487.905882c24.094118 0 42.164706 18.070588 42.164706 36.141177s-12.047059 36.141176-36.141176 36.141176h-481.882353v66.258824h475.858823c18.070588 0 36.141176 12.047059 36.141177 36.141176v6.02353c0 18.070588-12.047059 36.141176-36.141177 36.141176H367.435294c-36.141176 0-66.258824-24.094118-66.258823-54.211765V752.941176zM307.2 186.729412c0-36.141176 30.117647-60.235294 60.235294-60.235294h487.905882c24.094118 0 36.141176 18.070588 36.141177 36.141176s-12.047059 36.141176-36.141177 36.141177h-481.882352v66.258823h475.858823c18.070588 0 36.141176 12.047059 36.141177 36.141177v6.023529c0 18.070588-12.047059 36.141176-36.141177 36.141176H361.411765c-36.141176 0-66.258824-24.094118-66.258824-54.211764V186.729412z"/><path fill="var(--ce-color-error)" d="M90.352941 427.670588v180.705883c0 18.070588 12.047059 36.141176 36.141177 36.141176h301.17647c18.070588 0 36.141176-12.047059 36.141177-36.141176v-180.705883c0-18.070588-12.047059-36.141176-36.141177-36.141176h-301.17647c-18.070588 6.023529-36.141176 18.070588-36.141177 36.141176z m66.258824 36.141177h234.917647v114.447059H156.611765V463.811765z"/><path fill="var(--ce-color-error-light)" d="M156.611765 463.811765h234.917647v114.447059H156.611765z"/><path fill="var(--ce-color-error)" d="M789.082353 379.482353c12.047059-12.047059 36.141176-12.047059 48.188235 0 12.047059 12.047059 12.047059 30.117647 6.02353 42.164706l-6.02353 6.023529-210.823529 210.82353c-12.047059 12.047059-36.141176 12.047059-48.188235 0-6.023529-18.070588-12.047059-36.141176 0-48.188236l6.023529-6.023529 204.8-204.8z"/><path fill="var(--ce-color-error)" d="M584.282353 379.482353c12.047059-12.047059 30.117647-12.047059 42.164706-6.023529l6.023529 6.023529L843.294118 590.305882c12.047059 12.047059 12.047059 36.141176 0 48.188236-12.047059 12.047059-30.117647 12.047059-42.164706 6.023529l-6.02353-6.023529-210.823529-210.82353c-18.070588-18.070588-18.070588-36.141176 0-48.188235z"/></svg>`
+/** 空白行（表格右键菜单） */
+export const BlankRow = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024"><path fill="currentColor" d="M128 256h682.666667v213.333333H128V256z m700.074667 275.541333l48.256 48.256-81.408 81.365334 81.536 81.578666-48.256 48.256-81.536-81.578666-81.493334 81.578666-48.298666-48.256 81.493333-81.578666-81.365333-81.365334 48.256-48.256 81.408 81.322667 81.408-81.322667zM554.666667 554.666667v213.333333H128v-213.333333h426.666667z m-42.666667 42.666666H170.666667v128h341.333333v-128z m256-298.666666v128H170.666667V298.666667h597.333333z"/></svg>`
+/** 清空内容（表格右键菜单） */
+export const ClearContent = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024"><path fill="var(--ce-color-error)" d="M159.488 256c-52.608 0-96 43.328-96 96v256c0 52.672 43.392 96 96 96h291.264c-1.216 10.624-3.2 21.056-3.2 32 0 158.72 129.28 288 288 288 158.656 0 288-129.28 288-288a288 288 0 0 0-128-239.232V352c0-52.672-43.392-96-96-96h-640z m0 64h640c18.048 0 32 14.016 32 32v113.6a284.352 284.352 0 0 0-96-17.6C610.624 448 504.96 528.512 465.152 640H159.488a31.552 31.552 0 0 1-32-32v-256c0-17.984 14.016-32 32-32z m576 192c124.16 0 224 99.904 224 224s-99.84 224-224 224a223.488 223.488 0 0 1-224-224c0-124.096 99.904-224 224-224z m-160 192v64h320v-64h-320z"/></svg>`
 
+export const Database = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 16 16"><g fill="currentColor"><path d="M3.904 1.777C4.978 1.289 6.427 1 8 1s3.022.289 4.096.777C13.125 2.245 14 2.993 14 4s-.875 1.755-1.904 2.223C11.022 6.711 9.573 7 8 7s-3.022-.289-4.096-.777C2.875 5.755 2 5.007 2 4s.875-1.755 1.904-2.223"/><path d="M2 6.161V7c0 1.007.875 1.755 1.904 2.223C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777C13.125 8.755 14 8.007 14 7v-.839c-.457.432-1.004.751-1.49.972C11.278 7.693 9.682 8 8 8s-3.278-.307-4.51-.867c-.486-.22-1.033-.54-1.49-.972"/><path d="M2 9.161V10c0 1.007.875 1.755 1.904 2.223C4.978 12.711 6.427 13 8 13s3.022-.289 4.096-.777C13.125 11.755 14 11.007 14 10v-.839c-.457.432-1.004.751-1.49.972c-1.232.56-2.828.867-4.51.867s-3.278-.307-4.51-.867c-.486-.22-1.033-.54-1.49-.972"/><path d="M2 12.161V13c0 1.007.875 1.755 1.904 2.223C4.978 15.711 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13v-.839c-.457.432-1.004.751-1.49.972c-1.232.56-2.828.867-4.51.867s-3.278-.307-4.51-.867c-.486-.22-1.033-.54-1.49-.972"/></g></svg>`
+export const Dataset = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+	<path d="M0 0h24v24H0z" fill="none" />
+	<path fill="currentColor" d="M7 17h4v-4H7zm6 0h4v-4h-4zm-6-6h4V7H7zm6 0h4V7h-4zM5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21z" />
+</svg>`
+export const DatasetLinked = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+	<path d="M0 0h24v24H0z" fill="none" />
+	<path fill="currentColor" d="M5 20q-.825 0-1.412-.587T3 18V4q0-.825.588-1.412T5 2h14q.825 0 1.413.588T21 4v7.075q-.25-.05-.488-.062T20 11h-6q-.925 0-1.763.263T10.676 12H7v4h1.075q-.05.25-.062.488T8 17q0 .8.2 1.563T8.8 20zm2-10h4V6H7zm7 11q-1.65 0-2.825-1.175T10 17t1.175-2.825T14 13h2v2h-2q-.825 0-1.412.588T12 17t.588 1.413T14 19h2v2zm-1-11h4V6h-4zm1 8v-2h6v2zm4 3v-2h2q.825 0 1.413-.587T22 17t-.587-1.412T20 15h-2v-2h2q1.65 0 2.825 1.163T24 17q0 1.65-1.175 2.825T20 21z" />
+</svg>`
+export const Magnet = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M4 4v8.296C4 16.551 7.582 20 12 20s8-3.45 8-7.704V4"/><path d="M4 4h5.63v6.818C9.63 12.023 10.69 13 12 13s2.37-.977 2.37-2.182V4H20M9 8H4m16 0h-5"/></g></svg>`
+export const Text = () => h`<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M7.5 4H4v1H3V3h10v2h-1V4H8.5v8H10v1H6v-1h1.5z" clip-rule="evenodd"/></svg>`
 
-
-export const IconMap: Record<string, Function> = {
-    Compelem,
-    SidePeek, ListUl,
-    AlignLeftBlock, AlignCenterBlock, AlignRightBlock, AlignJustify, AlignCenter,
-    Close,
-    ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ExpandVertical,
-    Loading,
-    Check, CheckCircle, CheckCircleDuo, CheckCircleFill, CheckSquareSolid,
-    Times, TimesCircle, TimesCircleDuo, TimesCircleFill,
-    ExclamationCircle, ExclamationCircleDuo, ExclamationCircleFill, ExclamationTri, ExclamationTriDuo, ExclamationTriFill,
-    Info, InfoFill,
-    ArrowUp, ArrowDown, ArrowUpSolid, ArrowDownSolid,
-    CaretUp, CaretDown, CaretLeft, CaretRight,
-    Search, Date, Question, QuestionDuo, QuestionFill, Move, Drag, MoveIn,
-    AvatarDefault,
-    Gears, Gear, Nut,
-    Protocol, Collection, Branch, Home, Link,
-    Signout, CloudUp, CloudDown, CloudUpDuo, CloudDownDuo, Burger, ExportFile, DataBoolean,
-    TrashCan, Plus, Hash, Retry,
-    LockClosed, LockOpened,
-    Filter, FilterList, FilterListLight,
-    TrendDown, TrendUp,
-    EyeClosed, EyeOpened,
-    Pin, PinFill, StatsColumn,
-    SortDown, SortUp, Sort, Swap,
-    SectionDivider, Group,
-    RowHeight, RowHeightL, RowHeightM, RowHeightS,
-    DragVertical, DragHorizontal, Clock, Calendar,
-    Pencil, Enlarge, Reduce,
-    ExpandDiagonal, ShrinkDiagonal, Expand, Shrink,
-    OpenInWindow, OpenNewWindow, WindowMax, WindowMin,
-    EllipsisH, BrushBroad, FillColor,
-    CopySelect, CopySelectFill, Paste, SelectAllDuo, Select
+export const IconMap: Record<string, IconFactory> = {
+  Compelem, AdjustH, Sparkles, Dataset, DatasetLinked, Database,
+  SidePeek, ListUl, Magnet, Text,
+  AlignLeftBlock, AlignCenterBlock, AlignRightBlock, AlignJustify, AlignCenter,
+  Close,
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ExpandVertical,
+  Loading,
+  Check, CheckCircle, CheckCircleDuo, CheckCircleFill, CheckSquareSolid,
+  Times, TimesCircle, TimesCircleDuo, TimesCircleFill,
+  ExclamationCircle, ExclamationCircleDuo, ExclamationCircleFill, ExclamationTri, ExclamationTriDuo, ExclamationTriFill,
+  Info, InfoFill,
+  ArrowUp, ArrowDown, ArrowUpSolid, ArrowDownSolid,
+  CaretUp, CaretDown, CaretLeft, CaretRight,
+  Search, Date, Question, QuestionDuo, QuestionFill, Move, Drag, MoveIn,
+  AvatarDefault,
+  Gears, Gear, Nut,
+  Protocol, Collection, Branch, Home, Link,
+  Signout, CloudUp, CloudDown, CloudUpDuo, CloudDownDuo, Burger, ExportFile, DataBoolean,
+  TrashCan, Plus, Hash, Retry,
+  LockClosed, LockOpened,
+  Filter, FilterList, FilterListLight,
+  TrendDown, TrendUp,
+  EyeClosed, EyeOpened, Play,
+  Pin, PinFill, StatsColumn,
+  SortDown, SortUp, Sort, Swap,
+  SectionDivider, Group,
+  RowHeight, RowHeightL, RowHeightM, RowHeightS,
+  DragVertical, DragHorizontal, Clock, Calendar,
+  Pencil, Enlarge, Reduce,
+  ExpandDiagonal, ShrinkDiagonal, Expand, Shrink,
+  OpenInWindow, OpenNewWindow, WindowMax, WindowMin,
+  EllipsisH, EllipsisV, BrushBroad, FillColor,
+  CopySelect, CopySelectFill, Paste, SelectAllDuo, Select
 }

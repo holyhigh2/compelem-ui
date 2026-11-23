@@ -7,7 +7,7 @@ const COL_COUNT = 24
 /**
  * 格栅布局 - 行
  * 每一行分为24列
- * @props
+ * @attrs
  *  gap {string|number} 列间距，默认0。类型为数字时单位为px
  *
  * @slots
@@ -20,7 +20,12 @@ export class Row extends CompElem<null> {
   grid: Grid
 
   /////////////////////////////////// props
-  @prop({ type: String }) gap: string | number = '0'
+  // type 必须显式声明为 [String, Number]：
+  // - 省略 type 时 compelem 会用默认值的 typeof 推断，'0' 会被推断成 String，
+  //   模板里 .gap="${8}" 传数字照样报 "expected 'String' but got 'number'"；
+  // - 含 String 时框架跳过属性值转换（CompElem.#propTypeCheck），
+  //   gap="1rem" 这类字符串单位不会被 Number() 转成 NaN。
+  @prop({ type: [String, Number] }) gap: string | number = '0'
 
   /////////////////////////////////// styles
   get cssVars(): Record<string, string | number | undefined> {
@@ -55,7 +60,10 @@ export class Row extends CompElem<null> {
     })
   }
   beforeDestroyed(): void {
-    each(this.children, (col: Col) => {
+    // children 是 live HTMLCollection，destroy 会同步移除节点导致遍历错位，
+    // 必须先快照；且仅销毁真正的 Col 组件
+    const cols = filter<Col>(this.children, (el) => el instanceof Col)
+    each(cols, (col: Col) => {
       col.destroy()
     })
     this.grid = null as any

@@ -44,9 +44,21 @@ export class ColumnFoot extends CompElem {
     `]
   }
 
+  /**
+   * ⚠️⚠️ **`cssVars` 里禁止出现「挂在响应式字段上的成员访问/方法调用」**（如 `this.prop.replaceAll(...)`）。
+   *
+   * 编译器 `deps-extract.ts` 的 `resolveChain()` 会把 `this.prop.replaceAll` 解析成**路径** `['prop','replaceAll']`，
+   * 再由 `record()` 记成两条依赖：`'prop.replaceAll'` 与 `'prop'`；codegen 据此生成
+   * `rc.__s.prop.replaceAll.value` —— 而 `__s` 上只有 `prop`，没有 `prop.replaceAll`
+   * ⇒ 首次执行即 `TypeError: Cannot read properties of undefined (reading 'value')`。
+   *
+   * 修法：先把值**落到局部变量**（局部标识符不在依赖提取范围内），再在局部变量上做链式调用。
+   * 这里 `this.prop` 单独出现 → 依赖恰为 `'prop'`，是正确且最小的依赖集。
+   */
   get cssVars() {
+    const prop = this.prop
     return {
-      columnWidth: `var(--column-width-${kebabCase(this.prop.replaceAll('.', '-'))})`
+      columnWidth: `var(--column-width-${kebabCase(String(prop).split('.').join('-'))})`
     }
   }
 
@@ -162,7 +174,8 @@ export class ColumnFoot extends CompElem {
         if (col && col.pattern && v !== DEFAULT_VALUE && !isFillStat) {
           switch (col.dataType) {
             case DataType.Number:
-              v = isNumeric(v) ? formatNumber(v, col.pattern) : ''
+              // 同 Table：非数字保留原文（列脚的统计文案不该被吞成空）
+              v = isNumeric(v) ? formatNumber(v, col.pattern) : v
               break;
             case DataType.Time:
             case DataType.DateTime:

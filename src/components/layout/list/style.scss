@@ -1,24 +1,44 @@
-@use "../../../css/functions" as fn;
 @use "../../../css/mixins";
 @use "../../../css/utils";
+
+// ── 折叠/展开几何动画 ─────────────────────────────────────────
+// 原先 :host / .ce-list / .ce-list-container 各自写死 `transition 0.3s`，消费方
+// 既不能整体关闭，也不能和外壳（如 ce-aside）的时长对齐 ⇒ 行在动、外壳不动的错帧。
+// 现在统一走两个开关，默认值等于旧行为：
+//   --ce-list-transition-duration        几何动画时长，设 0s 即整体关闭插值
+//   --ce-list-transition-timing-function 缓动，外壳与行共用同一条曲线
+// hover 变色是另一回事（用户反馈，不该被折叠开关牵连），单独用
+// --ce-list-item-hover-transition-duration 控制（见 style-item.scss）。
+$_lt: var(--ce-list-transition-duration, 0.3s) var(--ce-list-transition-timing-function, ease);
 
 :host {
   --color: var(--ce-color-text);
   display: block;
   --list-collapsed-width: 56px;
-  --list-item-height: 32px;
-  transition: width 0.3s;
+  // 行高下限同样锚定根字号：14px 根字号下 2rem=28px，16px 根字号下=32px。
+  // 原来写死 32px，根字号缩小时行距不缩，视觉上反而变松。
+  --list-item-height: 2rem;
+  transition: width $_lt;
   position: relative;
 }
 :host(ce-list) {
   overflow: hidden;
 }
 
+// card：列表自身即卡片表面（背景 + 圆角 + 投影），无需再套一层 ce-card。
+// 圆角裁剪依赖上面的 overflow: hidden —— 分隔线与首末行的悬浮底色会一并裁进圆角。
+:host(ce-list[card]) {
+  background: var(--ce-card-bg);
+  border-radius: var(--ce-card-radius);
+  box-shadow: var(--ce-shadow-sm);
+}
+
 .ce-list {
   height: inherit;
   width: 100%;
   position: relative;
-  transition: all 0.3s;
+  transition: all $_lt;
+  font-size: var(--ce-list-font-md, var(--ce-font-md));
   ce-scroller {
     height: 100%;
   }
@@ -30,23 +50,25 @@
     }
     width: var(--list-collapsed-width) !important;
   }
+  // 字号按 size 变化；行间内距不受 size 影响，统一由 --ce-list-item-padding-block 控制。
+  // md 是正文档（与表格 / 菜单同档）；sm / lg 各降 / 升一档。
   &.ce-list-size-sm {
-    --padding-y: 0.5rem;
-    @include mixins.text-sm;
-  }
-
-  &.ce-list-size-md {
-    --padding-y: 0.75rem;
+    font-size: var(--ce-list-font-sm, var(--ce-font-sm));
+    line-height: var(--ce-lineh-sm);
   }
 
   &.ce-list-size-lg {
-    --padding-y: 1.25rem;
-    @include mixins.text-lg;
+    font-size: var(--ce-list-font-lg, var(--ce-font-lg));
+    line-height: var(--ce-lineh-lg);
   }
 
+  // 分隔线不用 CSS 画：ce-list 的 slot 无法在 slotted 节点之间插入 DOM，
+  // ::slotted() 后面也不能接 ::after，靠容器背景画线又要求等行高。
+  // 统一由调用方在列表项之间插入 <ce-divider> 组件 —— 实测只占 1px、不撑高行，
+  // inset="2rem" 即两端各内缩 1rem（对齐 Material 的 inset divider）。
   .ce-list-container {
     display: grid;
     position: relative;
-    transition: all 0.3s;
+    transition: all $_lt;
   }
 }

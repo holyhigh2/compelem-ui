@@ -6,22 +6,60 @@
   tab-size: 4;
   box-sizing: border-box;
   background-repeat: no-repeat;
+
   &:active,
   &:hover {
     outline: none;
   }
 }
+
 :host,
 html {
-  line-height: 1;
+  // 基线行高必须是「安全值」而非 1：1em 行盒恰好等于字号，任何带
+  // overflow:hidden 的文本（省略号/徽标/分段标签）都会裁掉中文竖钩、
+  // 拉丁降部。对齐主流库（Tailwind preflight 1.5 / AntD lineHeight 1.57），
+  // 统一取库内标准档 --ce-lineh-md=1.5；真正需要正方形紧凑行盒的图标/
+  // 装饰元素各自显式声明 --ce-lineh-xs（见各组件样式），不再让每个文本
+  // 组件反过来「恢复」被压扁的基线。fallback 保证 token 未注入时仍安全。
+  line-height: var(--ce-lineh-md, 1.5);
+  // 全库此前没有 font-family token ⇒ 拉丁字形回退 UA 衬线体，与 CJK 混排时断层明显。
+  // 统一由 --ce-font-family 提供（应用可整体覆盖），未定义时回退系统无衬线栈。
+  font-family: var(--ce-font-family,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "PingFang SC",
+      "Hiragino Sans GB",
+      "Microsoft YaHei",
+      "Helvetica Neue",
+      Arial,
+      sans-serif);
 }
+
 code {
   font-family: monospace;
 }
+
 button {
   color: inherit;
   font-size: inherit;
 }
+
+/*
+ * 表单控件默认**不继承**字体：UA 样式表给 input / textarea / select 指定了
+ * `font: 400 13.33px Arial` 之类的值，只重置 button（见上）是不够的 —— 实测
+ * 同一个表单里会并存 13 / 14 / 16px 三种字号，且字族回退到 Arial。
+ * 这里显式继承（不用 `font: inherit` 简写，避免连带重置 line-height 影响控件高度）。
+ */
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
 input {
   &::placeholder {
     color: var(--ce-color-placeholder);
@@ -32,10 +70,4 @@ button,
 input[type="button"] {
   cursor: pointer;
   outline: none;
-}
-//支持bs icons，需要引入bs-icons的svg文件
-//可以针对字体图标统一提供设置接口，
-@font-face {
-  font-family: "bootstrap-icons";
-  src: url("/fonts/bootstrap-icons.svg") format("svg");
 }

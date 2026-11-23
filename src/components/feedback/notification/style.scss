@@ -9,7 +9,7 @@
 .ce-notification {
   position: relative;
   padding: 1rem;
-  background-color: #fff;
+  background-color: var(--ce-color-bg, #fff);
   transition: opacity 0.4s ease-in-out, box-shadow 0.3s,
     padding 0.3s ease-in-out;
 
@@ -80,7 +80,7 @@
   }
 
   &-descr {
-    font-size: 0.875rem;
+    font-size: var(--ce-font-sm);
     line-height: 1.25rem;
     margin: 0;
     margin-top: 0.25rem;

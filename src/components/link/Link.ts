@@ -3,7 +3,7 @@ import { CompElem, prop, tag, csscope, Csscope } from "compelem";
 import style from "./style.scss?tmpl";
 /**
  * 文字链接
- * @props
+ * @attrs
  *  disabled {boolean} 是否禁用
  *  type {string} default/info/success/warning/error，默认default
  *  underline {string} always/hover/none，默认always

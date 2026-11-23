@@ -1,15 +1,16 @@
 import { ICloseable } from "@/interfaces/ICloseable";
-import { csscope, Csscope, emits, h, ifTrue, prop, tag, Template } from "compelem";
+import { csscope, Csscope, emits, h, html, ifTrue, prop, tag, Template } from "compelem";
 import { isBlank } from "myfx";
-import { AppearanceElem } from "../../../base/Appearance";
+import { Close } from "../../../icons/icons";
+import { APPEARANCE_LAYER, AppearanceElem } from "../../../base/Appearance";
 import style from "./style.scss?tmpl";
 /**
  * 标签组件
  * @extends AppearanceElem
- * @props
+ * @attrs
  *  dot {boolean} 是否显示点，默认false
  *  closable {boolean} 是否显示关闭按钮，默认false
- *  iconSize {string} 同size，用于定义icon大小。为空时使用size
+ *  iconSize {string} 同size，用于定义icon大小。为空时与标签文字同号（1em）
  *  icon {string} 图标名称，支持 c-svg-xx
  *  append-icon {string} 图标名称，支持 c-svg-xx
  * 
@@ -49,7 +50,7 @@ export class Tag extends AppearanceElem implements ICloseable {
           <ce-icon
             part="icon"
             svg="${this.icon}"
-            size="${this.iconSize || this.size}"
+            size="${this.iconSize}"
           >
           </ce-icon>
         `)}
@@ -60,14 +61,14 @@ export class Tag extends AppearanceElem implements ICloseable {
         ${ifTrue(!isBlank(this.appendIcon), () => h`
           <ce-icon
             svg="${this.appendIcon}"
-            size="${this.iconSize || this.size}"
+            size="${this.iconSize}"
           >
           </ce-icon>
         `)}
         <slot name="append"></slot>
-        ${ifTrue(this.closable, () => h`<ce-icon class="ce-tag-close" size="${this.size}" svg="c-svg-close" @click="${this.onClose}"></ce-icon>`)}
+        ${ifTrue(this.closable, () => h`<ce-icon class="ce-tag-close" .svg="${Close}" @click="${this.onClose}"></ce-icon>`)}
       </div>
-      ${super.render()}
+      ${html(APPEARANCE_LAYER)}
     `;
   }
   mounted(): void {

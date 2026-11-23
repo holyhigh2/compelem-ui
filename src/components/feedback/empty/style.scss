@@ -2,24 +2,37 @@
 @use "../../../css/functions" as fn;
 
 .ce-empty {
+  // 四个容器的空态隐藏：见 Empty.ts render 注释（slot 容器常驻，空内容用类隐藏）
+  .is-empty {
+    display: none;
+  }
+
   > h3 {
     margin: 0;
-    margin-bottom: var(--ce-spacing-md);
+    margin-bottom: var(--ce-empty-title-gap, var(--ce-spacing-md));
     text-align: center;
-    font-size: var(--ce-font-xl);
     @include mixins.text-lg;
+    // 标题字号/颜色做成公开 token：小卡片（挂件空态）里 20px 标题会把内容顶出卡片
+    font-size: var(--ce-empty-title-size, var(--ce-font-xl));
+    color: var(--ce-empty-title-color, inherit);
     letter-spacing: 1px;
   }
   > p {
     margin: 0;
     text-align: center;
     @include mixins.text-sm;
+    font-size: var(--ce-empty-text-size, var(--ce-font-sm));
+    color: var(--ce-empty-text-color, inherit);
   }
+  // actions 槽由组件提供默认间距（flex gap），插槽内容无需自行写 margin；
+  // 注意：> ce-button 在 Shadow DOM 下命中不了 slotted light DOM，故用容器布局
   .ce-empty-actions {
-    padding: var(--ce-spacing-lg);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ce-spacing-md);
+    padding: var(--ce-empty-actions-padding, var(--ce-spacing-lg));
     text-align: center;
-    > ce-button {
-      margin: var(--ce-spacing-lg);
-    }
   }
 }

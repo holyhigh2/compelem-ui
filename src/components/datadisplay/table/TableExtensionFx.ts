@@ -1,6 +1,7 @@
 import { Constructor } from "compelem";
 import { compact, concat, flat, isArray, isDefined, isNumeric, lowerCase, map, sum } from "myfx";
 import { showError } from "../../../utils/utils";
+import { FormulaFn } from "./types";
 
 const FORMULA_EXP = /(?:([a-zA-Z])+\d+)|(?:([a-zA-Z]+)\(([a-zA-Z0-9,:]+)\))/mg
 const CELL_ADDR_RANGE = /^[a-zA-Z]+\d+\s*:\s*[a-zA-Z]+\d+$/m
@@ -15,15 +16,12 @@ export function TableExtensionFx<T extends Constructor<any>>(spuerClass: T) {
   return class TableExtensionFx extends spuerClass {
 
     //fx cache <fxStr,fxFn>
-    formulaFnMap: Map<string, Function> = new Map()
+    formulaFnMap: Map<string, FormulaFn> = new Map()
     //value cache <cellPos,any>
     valueMap: Map<string, any> = new Map()
     //trace cells {cellPos:[cellPos...]}-> {d9:[b4, b5]}
     traceCells: Map<string, Set<string>> = new Map()
 
-    constructor(...args: any[]) {
-      super(...args)
-    }
 
     ////////////////////////////////////////// methods
     _pushFxQueue(fxStr: string, rowIndex: number, prop: string, force = false) {
@@ -51,7 +49,7 @@ export function TableExtensionFx<T extends Constructor<any>>(spuerClass: T) {
         this.updateCell(prop, rowIndex, v)
       })
     }
-    _getFormulaFn(fnStr: string, cellChar: string): [Function, any, string] {
+    _getFormulaFn(fnStr: string, cellChar: string): [FormulaFn, any, string] {
       let fn = this.formulaFnMap.get(fnStr)!
       const args: any[] = []
       const argChars: string[] = []
@@ -77,7 +75,7 @@ export function TableExtensionFx<T extends Constructor<any>>(spuerClass: T) {
         return ''
       })
       if (!fn) {
-        fn = new Function(concat(['sum'], argChars).join(','), fnStr2.replace('=', 'return '))
+        fn = new Function(concat(['sum'], argChars).join(','), fnStr2.replace('=', 'return ')) as FormulaFn
         this.formulaFnMap.set(fnStr, fn)
       }
       return [fn, args, cellChar]//.call(this, ...args)

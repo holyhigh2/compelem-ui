@@ -1,0 +1,201 @@
+{
+  "_note": "由 scripts/check.mjs colors --update 生成；数量增长即新增硬编码颜色债务",
+  "files": {
+    "src/base/appearance.scss": {
+      "hex": 2,
+      "blacka": 0
+    },
+    "src/components/button/btn.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/datadisplay/board/Board.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/datadisplay/board/BoardBar.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/datadisplay/panel/panelgroup.scss": {
+      "hex": 0,
+      "blacka": 6
+    },
+    "src/components/datadisplay/panel/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/datadisplay/portal/portal.scss": {
+      "hex": 23,
+      "blacka": 0
+    },
+    "src/components/datadisplay/portal/PortalEditor.ts": {
+      "hex": 3,
+      "blacka": 0
+    },
+    "src/components/datadisplay/portal/portalItem.scss": {
+      "hex": 14,
+      "blacka": 0
+    },
+    "src/components/datadisplay/portal/portalWidget.scss": {
+      "hex": 7,
+      "blacka": 0
+    },
+    "src/components/datadisplay/table/contextmenu.ts": {
+      "hex": 7,
+      "blacka": 0
+    },
+    "src/components/datadisplay/table/editableStyle.scss": {
+      "hex": 27,
+      "blacka": 10
+    },
+    "src/components/datadisplay/table/style.scss": {
+      "hex": 8,
+      "blacka": 2
+    },
+    "src/components/datadisplay/table/Table.ts": {
+      "hex": 6,
+      "blacka": 0
+    },
+    "src/components/datadisplay/table/TableBar.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/datadisplay/tag/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/datadisplay/tree/Tree.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/feedback/badge/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/feedback/message/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/feedback/notification/style.scss": {
+      "hex": 2,
+      "blacka": 0
+    },
+    "src/components/feedback/progress/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/feedback/rate/Rate.ts": {
+      "hex": 4,
+      "blacka": 0
+    },
+    "src/components/feedback/skeleton/style.scss": {
+      "hex": 4,
+      "blacka": 0
+    },
+    "src/components/form/checkbox/style.scss": {
+      "hex": 3,
+      "blacka": 0
+    },
+    "src/components/form/input/input.scss": {
+      "hex": 2,
+      "blacka": 0
+    },
+    "src/components/form/input/style.scss": {
+      "hex": 7,
+      "blacka": 0
+    },
+    "src/components/form/radio/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/form/slider/style.scss": {
+      "hex": 1,
+      "blacka": 9
+    },
+    "src/components/form/toggle/style.scss": {
+      "hex": 2,
+      "blacka": 7
+    },
+    "src/components/icons_images/avatar/style.scss": {
+      "hex": 4,
+      "blacka": 0
+    },
+    "src/components/icons_images/svgthumb/SvgThumb.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/nav/commandpalette/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/nav/dropdown/Dropdown.ts": {
+      "hex": 0,
+      "blacka": 1
+    },
+    "src/components/nav/menu/style.scss": {
+      "hex": 6,
+      "blacka": 4
+    },
+    "src/components/nav/nav/Nav.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/nav/nav/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/nav/navbar/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/overlays/drawer/style.scss": {
+      "hex": 6,
+      "blacka": 4
+    },
+    "src/components/overlays/overlay/Overlay.ts": {
+      "hex": 0,
+      "blacka": 1
+    },
+    "src/components/overlays/overlay/style.scss": {
+      "hex": 0,
+      "blacka": 1
+    },
+    "src/components/picker/colorpicker/ColorPicker.ts": {
+      "hex": 6,
+      "blacka": 7
+    },
+    "src/components/picker/colorpicker/style.scss": {
+      "hex": 24,
+      "blacka": 1
+    },
+    "src/components/picker/datepicker/DatePicker.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/picker/datepicker/YearMonthPanel.ts": {
+      "hex": 2,
+      "blacka": 0
+    },
+    "src/components/picker/datepicker/yearStyle.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/picker/listpicker/ListPicker.ts": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/components/picker/listpicker/style.scss": {
+      "hex": 1,
+      "blacka": 0
+    },
+    "src/constants.ts": {
+      "hex": 15,
+      "blacka": 0
+    },
+    "src/css/root.scss": {
+      "hex": 0,
+      "blacka": 6
+    }
+  }
+}

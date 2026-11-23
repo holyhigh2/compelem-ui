@@ -1,0 +1,158 @@
+// 编辑态挂件卡片（ce-portal-item）
+//
+// 这些规则原在 portal.scss 里以 `.ce-portal-grid.is-editor .ce-portal-item` 命中，
+// 但 item 现在是 `ce-portal-editor` 的 light child，编辑器 shadow 的样式表管不到它，
+// 必须由组件自身的 `:host` 承担。
+
+:host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  // 挂件私有背景（--ce-portal-widget-bg 由宿主写在 item 元素上，可带图）；
+  // 边框可按 item 关掉（--ce-portal-widget-border: none）
+  background: var(--ce-portal-widget-bg, var(--ce-color-bg));
+  border: var(--ce-portal-widget-border, 1px solid var(--ce-color-border-secondary));
+  border-radius: var(--ce-round-md, 8px);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+:host(.is-resizing) {
+  border-color: var(--ce-color-primary, #2f9bff);
+  box-shadow: 0 0 0 2px rgba(47, 155, 255, 0.16);
+}
+
+.ce-portal-item-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  // 同视图态：30px 是下限，宿主注入的头部内容更高时让 bar 自己长
+  height: auto;
+  min-height: 30px;
+  padding: 0 8px;
+  background-color: rgb(var(--ce-color-text-rgb) / 0.04);
+  border-bottom: 1px solid rgb(var(--ce-color-border-rgb) / 0.75);
+  cursor: move;
+  user-select: none;
+}
+
+// 宿主注入的头部内容（卡片级筛选等）：靠右、等宽约束，且不接管"拖动"手势
+// （标题栏整条是拖拽手柄，筛选控件要能点开下拉 —— 宿主在 mousedown 上 stopPropagation）。
+.ce-portal-item-bar slot[name='header-extra'] {
+  margin-left: auto;
+  // flex:none：标题占 `flex: 1`，可收缩的话筛选条会被压成窄条（每个字一行）
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  cursor: default;
+}
+
+// 抓握点：2 列 × 3 行的点阵，暗示「按住标题栏可拖动」。整条 bar 都可拖，这里纯视觉。
+//
+// ⚠️ 三处都是必需的，缺一个就退化成一个孤点：
+//   · background-repeat：reset.scss 的 `* { background-repeat: no-repeat }` 会关掉平铺
+//   · 宽 ≥ 2×tile：tile 4px 时圆心在 x = 2 / 6，6px 会把第二列裁掉
+//   · 盒子尺寸取 tile 整数倍（8×12）：否则平铺会多出上下两行残弧
+.ce-portal-item-grip {
+  width: 8px;
+  height: 12px;
+  flex: none;
+  background-image: radial-gradient(#b6bfcc 1.1px, transparent 1.2px);
+  background-size: 4px 4px;
+  background-repeat: repeat;
+}
+
+.ce-portal-item-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--ce-font-xs);
+  color: var(--ce-color-text);
+}
+
+// 不可用标记（无权限 / 已下线）：位置在标题与操作按钮之间，不抢标题宽度
+.ce-portal-item-badge {
+  flex: none;
+  padding: 0 6px;
+  font-size: 11px; // font-allow 徽标文字，装饰性（契约第 3 条）
+  line-height: 16px;
+  border-radius: var(--ce-round-xs, 4px);
+  color: #b54708;
+  background: #fffaeb;
+  border: 1px solid #fedf89;
+}
+
+// 内容区：等效于原来的 ce-portal-widget-editor 外框（is-plain）+ body
+// （两者合起来就是 flex column + 12px 内边距 + 裁剪）
+.ce-portal-item-widget {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  box-sizing: border-box;
+  // 编辑态内容不可交互（避免抢走拖拽/缩放手势）
+  pointer-events: none;
+}
+
+.ce-portal-item-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background-image: linear-gradient(135deg, transparent 52%, #c8d0dc 52%, #c8d0dc 62%, transparent 62%);
+  opacity: 0.75;
+}
+
+// 不可用占位：与 portalWidget.scss 中的同名规则保持一致（两个组件各在自己的 shadow 里）
+.ce-portal-item-widget.is-denied {
+  padding: 8px;
+  pointer-events: none;
+}
+
+.ce-portal-denied {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+  color: var(--ce-color-text-desc, #98a2b3);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border: 1px dashed var(--ce-color-border-tertiary, #e4e7ec);
+    border-radius: var(--ce-round-sm, 6px);
+    pointer-events: none;
+  }
+}
+
+.ce-portal-denied-icon {
+  width: 26px;
+  height: 26px;
+  opacity: 0.7;
+}
+
+.ce-portal-denied-text {
+  font-size: var(--ce-font-sm);
+  line-height: 1.5;
+  text-align: center;
+}

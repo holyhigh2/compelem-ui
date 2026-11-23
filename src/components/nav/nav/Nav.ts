@@ -5,7 +5,7 @@ import style from "./style.scss?tmpl";
 const UNSELECTABLE = 'unhoverable'
 /**
  * 导航基础
- * @props
+ * @attrs
  *  activeIndex {string} 当前激活索引，受控
  *  appearance {string} 外观。default/tab/underlined/pill
  *  vertical {boolean} 是否垂直
@@ -60,9 +60,19 @@ export class Nav extends AppearanceElem {
   }
   @watch('activeIndex')
   watchIndex(nv: string) {
-    let slotRoots = this.slotRef.current?.assignedElements({ flatten: true });
-    let root = find(slotRoots!, (root) => root.getAttribute('index') === nv);
-    this.onClick({ target: root } as any);
+    // 外部改 value 时目标页签可能还没插槽就位（列表重建中），直接放弃会让
+    // 页签停在旧激活态。下一帧重试几次，直到目标项可用。
+    const apply = (retry: number) => {
+      if (nv !== this.activeIndex) return;
+      let slotRoots = this.slotRef.current?.assignedElements({ flatten: true });
+      let root = slotRoots && find(slotRoots, (root) => root.getAttribute('index') === nv);
+      if (!root) {
+        if (retry < 3) requestAnimationFrame(() => apply(retry + 1));
+        return;
+      }
+      this._active(root as HTMLElement);
+    };
+    apply(0);
   }
   //////////////////////////////////// lifecycles
   constructor() {
@@ -91,6 +101,7 @@ export class Nav extends AppearanceElem {
               ref="${this.slotRef}"
               @slotchange="${this.onItemsChange}"
             ></slot>
+            <div class="ce-nav-tab-frame"></div>
           </div>
         </div>
       </nav>
@@ -111,20 +122,40 @@ export class Nav extends AppearanceElem {
         slotRoots,
         (root) => root.getAttribute("index") == this.activeIndex
       );
-
+      // 指定的激活项还没就位（页签列表刚重建）：退回第一项会把旧页签
+      // 重新激活，出现两个 active。交给 watchIndex 的重试处理。
+      if (!root) return;
     }
-    this._active(root as HTMLElement || slotRoots[0])
+    const first = root as HTMLElement || slotRoots[0];
+    this._active(first)
+    // 首屏缺口直接就位，下一帧起才启用过渡
+    this.updateTabNotch(first)
+    requestAnimationFrame(() => this.classList.add('tab-notch-ready'))
 
     this.updateVWidth()
 
     this.emit("item-change", { node: root });
   }
+  // 激活项相对 .ce-nav-items 的起点与长度，横向是 left/width，竖向是 top/height
+  updateTabNotch(node: HTMLElement) {
+    const items = this.slotRef.current?.parentElement;
+    if (!items || !node) return;
+    const base = items.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    const start = this.vertical ? rect.top - base.top : rect.left - base.left;
+    const size = this.vertical ? rect.height : rect.width;
+    this.style.setProperty("--tab-notch-start", start + "px");
+    this.style.setProperty("--tab-notch-size", size + "px");
+  }
   updateVWidth() {
-    let maxW = 0
     let slotRoots = this.slotRef.current?.assignedElements({ flatten: true });
     (slotRoots as HTMLElement[])?.forEach((v: HTMLElement) => {
-      if (v.offsetWidth > maxW) {
-        maxW = v.offsetWidth
+      // 下划线宽度只在 active 项上展开（::after width/height:var(--underline-width)）；
+      // _active 先置 0 再在 active 类就位后由这里撑开，形成滑动动画。
+      // 横向下划线长度=item宽；竖向（::after 用 height）长度=item高
+      if (v.classList.contains("active")) {
+        const len = this.vertical ? v.offsetHeight : v.offsetWidth;
+        v.style.setProperty("--underline-width", len + "px");
       }
     })
     // this.vWidth = maxW + 'px'
@@ -148,9 +179,23 @@ export class Nav extends AppearanceElem {
 
     this.emit("select", { activeIndex: root?.getAttribute('index'), activeNode: root });
   }
+  /**
+   * 激活序号：外部连续改 value、插槽重建都会多次调用 `_active`，
+   * 只有最后一次的延时提交有效，否则晚到的旧提交会把 active 类加回旧项。
+   */
+  private __activeSeq = 0
   _active(node: HTMLElement) {
     let slotRoots = this.slotRef.current?.assignedElements({ flatten: true });
-    let lastActiveNode = find(slotRoots!, (root) => root.classList.contains('active')) as HTMLElement
+    let lastActiveNode = find(slotRoots!, (root) => root !== node && root.classList.contains('active')) as HTMLElement
+    if (!lastActiveNode) {
+      // Tabs.changeTab 可能已把 active 类挪到 node 上，此时按「还残留着
+      // 下划线宽度」找上一项，保证它的下划线能被收回
+      lastActiveNode = find(slotRoots!, (root) => {
+        if (root === node) return false
+        const w = parseFloat((root as HTMLElement).style.getPropertyValue('--underline-width') || '0')
+        return w > 0
+      }) as HTMLElement
+    }
     if (!lastActiveNode) {
       let tmp = find(slotRoots!, (root) => root.getAttribute('index') === this.activeIndex) as HTMLElement
       if (tmp !== node) {
@@ -177,9 +222,22 @@ export class Nav extends AppearanceElem {
       }
     }
 
+    const seq = ++this.__activeSeq
     setTimeout(() => {
-      slotRoots?.forEach((el) => el.classList.remove("active"));
+      // 已有更新的激活请求，本次延时提交作废
+      if (seq !== this.__activeSeq) return;
+      slotRoots?.forEach((el) => {
+        el.classList.remove("active");
+        // 非当前项的下划线宽度必须归零：外部改 value 时 active 类可能已被
+        // Tabs.changeTab 提前挪走，旧项宽度不收就会出现两条激活下划线
+        if (el !== node) (el as HTMLElement).style.setProperty("--underline-width", "0")
+      });
       node.classList.add("active");
+      this.updateTabNotch(node);
+      // 归位：active 下划线最终停靠在自身左/上缘。向左(上)切换时 _active 先把
+      // left 置 100% 供滑入动画，若不归位，展开的下划线会落在相邻项下方
+      // （CSS 中的 .is-active 归位规则与实际类名 .active 不匹配，属死代码）
+      node.style.setProperty('--underline-left', '0%')
       this.nextTick(() => {
         this.updateVWidth()
       })

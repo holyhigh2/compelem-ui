@@ -10,20 +10,30 @@
 
 @mixin text-sm {
   font-size: var(--ce-font-sm);
-  line-height: 1.25rem;
+  line-height: var(--ce-lineh-sm);
 }
 
 @mixin text-md {
-  font-size: 1rem;
-  line-height: 1.5rem;
+  font-size: var(--ce-font-md);
+  line-height: var(--ce-lineh-md);
 }
 
 @mixin text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
+  font-size: var(--ce-font-lg);
+  line-height: var(--ce-lineh-lg);
 }
 
 @mixin text-overflow {
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+// 虚拟列表的占位柱：1px 宽 + 负 z-index，只用来撑出可滚动高度的锚点，
+// table / tree / datepicker / listpicker 的虚拟行池共用同一份
+@mixin virtual-pillar {
+  #vpillar {
+    width: 1px;
+    z-index: -1;
+    position: relative;
+  }
 }

@@ -9,7 +9,7 @@ import style from "./style.scss?tmpl";
  * 评价组件
  * @attrs
  *  activeColor {string} 激活状态颜色，默认 #ffb300
- *  color {string} 组件默认颜色，currentColor
+ *  color {string} 组件默认色（未激活图标的填充/描边基色），默认 #ddd
  *  round {number} 图标圆角，可选0 ~ 20。默认0
  *  ratio {number} 图标内径比率，可选 0.1 ~ 1。默认0.5
  *  size {number} 图标尺寸，默认24
@@ -80,7 +80,7 @@ export class Rate extends CompElem implements IColorable, IActivatable, IClearab
       ${forEach(range(1, this.length + 1), identity, (i) => h`
         <div part="icon" n="${i}">
           ${ifTrue(this.allowHalf, () => h`
-            <svg n="${i - 0.5}" class="ce-rate ce-rate-before" ?active="${i - 0.5 <= defaultTo(this.hoverValue, this.value)!}" *width="${this.size / 2}" *height="${this.size}" *viewBox="${'0 0 ' + this.size + ' ' + this.size}" ${html(this.svgPath)}></svg>  
+            <svg n="${i - 0.5}" class="ce-rate ce-rate-before" ?active="${i - 0.5 <= defaultTo(this.hoverValue, this.value)!}" *width="${this.size}" *height="${this.size}" *viewBox="${'0 0 ' + this.size + ' ' + this.size}" ${html(this.svgPath)}></svg>  
           `)}
           <svg n="${i}" class="ce-rate" ?active="${i <= defaultTo(this.hoverValue, this.value)!}" *width="${this.size}" *height="${this.size}" *viewBox="${'0 0 ' + this.size + ' ' + this.size}" ${html(this.svgPath)}></svg>
         </div>

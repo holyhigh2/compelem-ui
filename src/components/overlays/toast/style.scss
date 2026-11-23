@@ -122,7 +122,7 @@
 
       &.ce-toast-toasted {
         opacity: 1;
-        z-index: 9999;
+        z-index: var(--ce-z-index-toast, 9999);
       }
     }
   }

@@ -1,5 +1,5 @@
 import { computed, csscope, Csscope, debounced, emits, forEach, h, ifElse, ifTrue, model, prop, query, QueryCache, show, state, styles, tag, Template, watch } from "compelem";
-import { clone, cloneDeep, compact, concat, each, eq, filter, find, first, flatMap, get, isArray, isDefined, isEmpty, isEqual, isNumber, isObject, isUndefined, map, range, reject, size, some, test, values } from "myfx";
+import { clone, cloneDeep, compact, concat, each, filter, find, first, flatMap, get, isArray, isDefined, isEmpty, isEqual, isNumber, isObject, isString, isUndefined, map, range, reject, size, some, test, values } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 import { Check, Question } from "../../../icons/icons";
 import { Virtualized } from "../../../mixins/Virtualized";
@@ -7,6 +7,8 @@ import { Scroller } from "../../datadisplay/scroller/Scroller";
 import { Input } from "../../form/input/Input";
 import { List } from "../../layout/list/List";
 import style from "./style.scss?tmpl";
+import { FADE_CSS } from "../../../css/transition";
+import { nodesToHTML } from "../../../utils/utils";
 export const AVAILABLE_ROW_TAG = 'available'
 interface Option {
   value: any;
@@ -18,7 +20,7 @@ interface Option {
  * 列表数据拾取
  * 支持slot/data方式定义数据
  * optgroup标签分组开启后，非分组标签会忽略
- * @props
+ * @attrs
  *  data {array|object} 列表数组，格式[{value,label,selected,tooltip}]。如果值类型为对象表示分组数据，格式 {groupLabel: [{value,label,selected,tooltip}]}。当slot有内容时，data属性无效
  *  multiple {boolean} 是否可多选，默认false
  *  limit {number} 多选时允许的最大项，小于1表示不限制。默认0
@@ -53,34 +55,22 @@ export class ListPicker extends Virtualized(AppearanceElem) {
   @prop rowHeight = 32
   @prop maxHeight = 10 * this.rowHeight
   @prop({
-    type: [String, Array, Number], hasChanged(newValue: any, oldValue: any, changeChain: string[]) {
-      if (isArray(newValue) && isArray(oldValue)) {
-        return !eq(newValue, oldValue)
-      } else {
-        return newValue != oldValue
-      }
-    }, isValid(value: any, props?: Record<string, any>) {
+    type: [String, Array, Number], isValid(value: any, props?: Record<string, any>) {
       if (isUndefined(props?.multiple)) return true;
       return props?.multiple && isDefined(value) ? isArray(value) : true;
     }, model: true
-  }) value: string | Array<string>;
+  }) value!: string | Array<string>;
   //单项列表/分组列表数据
-  @prop({
-    type: [Array, Object], shallow: true
-  }) data: Record<string, any>[] | Record<string, Record<string, any>[]> = [];
+  @prop({ type: [Array, Object] }) data: Record<string, any>[] | Record<string, Record<string, any>[]> = [];
   activeColor = '#2196f3'
 
   //已选中标签
-  @state({
-    hasChanged(nv, ov) {
-      return !isEqual(nv, ov)
-    }
-  }) selectLabelAry: Array<string> = [];
+  @state selectLabelAry: Array<string> = [];
   @state private __filterValue = '';
-  @state private groupData: Record<string, any[]> = {}
+  @state groupData: Record<string, any[]> = {}
   @state renderData: typeof this.data
-  @state({ prop: 'rowHeight' }) vRowHeight = 0
-  @state({ prop: 'value' }) selectedValue: typeof this.value
+  @state vRowHeight = 0
+  @state selectedValue: typeof this.value = this.value
 
   selection: Record<string, []> = {}
   rounded = true
@@ -101,18 +91,21 @@ export class ListPicker extends Virtualized(AppearanceElem) {
   @query('#vpillar') vPillar: HTMLElement = document.body
   @query('.ce-list-picker-list-container') container: HTMLElement
 
-  connectedCallback() {
-    super.connectedCallback()
-    // Virtualized mixin declares vRowHeight: number without initializer; under useDefineForClassFields
-    // the @state({prop:'rowHeight'}) class field creates an own property vRowHeight=0 that shadows
-    // the @state getter/setter, so updateV() divides by 0. Sync from rowHeight here.
-    this.vRowHeight = this.rowHeight || 32
-  }
-
   //////////////////////////////////// styles
   @csscope(Csscope.INNER)
   static get css() {
-    return [style];
+    return [style, FADE_CSS];
+  }
+
+  /**
+   * scroller 的展示高度。
+   * 原 `_renderList()` 里那句 `if (this.sHeight < 1) this.sHeight = this.rowHeight * 3`
+   * 是渲染期初始化。内联后没有地方放这条副作用了，用 getter 保留同样的写回语义
+   * （`sHeight` 是 @state，组件内可写）。
+   */
+  get listHeight(): number {
+    if (this.sHeight < 1) this.sHeight = this.rowHeight * 3
+    return this.sHeight
   }
 
   //////////////////////////////////// computed
@@ -152,6 +145,14 @@ export class ListPicker extends Virtualized(AppearanceElem) {
   @watch('gap', { immediate: true })
   watchGap(nv: number) {
     this.vRowGap = nv
+  }
+  @watch('rowHeight')
+  watchRowHeight() {
+    this.nextTick(() => {
+      this.resetVirtualized()
+      // resetVirtualized 只重算高度/轨道，行位移要由 initV 重铺
+      this.onListReady()
+    })
   }
   @watch('data', { immediate: true })
   watchData(nv: Record<string, any>[] | Record<string, Record<string, any>[]>) {
@@ -214,6 +215,9 @@ export class ListPicker extends Virtualized(AppearanceElem) {
     if (isNumber(this.height))
       this.renderRoot!.style.height = this.height + 'px'
   }
+  // 原 `_renderList()` / `_renderGroup()` 已就地内联到下面的 ifElse 分支：
+  // 0.30 的结构指令回调体必须是**直接书写**的唯一 h`` 模板，回调里调用
+  // 「返回 Template 的方法」会被判为「命中 0 个」而阻断编译。
   render(): Template {
     return h`
     <selection class="ce-list-picker" @resize.debounce:200="${this.onResize}">
@@ -225,25 +229,16 @@ export class ListPicker extends Virtualized(AppearanceElem) {
       <main ${styles({
       'flex-direction': isEmpty(this.filteredData) ? 'column' : 'row'
     })}>
-      <div class="ce-list-picker-select-item is-empty" ${show(isEmpty(this.filteredData))} unhoverable style="display:block;cursor:auto">无可选项</div>
-      ${ifElse(isEmpty(this.groupData), () => this._renderList(), () => this._renderGroup())}
-      </main>
-    </selection>
-    <slot style="display:none"></slot>
-    `;
-  }
-  _renderList() {
-    if (this.sHeight < 1) {
-      this.sHeight = this.rowHeight * 3
-    }
-    if (!isArray(this.filteredData)) return h``
-    return h`
-        <ce-scroller wheel-step="80" @scroll="${this.onScroll}" direction="v" s-height="${this.sHeight}" .showTrack="${this.showTrack}">
-          <ce-list class="ce-list-picker-list-container" nav selectable gap="${this.gap}px" style="min-width: 10rem;" ${model(this.selectedValue, 'select')} 
+      ${ifElse(isEmpty(this.filteredData), () => h`
+        <div class="ce-list-picker-select-item is-empty" unhoverable style="display:block;cursor:auto">无可选项</div>
+      `, () => h`
+      ${ifElse(isEmpty(this.groupData), () => h`
+        <ce-scroller wheel-step="80" @scroll="${this.onScroll}" direction="v" s-height="${this.listHeight}" .showTrack="${this.showTrack}">
+          <ce-list class="ce-list-picker-list-container" nav selectable gap="${this.gap}px" style="min-width: var(--ce-list-picker-min-width, 100px);" ${model(this.selectedValue, 'select')}
           @select="${this.onSelect}" @mutate.child.debounce:100="${this.onListReady}" ?multiple="${this.multiple}">
             <div id="vpillar"></div>
             ${forEach(range(this.vCachedRows), (row, i) => i, (row, i) => h`
-              <ce-list-item hoverable appearance="pale" style="height:${this.rowHeight}px;font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+              <ce-list-item hoverable appearance="pale" style="height:${this.rowHeight}px;font-size:var(--ce-font-sm);padding-inline:var(--ce-spacing-md)">
                 <span class="ce-list-picker-label"></span>
                 <span class="ce-list-picker-check-icon" slot="append">
                   <ce-icon svg="c-svg-check" size="lg"></ce-icon>
@@ -252,28 +247,29 @@ export class ListPicker extends Virtualized(AppearanceElem) {
             `)}
           </ce-list>
         </ce-scroller>
-    `
-  }
-  _renderGroup() {
-    return h`
-      ${forEach((this.filteredData), (gd, k) => k, (gd, k: string) => h`
-        <ce-panel title="${k}" shadow="never" style="--padding:0.5rem">
-          <ce-list size="sm" space="compact" max-rows="${this.maxRows}" selectable gap=".1rem" appearance="text">
-          ${forEach(gd, li => li.key ?? li.label, (li: any) => h`
-            <ce-list-item active-color="${this.activeColor}" class="ce-list-picker-select-item" appearance="text" .value="${li.value}" 
-             ?disabled="${li.disabled}" data-label="${li.label}" >
-              <span class="ce-list-picker-label">${this.__formatter ? this.__formatter(li) : li.label}</span>
-              <span class="ce-list-picker-check-icon" slot="append">
-                <ce-icon .svg="${Check}" ${show(this.selectLabelAry.includes(li.label))} size="lg"></ce-icon>
-              </span>
-            </ce-list-item>
-          `)}
-          </ce-list>
-        </ce-panel>
+      `, () => h`
+        ${forEach((this.filteredData), (gd, k) => k, (gd, k) => h`
+          <ce-panel title="${k}" shadow="never" style="--padding:0.5rem">
+            <ce-list size="sm" space="compact" max-rows="${this.maxRows}" selectable gap=".1rem" appearance="text">
+            ${forEach(gd, li => li.key ?? li.label, (li) => h`
+              <ce-list-item active-color="${this.activeColor}" class="ce-list-picker-select-item" appearance="text" .value="${li.value}"
+               ?disabled="${li.disabled}" data-label="${li.label}" >
+                <span class="ce-list-picker-label">${this.__formatter ? this.__formatter(li) : li.label}</span>
+                <span class="ce-list-picker-check-icon" slot="append">
+                  <ce-icon .svg="${Check}" ${show(this.selectLabelAry.includes(li.label))} size="lg"></ce-icon>
+                </span>
+              </ce-list-item>
+            `)}
+            </ce-list>
+          </ce-panel>
+        `)}
       `)}
-    `
+      `)}
+      </main>
+    </selection>
+    <slot style="display:none"></slot>
+    `;
   }
-
   slotChange(slot: HTMLSlotElement, name: string): void {
     this.__updateDataList(this.slotEl)
   }
@@ -302,7 +298,12 @@ export class ListPicker extends Virtualized(AppearanceElem) {
   }
   #isFirstReady = false
   onListReady() {
-    if (!this.isMounted) return;
+    // 与同族 onListReady 一致：销毁后 isMounted 为 false，离场动画的 freeze 窗口由 isDestroyed 挡掉
+    if (!this.isMounted || this.isDestroyed) return;
+    // 与 #updateScrollH 处同一守卫：container 是 @query('.ce-list-picker-list-container')，
+    // 首个 mutate.child 早于 ce-scroller 把子节点就位时解析为 null，
+    // 无守卫会抛未捕获 TypeError（ListPicker.ts onListReady）并中断后面的 ready 收尾。
+    if (!this.container) return;
 
     let vList = Array.from<HTMLElement>(this.container.querySelectorAll('ce-list-item'))
 
@@ -340,11 +341,18 @@ export class ListPicker extends Virtualized(AppearanceElem) {
       let show = (rowData ? this.selectLabelAry.includes(rowData.label) : false)
       // checkElChild.setAttribute('checked', show + '')
       rowEl.toggleAttribute('active', show)
+      // 虚拟化行填充时才可靠得知 rowData.value（watchSelect 首次触发时行的 value 尚未填充，
+      // ce-list._resetSelectItem 数组分支匹配不到任何行），此处随行填充把预选项同步进
+      // selection 集合，否则首次点击新项时 _toggleSelect 从空集开始计算，预选值全部丢失
+      if (show && rowData && this.listEl) this.listEl.selection.add(rowData.value)
       // let checkbox = rowEl.querySelector('.ce-list-picker-checkbox') as Checkbox
       // checkbox.toggleCheck(show)
     } else {
-      let show = rowData && this.selectLabelAry.includes(rowData.label)
-      // checkElChild.style.visibility = show ? 'visible' : 'hidden'
+      // ⚠️ show 必须兜成布尔值：rowData 为空（虚拟化占位行尚未填数据）时
+      // `rowData && ...` 求值为 undefined，而 toggleAttribute(name, undefined)
+      // 按规范是「切换」⇒ 空行被误打上 active（蓝底 + 勾选图标的空行，
+      // 2026-10-18 实测 8 项列表渲染出 7 个空 active 行）。
+      let show = !!rowData && this.selectLabelAry.includes(rowData.label)
       rowEl.toggleAttribute('active', show)
     }
 
@@ -357,8 +365,12 @@ export class ListPicker extends Virtualized(AppearanceElem) {
 
       let optionFn = this.slotHooks.option
       if (isDefined(optionFn)) {
-        let html = (optionFn(rowData) as Template).getHTML(this)
-        labelEl.innerHTML = html
+        // 钩子可返回 Template（经 slot() 登记、有 provenance）或直接返回 HTML 字符串。
+        // 走 Template 分支时 getSubViewNodes + nodesToHTML 是 outerHTML 序列化，
+        // 属性绑定（prop binding）会丢失，且子模板内的结构指令不生效，
+        // 故需要图标/属性等真实属性时由钩子自行拼字符串。
+        let r = optionFn(rowData)
+        labelEl.innerHTML = isString(r) ? r : nodesToHTML(this.getSubViewNodes(optionFn, rowData))
         return
       }
       labelEl.textContent = rowData.label
@@ -459,8 +471,42 @@ export class ListPicker extends Virtualized(AppearanceElem) {
       this.showTrack = size(this.filteredData) * this.rowHeight > roh
       this.sHeight = size(this.filteredData) * (this.rowHeight + this.vRowGap)
       this.updateV(size(this.filteredData), roh)
+      // 虚拟化窗口从 scrollTop=0 开始铺行，选中行（受控 value 对应项）可能
+      // 落在视口外 ⇒ 看不见 active 行与勾选图标，用户以为"没有选中项"。
+      // 打开 / 过滤后把选中行滚进视口中部（列表短到无滚动条时 scrollYTo
+      // 自然空转，无需特判）。
+      this.scrollSelectedIntoView()
     }, 0);
 
+  }
+  /**
+   * 把选中行滚进视口中部。
+   *
+   * 分组数据拍平后查找；多选（value 为数组）不处理 —— 调用方 ce-select 的
+   * 列选择场景全是单选。已在视口内则保留当前滚动位置不动。
+   */
+  scrollSelectedIntoView() {
+    console.log("[SSIV] called", JSON.stringify({
+      selectedValue: this.selectedValue,
+      filteredLen: size(this.filteredData),
+      scrollerY: this.scroller?.y,
+      vh: this.__viewportH(),
+      dataLen: size(this.data),
+    }));
+    if (!this.scroller) return
+    const data: Option[] = isArray(this.filteredData)
+      ? this.filteredData as Option[]
+      : concat(...values<Option[]>(this.filteredData as Record<string, Option[]>))
+    if (size(data) < 1) return
+    const idx = data.findIndex((d) => d.value === this.selectedValue)
+    if (idx < 0) return
+    const rowH = this.vRowHeight + this.vRowGap
+    const top = idx * rowH
+    const vh = this.__viewportH()
+    if (top >= this.scroller.y && top + rowH <= this.scroller.y + vh) return
+    // 选中行落在视口中部；视口比行高还矮时至少让顶端可见
+    const target = Math.max(0, top - Math.max(0, (vh - rowH) / 2))
+    this.scroller.scrollYTo(target)
   }
   refreshView() {
     if (isEmpty(this.vList)) return;

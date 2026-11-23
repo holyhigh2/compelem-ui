@@ -1,7 +1,15 @@
 import { Constructor } from "compelem";
 import { each, isEmpty, walkTree } from "myfx";
 
-export const CLASS_EXPAND = "__expanded";
+/**
+ * 展开态类名。
+ *
+ * ⚠️ 必须与样式表里的选择器同名：`tree/style.scss` 与 `table/style.scss` 用的都是
+ * `.is-expanded`（`.ce-tree-node.is-expanded > .ce-tree-node-content …` 、
+ * `.ce-table-caret.is-expanded ce-icon`）。历史上这里是 `__expanded`，两边对不上，
+ * 导致"展开后 caret 图标仍是右向（未展开）"以及分组列的同一现象。
+ */
+export const CLASS_EXPAND = "is-expanded";
 /**
  * 树形结构化混入，提供统一的状态及逻辑管理
  * @methods
@@ -29,25 +37,32 @@ export function TreeStructured<T extends Constructor<any>>(spuerClass: T) {
 
         groupedIndexMap: Record<string, number> = {}
 
-        constructor(...args: any[]) {
-            super(...args)
-        }
 
         toggleExpand(node: Element) {
+            // node 是**事件目标**（caret span / 其中的 ce-icon），而展开态样式是
+            // `.ce-tree-node.is-expanded > .ce-tree-node-content …` —— 类必须落在
+            // 「带 data-row-index 的行元素」上才可能命中，加在 target 上等于没加。
             const rowEl = node.closest('[data-row-index]') as HTMLElement
+            if (!rowEl) return
+
             const i = parseInt(rowEl.dataset.rowIndex!)
             const rowData = this.renderList[i]
+            if (!rowData) return
+
             let key = rowData[this.nodeKey]
-            if (this.expandedIdMap[key]) {
-                node.classList.remove(CLASS_EXPAND)
-                this.expandedIdMap[key] = false
-            } else {
-                node.classList.add(CLASS_EXPAND)
-                this.expandedIdMap[key] = true
-            }
+            const expanded = !this.expandedIdMap[key]
+            this.expandedIdMap[key] = expanded
+            rowEl.classList.toggle(CLASS_EXPAND, expanded)
 
             this.refreshRenderSeed = Math.random()
 
+            this.__scheduleExpandRefresh()
+        }
+        /**
+         * 展开态变化后的重排入口。默认延迟 20ms 让 `refreshRenderSeed` 驱动的
+         * 模板重建先落地；带树动画的组件会覆盖它，换成同帧路径。
+         */
+        __scheduleExpandRefresh() {
             setTimeout(() => {
                 this.resetVirtualList()
                 this.refreshView()
@@ -88,10 +103,7 @@ export function TreeStructured<T extends Constructor<any>>(spuerClass: T) {
             })
             this.refreshRenderSeed = Math.random()
 
-            setTimeout(() => {
-                this.resetVirtualList()
-                this.refreshView()
-            }, 20)
+            this.__scheduleExpandRefresh()
         }
         /**
          * 合并树到指定级别

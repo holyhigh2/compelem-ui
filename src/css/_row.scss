@@ -1,0 +1,13 @@
+/**
+ * 行内单元格的共享约束。
+ *
+ * ce-menu 的 `.ce-menu__cell` 与 ce-list-item 的 prepend/append 都是行内的一条
+ * flex 通道：垂直居中、可收缩、不撑破所在轨道。这里只收敛这三条；各组件自己的
+ * 宽度来源、对齐方式、溢出策略仍留在各自样式里 —— 行的结构（菜单的 7 列网格 /
+ * 列表的 3 槽网格）不在共享范围内。
+ */
+@mixin cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}

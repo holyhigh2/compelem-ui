@@ -1,5 +1,5 @@
 import { Constructor } from "compelem"
-import { last } from "myfx"
+import { last, mod } from "myfx"
 export const TransYReg = /translateY\((.*?)\)/
 /**
  * 虚拟化循环混入，提供统一的状态及逻辑管理
@@ -12,22 +12,21 @@ export const TransYReg = /translateY\((.*?)\)/
  */
 export function VirtualLoop<T extends Constructor<any>>(spuerClass: T) {
     return class VirtualLoop extends spuerClass {
-        rowHeight: number
-        vViewHeight: number
+        /** ⚠️ 见 `mixins/Virtualized.ts` 顶部说明：存储由子类的五族装饰器提供，
+         *  这里必须是 `declare`，否则 define 语义发射的 own undefined 属性会遮蔽原型访问器。 */
+        declare rowHeight: number
+        declare vViewHeight: number
         vBufferSize: number = 3
         //滚动步长
         vStep: number = 100
         //数据长度
-        vDataSize: number
+        declare vDataSize: number
         //dom rows
-        vList: HTMLElement[]
+        declare vList: HTMLElement[]
         //窗口可显示的最大行数
         //包含上下缓存的虚拟行数，>= vViewRows
-        vCachedRows: number
+        declare vCachedRows: number
 
-        constructor(...args: any[]) {
-            super(...args)
-        }
 
         scrolling = false
         scrollV(delta: number, cbk: (rowEl: HTMLElement, rowIndex: number) => void) {
@@ -85,10 +84,7 @@ export function VirtualLoop<T extends Constructor<any>>(spuerClass: T) {
                 this.nextTick(() => {
                     toTops.forEach((li, i) => {
                         li.style.transform = `translateY(${minTop - this.rowHeight - (this.gap * (i + 1))}px)`;
-                        --minRowIndex
-                        if (minRowIndex < 0) {
-                            minRowIndex = this.vDataSize + minRowIndex
-                        }
+                        minRowIndex = mod(minRowIndex - 1, this.vDataSize)
                         li.dataset.rowIndex = minRowIndex + ''
                         cbk(li, minRowIndex)
                         minTop = minTop - this.rowHeight

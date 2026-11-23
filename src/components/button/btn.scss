@@ -1,37 +1,41 @@
 @use "../../css/functions" as fn;
 
 ////////////////////////////////// size
-:host([size="xs"]) {
-  --ce-button-h: 1.5em;
-  --ce-button-fs: 0.75em;
-  --ce-button-px: .625em;
-  --ce-button-gap: .25em;
-}
-
-:host([size="sm"]) {
-  --ce-button-h: 1.75em;
-  --ce-button-fs: .8125em;
-  --ce-button-px: .75em;
-  --ce-button-gap: .25em;
-}
-
-:host([size="md"]) {
-  --ce-button-h: 2.25em;
-  --ce-button-fs: .875em;
+// 字号：五档全部走 rem 档（root.scss 字号契约第 1 条：md = --ce-font-md，
+// 全库没有第二套 md 定义）。密度由宿主改 --ce-font-base 统一控制，不靠上下文继承。
+// 盒模型：height / padding / gap 用 em（或 --ce-control-h-* 的 em 值）相对按钮
+// 自身字号派生，所以档位切换时盒模型自动跟随。
+:host {
+  --ce-button-fs: var(--ce-font-md);
+  --ce-button-h: var(--ce-control-h-md);
   --ce-button-px: 1em;
   --ce-button-gap: .375em;
 }
 
+:host([size="xs"]) {
+  --ce-button-h: var(--ce-control-h-xs);
+  --ce-button-fs: var(--ce-font-xs);
+  --ce-button-px: .75em;
+  --ce-button-gap: .25em;
+}
+
+:host([size="sm"]) {
+  --ce-button-h: var(--ce-control-h-sm);
+  --ce-button-fs: var(--ce-font-sm);
+  --ce-button-px: .75em;
+  --ce-button-gap: .25em;
+}
+
 :host([size="lg"]) {
-  --ce-button-h: 2.5em;
-  --ce-button-fs: 1em;
+  --ce-button-h: var(--ce-control-h-lg);
+  --ce-button-fs: var(--ce-font-lg);
   --ce-button-px: 1.25em;
   --ce-button-gap: .5em;
 }
 
 :host([size="xl"]) {
-  --ce-button-h: 3em;
-  --ce-button-fs: 1.125em;
+  --ce-button-h: var(--ce-control-h-xl);
+  --ce-button-fs: var(--ce-font-xl);
   --ce-button-px: 1.5em;
   --ce-button-gap: .5em;
 }
@@ -70,6 +74,13 @@
   display: flex;
 }
 
+// 纯图标按钮没有文字可比照，取 1.35em 让图标撑满视觉重心
+// （图标基准 1.2em 见 --ce-icon-unit）。
+:host([circle]) ce-icon,
+:host([icon-only]) ce-icon {
+  --ce-icon-unit: 1.35em;
+}
+
 :host([color="info"]) {
   --color: var(--ce-color-info);
 }
@@ -98,7 +109,7 @@
 
   &::part(__underlay) {
     opacity: 0.5;
-    background-color: rgba(255, 255, 255, 1);
+    background-color: var(--ce-color-bg);
   }
 }
 
@@ -110,7 +121,10 @@
 /////////////////// appearance
 :host(ce-button[appearance="flat"]) {
   background-color: var(--color, var(--ce-color-info));
-  color: #fff;
+  // 前景必须与背景配对：语义色由 ColorHelper 注入 --on-color（warning 黄底、
+  // 深色主题下提亮的 info / 反相后的 text 都不能用白字）；未指定 color 时
+  // 背景回落到 info，前景也必须回落到 on-info 而不是通用白字。
+  color: var(--on-color, var(--ce-color-on-info));
 }
 
 :host([appearance="outlined"][active]) {
@@ -241,7 +255,7 @@
       top: 0;
       width: 100%;
       height: 100%;
-      background: rgb(255, 255, 255, .9);
+      background: rgb(var(--ce-color-bg-rgb, 255 255 255) / .9);
     }
   }
 }

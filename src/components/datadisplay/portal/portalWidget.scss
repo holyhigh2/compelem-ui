@@ -1,47 +1,147 @@
 :host {
-  pointer-events: none;
-  resize: var(--portal-widget-resizable);
-}
-.ce-portal-editor-widget {
-  height: inherit;
-  .ce-portal-editor-content {
-    pointer-events: auto;
-    height: 100%;
-    &.is-editable {
-      pointer-events: none;
-      * {
-        pointer-events: none;
-      }
-    }
-  }
-
-  .ce-portal-editor-resize {
-    pointer-events: auto;
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 10px;
-    height: 10px;
-  }
-  .ce-portal-editor-close {
-    pointer-events: auto;
-    position: absolute;
-    right: 0.5rem;
-    top: 0.5rem;
-  }
-  .ce-portal-editor-config {
-    pointer-events: auto;
-    position: absolute;
-    right: 3.5rem;
-    top: 0.5rem;
-  }
+  display: block;
+  min-width: 0;
+  // 高度自适应：视图态网格行高是 `minmax(rowHeight, auto)`，卡片至少要占住
+  // 网格给它的高度（值由 Portal 按 h/rowHeight/gap 算好写在元素上），
+  // 内容比它更高时允许长高 —— 否则矮卡片里的内容只剩"压扁"和"滚动条"两条路。
+  height: auto;
+  min-height: var(--ce-portal-widget-h, 0px);
+  // 内部尺寸常量：模板要算"我到底拿到多少可用高度"时用得上（见 body 的 content-h）
+  --ce-portal-widget-bar-h: 30px;
+  --ce-portal-widget-pad: 12px;
 }
 
-//uii --------------------
-.uii-draggable-handle {
-  pointer-events: auto;
-  position: absolute;
-  left: 0.5rem;
-  top: 0.5rem;
-  cursor: move;
+.ce-portal-widget-frame {
+  height: 100%;
+  // 跟随 host 的最小高度：host 高度是 auto 时 `height:100%` 失效，靠这条兜底
+  min-height: inherit;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  // 挂件私有背景（--ce-portal-widget-bg 由宿主按 item 注入，可带图）；
+  // 边框同样可按 item 关掉（自带背景设计的卡片不需要描边）
+  background: var(--ce-portal-widget-bg, var(--ce-color-bg));
+  border: var(--ce-portal-widget-border, 1px solid var(--ce-color-border-secondary));
+  border-radius: var(--ce-round-md, 8px);
+
+  &.is-plain {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  &.is-overflowed {
+    overflow: visible;
+  }
+
+  &.is-denied {
+    position: relative;
+  }
+}
+
+// 标题栏：与编辑态 `ce-portal-item` 的 bar 同尺寸同配色（高度 30 / 12px 字号 /
+// #f8fafc 底 + 1px 分隔线），这样「编辑时什么样、保存后就什么样」。
+.ce-portal-widget-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  // 高度是**下限**不是定值：宿主注入的头部内容（卡片级筛选）比标题高时，
+  // 让 bar 自己长高，而不是把控件溢出到正文上面去。
+  height: auto;
+  min-height: var(--ce-portal-widget-bar-h);
+  padding: 0 12px;
+  // 与正文同处一层表面：用文字色叠一层极低透明度，明暗主题都会得到「略深/略浅」
+  // 的一条分隔带，不再写死 #f8fafc（暗色主题下会变成一条刺眼的白条）。
+  background-color: rgb(var(--ce-color-text-rgb) / 0.04);
+  border-bottom: 1px solid rgb(var(--ce-color-border-rgb) / 0.75);
+  box-sizing: border-box;
+}
+
+// 宿主注入的头部内容（卡片级筛选等）：靠右；没有标题时标题位不占空间
+.ce-portal-widget-bar slot[name='header-extra'] {
+  margin-left: auto;
+  // flex:none：标题是 `flex: 1`，若这里可收缩，筛选条会被压成"每个字一行"的窄条
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ce-portal-widget-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  // 与挂件正文同字号区间：标题是「这张卡叫什么」，不该比内容更抢眼
+  font-size: var(--ce-font-xs);
+  font-weight: 500;
+  color: var(--ce-color-text);
+}
+
+// 不可用占位（无权限 / 已下线）：保留卡片外形与尺寸，内部换成锁 + 文案。
+// 虚线内框让「这是被替换的内容」一眼可辨，且不依赖主题色。
+.ce-portal-denied {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+  color: var(--ce-color-text-desc, #98a2b3);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border: 1px dashed var(--ce-color-border-tertiary, #e4e7ec);
+    border-radius: var(--ce-round-sm, 6px);
+    pointer-events: none;
+  }
+}
+
+.ce-portal-denied-icon {
+  width: 26px;
+  height: 26px;
+  opacity: 0.7;
+}
+
+.ce-portal-denied-text {
+  font-size: var(--ce-font-sm);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.ce-portal-widget-body {
+  // 原来是 `flex: 1`（basis 0）：内容高度不参与外层高度计算，卡片永远撑不高。
+  // 改成 basis auto —— 内容少时照样被 grow 撑满，内容多时把卡片顶高。
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  padding: var(--ce-portal-widget-pad);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  // 「扣掉标题栏和上下内边距之后还剩多少高」：列表 / 图表这种要自己滚动的模板
+  // 靠它把高度锁在卡片里，而不是把卡片顶大。
+  //
+  // 注意这里**不能**加 `container-type: size`：size containment 会让 body 的尺寸
+  // 不受内容影响，卡片就再也不会因为内容长高了 —— 这正是本组件要做的事。
+  // 需要按可用空间换排版时请用 `@media` / 宽度查询，或用下面这个高度变量自己算。
+  --ce-portal-widget-content-h: calc(
+    var(--ce-portal-widget-h, 0px) - var(--ce-portal-widget-bar-h) - 2 * var(--ce-portal-widget-pad)
+  );
+
+  ::slotted(*) {
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+  }
 }

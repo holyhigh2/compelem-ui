@@ -1,13 +1,28 @@
 @use "../../../css/functions" as fn;
 
-:host([backdrop]) .ce-loader-backdrop {
+:host {
+  display: inline-block;
+}
+
+// 遮罩模式：宿主作为父级（需 position:relative）的覆盖层铺满父级。
+// appearance.scss 给所有宿主设了 position:relative，若宿主是 0 尺寸的
+// inline 元素，绝对定位的遮罩按宿主计算 100% 会得到 0 尺寸。
+:host(.ce-loader-mask) {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+// 默认显示遮罩（backdrop 默认 true），由 Loader.ts 的 showBackdrop 落类；
+// 不能用 :host([backdrop]) 判断——未写属性时默认值不会出现在 DOM 上。
+.ce-loader-backdrop.is-shown {
   position: absolute;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
   background-color: rgba(111, 111, 111, 0.1);
-  z-index: 9901;
+  z-index: var(--ce-z-index-loader, 9900);
 }
 
 :host([fullscreen]) {
@@ -24,42 +39,42 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 9902;
+    z-index: calc(var(--ce-z-index-loader, 9900) + 1);
   }
 
   &.ce-loader-size-xl {
-    font-size: 0.75rem;
-    line-height: 1;
+    font-size: var(--ce-font-xs);
+    line-height: var(--ce-lineh-xs, 1); // 图标容器：显式紧凑
 
     >ce-icon {
-      font-size: 1.25rem;
+      font-size: var(--ce-font-xl);
     }
   }
 
   &.ce-loader-size-sm {
-    font-size: 0.875rem;
+    font-size: var(--ce-font-sm);
     line-height: 1.25rem;
 
     >ce-icon {
-      font-size: 1.45rem;
+      font-size: calc(var(--ce-font-base) * 1.45);
     }
   }
 
   &.ce-loader-size-md {
-    font-size: 0.875rem;
+    font-size: var(--ce-font-sm);
     line-height: 1.25rem;
 
     >ce-icon {
-      font-size: 1.75rem;
+      font-size: calc(var(--ce-font-base) * 1.75);
     }
   }
 
   &.ce-loader-size-lg {
-    font-size: 1rem;
+    font-size: var(--ce-font-md);
     line-height: 1.25rem;
 
     >ce-icon {
-      font-size: 2rem;
+      font-size: calc(var(--ce-font-base) * 2);
     }
   }
 }

@@ -22,6 +22,23 @@ export enum FieldContainerEvents {
   Sort = 'sort'
 }
 /**
+ * 只返回**存活**字段组件的 Map（见 `FieldContainer._fieldMap` 注释）。
+ *
+ * `isDestroyed` 是 compelem 组件实例上的只读标记（`destroy()` 内置位）；
+ * 非组件值读不到该属性，按"存活"处理（`undefined` 为假）。
+ */
+class LiveFieldMap<V = any> extends Map<string, V> {
+  get(key: string): V | undefined {
+    const v = super.get(key)
+    if (v && (v as any).isDestroyed) {
+      this.delete(key)
+      return undefined
+    }
+    return v
+  }
+}
+
+/**
  * 字段容器混入，提供统一的字段控制、排序、筛选等
  * @methods
  * 
@@ -30,18 +47,31 @@ export enum FieldContainerEvents {
 export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
   return class FieldContainer extends spuerClass {
     _hiddenFieldList: string[] = []
-    _fieldMap = new Map<string, any>()
+    /**
+     * 字段映射（prop → 字段组件实例）。
+     *
+     * 用 `LiveFieldMap` 而非裸 `Map`：字段的销毁可能**先于**容器 —— 容器被整体
+     * 替换时（例如换一份列数不同的报表）子先父后，而容器侧的迟到回调
+     * （`@mutate.child.debounce:100` 的 `onListReady`、`@debounced(100)` 的
+     * `__fillCells`）仍会遍历本表。此时死字段的内部结构（`slots` / `slotHooks`）
+     * 已随 `__data_` 一起被置空，读它就会抛
+     * `Cannot read properties of null (reading 'cell')`
+     * （实测于 M5 预览「8 列报表 → 6 列报表」的重建）。
+     *
+     * 这类消费点在全库有 30+ 处，逐处加守卫既啰嗦又必然漏；把守卫收敛到 `get()`
+     * 本身：死字段一律视为"不存在"并从表中剔除，调用方沿用既有的
+     * `if (!col) return` 分支即可，行为自然收敛。
+     */
+    _fieldMap: Map<string, any> = new LiveFieldMap()
     //<field,fieldColorMap>
     _tagColorMap = new Map<string, Record<string, string>>()
     __sortQueue: Array<{ prop: string, sort: string }> = []
-    innerData: Array<Record<string, any>>
+    //数据源（由子类的 `@state innerData` 提供存储，这里只声明类型）
+    declare innerData: Array<Record<string, any>>
     //隐藏列
     declare invisibleFields: string[]
     declare sortOrders: Array<{ prop: string, sort: string }>
     declare filterData: Array<Record<string, any>> | undefined
-    constructor(...args: any[]) {
-      super(...args)
-    }
 
     ////////////////////////////////////////// 字段隐藏/显示控制
     toggleFieldHide(colProp: string) {
@@ -62,14 +92,10 @@ export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
       if (colAry !== this._hiddenFieldList) {
         this._hiddenFieldList = colAry
       }
-      this.invisibleFields = []
-
-      colAry.forEach(col => {
-        this.invisibleFields.push(col)
-      })
+      this.invisibleFields = Array.from(colAry)
 
       this.emit(FieldContainerEvents.Hide, { columns: Array.from(colAry) })
-      this.__onFieldHideChange && this.__onFieldHideChange(Array.from(colAry))
+      this.__onFieldHideChange?.(Array.from(colAry))
       if (!cancelEmit)
         this.emit(FieldContainerEvents.ConfigChange, { type: FieldConfigType.Hide })
     }
@@ -83,7 +109,7 @@ export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
     }
     __filterMap: Record<string, FilterType> = {}
     __filterConditionMap: Record<string, string> = {}
-    _setFilter(prop: string, filter: null | FilterType, filterCondition: string, cancelEmit = false, customFilter?: (__baseFilter?: Function) => void) {
+    _setFilter(prop: string, filter: null | FilterType, filterCondition: string, cancelEmit = false, customFilter?: (baseFilter?: () => void) => void) {
       if (filter) {
         this.__filterMap[prop] = filter
         this.__filterConditionMap[prop] = filterCondition
@@ -95,7 +121,7 @@ export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
       let autoFilter = true;
       let filters = toObject(this.__filterConditionMap)
       this.emit(FieldContainerEvents.FilterChange, { filters, cancel() { autoFilter = false } })
-      this.__onFilterChange && this.__onFilterChange(filters)
+      this.__onFilterChange?.(filters)
       if (autoFilter) {
         if (customFilter) {
           customFilter.call(this, this.__baseFilter)
@@ -119,7 +145,7 @@ export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
           const f = FilterFunctionMap[fType]
           return f(r, k, value!)
         })
-        let rs2 = every(this.__filterFillMap as any, (fType: FilterType, k) => {
+        let rs2 = every(this.__filterFillMap as any, (fType: FilterType, k: string) => {
           const f = FilterFunctionMap[fType]
           return f ? f(r, k, '') : true
         })
@@ -136,7 +162,7 @@ export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
     _clearFilter() {
       this._clearFilterData()
       this.emit(FieldContainerEvents.FilterChange, { filters: {}, cancel() { } })
-      this.__onFilterChange && this.__onFilterChange()
+      this.__onFilterChange?.()
       if (this.groupedData) {
         //更新分组数据
         this.__groupData()
@@ -164,7 +190,7 @@ export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
       let autoSort = true;
       let orders = clone(this.__sortQueue)
       this.emit(FieldContainerEvents.SortChange, { orders, cancel() { autoSort = false } })
-      this.__onSortChange && this.__onSortChange(orders, prop)
+      this.__onSortChange?.(orders, prop)
       if (!cancelEmit) {
         this.emit(FieldContainerEvents.ConfigChange, { type: FieldConfigType.Sort })
       }

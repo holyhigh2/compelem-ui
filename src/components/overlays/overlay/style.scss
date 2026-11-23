@@ -8,12 +8,49 @@
 /* Dialog 内容面板：内容节点会被移动到 body 级容器中，
    因此该样式依赖 Overlay 的 GLOBAL 注入才能命中 */
 .ce-dialog-surface {
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
   border-radius: var(--ce-round-lg);
   background: var(--ce-card-bg);
-  overflow: hidden;
+  /* 高度上限 + 自身滚动。
+     原来只有 overflow: hidden 而没有 max-height：内容一长（挂件设置这种多分组表单）
+     面板就撑到比视口还高，被视口裁掉的部分既看不见也滚不到 —— 表现是"显示不全
+     且无法滚动"。上限留出上下 1.5rem 的呼吸位，超出后在面板内部滚动。 */
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+  /* 面板内部滚动到边界时不再把滚动传给外层（避免"滚到底接着滚页面"） */
+  overscroll-behavior: contain;
+
+  /* 子项不许被压扁：flex 列默认 flex-shrink:1，加上 max-height 后卡片会被压到
+     面板高度以内、内容溢出被卡片自己的 overflow 裁掉 —— 结果 scrollHeight 等于
+     clientHeight，既看不全也滚不动。让子项保持自然高度，溢出交给 surface 滚动。 */
+  & > * {
+    flex: none;
+  }
+}
+
+.ce-dialog-close {
+  position: absolute;
+  // 与常见内容（ce-card，padding 1rem）的头部行对齐，避免关闭钮悬在卡片外沿上方
+  top: 0.875rem;
+  right: 0.875rem;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: var(--ce-font-xl);
+  line-height: var(--ce-lineh-xs, 1); // 关闭钮×：显式紧凑，正方形行盒
+  color: var(--ce-color-text-secondary);
+  // 内容（如 ce-card）会以 light DOM 搬进 surface 且绘制在靠后位置，
+  // 关闭钮必须压在其上，否则 hover/点击都被卡片截走
+  z-index: 10;
+  transition: color 0.2s, background-color 0.15s;
+
+  &:hover {
+    color: var(--ce-color-text);
+    background-color: rgba(0, 0, 0, 0.06);
+  }
 }
 
 .ce-overlay {
@@ -36,6 +73,14 @@
       transform: scale(1) !important;
     }
 
+    /* ⚠️ 模态遮罩**必须**吃命中，别改成 none。
+       backdrop 只在 `backdrop=true` 时才渲染（见 Overlay.ts 的 `ifTrue(this.backdrop, …)`），
+       dropdown / tooltip / popover 默认 false，压根没有这个节点 —— 想"让非模态浮层不挡页面"
+       不该动这里（改了也完全无效，只是白废一层）。
+       改成 none 的后果（2026-11-12 实测回归）：`.ce-overlay` 本身与 body 级容器都是
+       pointer-events:none，遮罩再一让，整屏只剩 `.ce-overlay-content`（面板矩形）可命中，
+       暗色遮罩变成纯装饰 —— 点击直接穿透到底下的画布 / 工具条，同时被 layerHost 判成
+       "点了浮层外部"。 */
     .ce-overlay-backdrop {
       pointer-events: auto;
     }
@@ -64,7 +109,11 @@
   }
 
   .ce-overlay-content {
-    pointer-events: none;
+    // 2026-11-10：原来是 none（靠 `> *` 给内容恢复 all）。但命中判定要求**整条祖先链**
+    // 满足，只给直接子元素 all 时，投影进来的内容（下拉的 ce-list-picker）拿不到
+    // hover / click —— 面板看得见、点不动、也没有浮动样式。
+    // 改成 auto 不影响"全屏不挡页面"：这层是面板尺寸（absolute），铺满视口的是 .ce-overlay。
+    pointer-events: auto;
     position: absolute;
     display: flex;
     align-items: center;
@@ -80,12 +129,23 @@
     // transform: scale(1);
     //todo 这里需要独立到动画组件
 
+    // 2026-11-19：移除 width 过渡。宽度由内容布局决定（改数据/自定义行注入都会
+    // 改变它），给 width 加 0.2s 会把任何内容收敛渲染成肉眼可见的"闪一下"。
+    // 浮层的进出场动画用 transform + opacity 足够，宽度应瞬时到位。
     transition: transform 0.2s cubic-bezier(0.62, 1.36, 0.9, 1.1),
-    opacity 0.2s,
-    width 0.2s;
+    opacity 0.2s;
 
     >* {
       pointer-events: all;
+    }
+
+    // 浮起表面（surface 属性开启）：锚定面板的底色与页面底色相同，无阴影/描边时
+    // 边界不可辨。内容元素被搬进本 shadow 之外的 document 容器，投影只能挂在
+    // 这层内容盒上，不能靠内容自身的样式保证。
+    &.ce-overlay-surface {
+      background: var(--ce-overlay-surface-bg, var(--ce-card-bg));
+      border-radius: var(--ce-overlay-surface-radius, var(--ce-round-lg));
+      box-shadow: var(--ce-overlay-surface-shadow, var(--ce-shadow-overlay));
     }
   }
 

@@ -45,7 +45,7 @@
         border-width: 0 0 2px 2px;
         border-color: transparent;
         width: 60%;
-        height: 25%;
+        height: 35%;
         left: 15%;
         top: 20%;
         transition:
@@ -80,7 +80,7 @@
       }
 
       &::after {
-        border-color: #fff;
+        border-color: var(--ce-color-on-primary, #fff);
         transform: rotateZ(-52deg);
       }
     }
@@ -121,6 +121,9 @@
     }
 
     &.is-indeterminate .ce-form-checkbox-container>.ce-form-checkbox-box {
+      // 降级：不支持 color-mix() 的浏览器（Chrome<111 / Safari<16.2 / Firefox<113）
+      // 走不透明描边，视觉略重但语义一致；支持时下面一行覆盖为 60% 混合。
+      outline: 1px solid var(--color);
       outline: 1px solid color-mix(in srgb, var(--color) 60%, transparent);
 
       &::before {
@@ -128,7 +131,7 @@
       }
 
       &::after {
-        border-color: #fff;
+        border-color: var(--ce-color-on-primary, #fff);
         transform: rotateZ(-52deg);
       }
     }
@@ -149,10 +152,37 @@
       &::after {
         left: 20%;
         // top: 10%;
-        border-color: #fff;
+        border-color: var(--ce-color-on-primary, #fff);
         border-width: 0 0 2px 0;
         transform: rotateZ(0) !important;
       }
     }
   }
+}
+
+// 缁勫唴闂磋窛锛氱敤 flex + gap 鍚屾椂瑕嗙洊姘村钩涓庡瀭鐩翠袱涓柟鍚戙€?
+// 涓嶉噰鐢?::slotted(*:not(:first-child)) 鐨?margin 鏂规 鈥斺€?瀹冨湪 flex-wrap 鎹㈣鏃?
+// 姣忚鏈」鍙充晶浠嶄細娈嬬暀涓€娈靛杈硅窛锛圗lement Plus 鐨?margin-right:30px 灏辨槸涓烘鍦?
+// bordered 鍙樹綋涓婇澶栨墦琛ヤ竵锛夛紝鑰?gap 鍙湪鐩搁偦椤逛箣闂寸敓鏁堬紝鎹㈣鑷甫琛岃窛銆?
+// 闄勫甫鏁堟灉锛歴lotted 鐨?ce-checkbox 鎴愪负 flex item 鍚庤鍧楀寲锛屽叾 :host 涓婄殑
+// vertical-align: super 涓嶅啀鍙備笌鍩虹嚎瀵归綈锛岀粍鍐呬笉浼氬啀鍑虹幇鏁翠綋涓婃诞銆?
+.ce-form-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1rem;
+  row-gap: 0.5rem;
+}
+
+// 绂佺敤鎬佽“鍑忛噺鎺у埗锛堣 base/appearance.scss 鐨?--ce-disabled-opacity锛夛細
+// ce-checkbox-group 鍙槸"鐘舵€佷笅鍙戝鍣?锛宒isabled 浼氫笅娌夌粰姣忎釜 ce-checkbox锛?
+// 鐢?ce-checkbox 鑷韩鐨?.is-disabled锛堟枃瀛?澶栨/鍕鹃€夋爣璁版敼鐢ㄦ绾ц壊 + cursor锛夎〃杈俱€?
+// 鑻?group 鍐嶅彔涓€灞?opacity锛岀埗瀛愮浉涔?0.25 脳 0.25 = 0.0625锛岀鐢ㄦ€佸嚑涔庝笉鍙銆?
+:host(ce-checkbox-group) {
+  --ce-disabled-opacity: 1;
+}
+
+// 鑷畾涔夊睘鎬т細娌?DOM 缁ф壙锛屽彾瀛愭帶浠跺繀椤绘樉寮忔仮澶嶈嚜韬“鍑忓€硷紝
+// 鍚﹀垯 ce-checkbox锛堜綔涓?group 鐨?light DOM 瀛愯妭鐐癸級浼氱户鎵垮埌 group 鐨?1 鑰屽畬鍏ㄤ笉琛板噺
+:host(ce-checkbox) {
+  --ce-disabled-opacity: 0.25;
 }

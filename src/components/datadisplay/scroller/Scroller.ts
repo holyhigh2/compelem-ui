@@ -1,8 +1,9 @@
 import { classes, CompElem, computed, csscope, Csscope, debounced, emits, h, prop, query, show, tag, Template, watch } from "compelem";
-import { isBlank, throttle } from "myfx";
+import { isBlank } from "myfx";
 import { getMatrixInfo } from "uiik";
 import { IColorable } from "../../../interfaces/IColorable";
 import { ColorHelper } from "../../../utils/color";
+import { beginDrag, type DragSessionHandle } from "../../../utils/dragSession";
 import { isVisible } from "../../../utils/utils";
 import style from "./style.scss?tmpl";
 
@@ -12,10 +13,31 @@ export enum Edge {
   Left = 'left',
   Right = 'right'
 }
+
+/** `scroll` 事件载荷 */
+export type ScrollerScrollPayload = {
+  /** 滚动距离（px） */
+  to: number
+  /** 命中的边界，不在边界时为 '' */
+  edge: Edge | ''
+  /** 滚动方向：v 纵向 / h 横向 */
+  direction: 'v' | 'h'
+  /** 取消滚动包装元素的默认操作 */
+  preventDefault(): void
+  /** 触发滚动的原始事件目标 */
+  el?: EventTarget
+}
+
+/** `scrollend` 事件载荷：滚动操作结束后的最终位置与边界 */
+export type ScrollerEndPayload = {
+  to: number
+  edge: Edge | ''
+  direction: 'v' | 'h'
+}
 /**
  * 滚动条组件
  * 支持自动检测与指定范围
- * @props
+ * @attrs
  *  autoHide {boolean} 自动隐藏，默认true
  *  rounded {boolean} 圆角，默认true
  *  showTrack {boolean} 显示滚动条轨道，默认true
@@ -119,16 +141,28 @@ export class Scroller extends CompElem implements IColorable {
         <slot></slot>
       </div>
       <div ${show(this.direction === '' || this.direction === 'v')} class="ce-scroller-scroll-bar is-vertical" @mousedown.stop="${this.moveThumbV}">
-        <div class="ce-scroller-thumb" tabindex="-1" @mousedown.stop.prevent="${this.startDragV}"></div>
+        <div class="ce-scroller-thumb" tabindex="-1" @pointerdown.stop.prevent="${this.startDragV}"></div>
       </div>
       <div ${show(this.direction === '' || this.direction === 'h')} class="ce-scroller-scroll-bar is-horizontal" @mousedown.stop="${this.moveThumbH}">
-        <div class="ce-scroller-thumb" tabindex="-1" @mousedown.stop.prevent="${this.startDragH}"></div>
+        <div class="ce-scroller-thumb" tabindex="-1" @pointerdown.stop.prevent="${this.startDragH}"></div>
       </div>
     </div>
     `;
   }
 
-  beforeDestroyed(): void {
+  /**
+   * 注意用 `destroyed()` 而非 `beforeDestroyed()`。
+   *
+   * 编译器要把 `@debounced` 的清理注入成一个**新的** `beforeDestroyed()` 方法
+   *（`methodDecoDestroy` → `beforeDestroyed() { this.xxx?.cancel?.(); … super.beforeDestroyed?.() }`）；
+   * 若本类自己也声明了 `beforeDestroyed`，会变成重复方法定义（后者覆盖前者 → 用户逻辑静默丢失），
+   * 因此编译器对这种情况直接报 E-METHOD-DECO-HOOK 并**整体放弃**装饰器注入 —— 那样
+   * `@debounced` 会彻底失效，比报错更难查。改用 `destroyed()`（销毁链的下一环）即可两者共存。
+   */
+  destroyed(): void {
+    this.#drag?.end(false)
+    this.#drag = null
+    this.dragging = false
     this.draggingThumb = this.draggingRect = null as any
   }
 
@@ -146,6 +180,9 @@ export class Scroller extends CompElem implements IColorable {
   calcBounding() {
     if (!isVisible(this)) return
     if (!this.renderRoot) return
+    // 容器高度为 0（隐藏中、弹窗/抽屉展开动画首帧）时不能算：此时 ratioH 为 0，
+    // 反算出的 y 与滑块尺寸会把内部状态写坏，等容器恢复高度后滑块就与内容错位。
+    if (!this.renderRoot.offsetHeight) return
     let sh = (this.sHeight || this.contentWrapper.scrollHeight) - (this.hasV ? this.size : 0)
     let sw = (this.sWidth || this.contentWrapper.scrollWidth) - (this.hasH ? this.size : 0)
     let h = this.renderRoot.offsetHeight - (this.hasV ? this.size : 0)
@@ -180,31 +217,85 @@ export class Scroller extends CompElem implements IColorable {
     if (sw <= this.renderRoot.offsetWidth) {
       vw = 0
     }
-    if (this.thumbVHeight === vh && this.thumbHWidth === vw) return
-
-    this.thumbVHeight = vh
-    this.thumbHWidth = vw
-    this.thumbV.style.height = vh + 'px'
-    this.thumbH.style.width = vw + 'px'
+    if (this.thumbVHeight !== vh) {
+      this.thumbVHeight = vh
+      this.thumbV.style.height = vh + 'px'
+    }
+    if (this.thumbHWidth !== vw) {
+      this.thumbHWidth = vw
+      this.thumbH.style.width = vw + 'px'
+    }
 
     if (this.dragging) return
 
-    this.draggingThumb = this.thumbV
+    // 内容骤减（数据清空/重建、宿主弹窗重开）时浏览器会把原生 scrollTop 夹紧，
+    // 而 this.y 仍是旧值。两份状态一旦分叉：滑块停在旧位置、内容却在顶部，且
+    // onWheel 的两个早退判断分别读 scrollTop 与 y ⇒ 两个方向都滚不动。
+    // 以原生 scrollTop 为准收敛，并清掉 moveThumb 的去重闩，让这次落位真正生效。
+    const nativeTop = this.contentWrapper.scrollTop
+    if (Math.abs(nativeTop - this.y) > 1) {
+      this.y = nativeTop
+      this.__lastMoveV = -1
+      this._lastXY = -1
+    }
+
     const maxX = sw - w
     const maxY = sh - h
-    this.moveThumb(((this.y > maxY ? maxY : this.y) || 0) * this.ratioH)
+    const targetY = (this.y > maxY ? maxY : this.y) || 0
+    const targetX = (this.x > maxX ? maxX : this.x) || 0
+    // 去重闩只在「上次落位就是这里」时才成立。DOM 上的滑块位移一旦与目标不符
+    // （y 被归一化、尺寸突变、内容夹紧），必须清闩，否则这次落位会被当成重复丢掉，
+    // 滑块就永久停在旧位置（"滑块到底、内容在顶"那种错位）。
+    if (Math.abs(this.__thumbOffsetV() - targetY * this.ratioH) > 0.5
+      || Math.abs(this.__thumbOffsetH() - targetX * this.ratioW) > 0.5) {
+      this.__lastMoveV = -1
+      this.__lastMoveH = -1
+      this._lastXY = -1
+    }
+    this.draggingThumb = this.thumbV
+    this.moveThumb(targetY * this.ratioH)
     this.draggingThumb = this.thumbH
-    this.moveThumb(((this.x > maxX ? maxX : this.x) || 0) * this.ratioW)
+    this.moveThumb(targetX * this.ratioW)
 
-    this.emit('scrollchange', {
-      maxX, maxY
-    })
+    if (this.__lastMaxX !== maxX || this.__lastMaxY !== maxY) {
+      this.__lastMaxX = maxX
+      this.__lastMaxY = maxY
+      this.emit('scrollchange', {
+        maxX, maxY
+      })
+    }
   }
+  /** 滑块当前位移（读内联 transform，缺省 0）：判断去重闩是否已经过期 */
+  __thumbOffsetV() {
+    const m = /translateY\(([-\d.]+)px\)/.exec(this.thumbV?.style.transform || '')
+    return m ? Number(m[1]) : 0
+  }
+  __thumbOffsetH() {
+    const m = /translateX\(([-\d.]+)px\)/.exec(this.thumbH?.style.transform || '')
+    return m ? Number(m[1]) : 0
+  }
+  /** 上次 emit 的滚动上限：落位每次都会跑，尺寸没变时不必重复通知宿主 */
+  __lastMaxX = -1
+  __lastMaxY = -1
   draggingThumb: HTMLElement
   draggingRect: DOMRect
   draggingOffset: number
   totalLen: number
   draggingTrans: number = 0
+
+  #drag: DragSessionHandle | null = null
+
+  /** 用指针捕获建立拖动会话；`e` 不是指针事件（轨道点击、`onWheel` 等）时不建立 */
+  #startDrag(e: MouseEvent) {
+    if (typeof (e as PointerEvent).pointerId !== 'number') return
+    this.#drag?.end(false)
+    this.#drag = beginDrag(this.draggingThumb, e as PointerEvent, {
+      interval: 20,
+      onMove: (ev) => this.onDrag(ev),
+      onEnd: () => this.onDragEnd()
+    })
+  }
+
   startDragV(e: MouseEvent) {
     this.dragging = true;
     this.renderRoot?.classList.add('dragging')
@@ -217,10 +308,7 @@ export class Scroller extends CompElem implements IColorable {
     let rect = getMatrixInfo(this.thumbV)
     this.draggingTrans = rect.y
 
-    if (e instanceof MouseEvent) {
-      document.onmousemove = throttle(this.onDrag.bind(this), 20)
-      window.onblur = document.onmouseup = this.onDragEnd.bind(this)
-    }
+    this.#startDrag(e)
   }
   startDragH(e: MouseEvent) {
     this.dragging = true;
@@ -234,14 +322,11 @@ export class Scroller extends CompElem implements IColorable {
     let rect = getMatrixInfo(this.thumbH)
     this.draggingTrans = rect.x
 
-    if (e instanceof MouseEvent) {
-      document.onmousemove = throttle(this.onDrag.bind(this), 20)
-      window.onblur = document.onmouseup = this.onDragEnd.bind(this)
-    }
+    this.#startDrag(e)
   }
 
   @debounced(200)
-  onScrollEnd(edge: string, scrollTo: number, direction: string) {
+  onScrollEnd(edge: Edge | '', scrollTo: number, direction: 'v' | 'h') {
     this.emit('scrollend', {
       to: scrollTo,
       edge,
@@ -270,7 +355,14 @@ export class Scroller extends CompElem implements IColorable {
       this.__lastMoveH = leftOrTop
     }
 
-    let edge = ''
+    // 位移与上次落地值相同 ⇒ 不重复写 DOM。**必须在改 y/x 之前判**：旧实现把它放在
+    // 写 y 之后，一旦命中就出现「y 已更新、scrollTop 与滑块仍是旧值」的半写状态，
+    // 随后 onWheel 按 y 判断、按 scrollTop 判断各得一半结论，双向都滚不动。
+    if (this._lastXY === leftOrTop) {
+      return
+    }
+
+    let edge: Edge | '' = ''
     if (isV) {
       if (Math.abs(leftOrTop - this.totalLen) < 1) {
         edge = Edge.Bottom
@@ -321,11 +413,12 @@ export class Scroller extends CompElem implements IColorable {
       }
     }
 
-    if (this._lastXY == leftOrTop) {
-      return
-    }
-
     if (isV) {
+      // 先落原生滚动位置、再派发 scroll：监听者（如 `ce-table`）会同步改大批
+      // `transform`，之后写 `scrollTop` 要在这些脏节点上强制一次 style + layout。
+      // 被 `preventDefault` 拦下时回滚一次 —— 该分支只在表格选区格上出现。
+      const prevTop = this.contentWrapper.scrollTop
+      this.contentWrapper.scrollTop = scrollTo
       this.emit('scroll', {
         to: scrollTo,
         edge,
@@ -334,9 +427,10 @@ export class Scroller extends CompElem implements IColorable {
         },
         el: e?.target
       }, e)
-      if (doScroll)
-        this.contentWrapper.scrollTop = scrollTo
+      if (!doScroll) this.contentWrapper.scrollTop = prevTop
     } else {
+      const prevLeft = this.contentWrapper.scrollLeft
+      this.contentWrapper.scrollLeft = scrollTo
       this.emit('scroll', {
         to: scrollTo,
         edge,
@@ -345,9 +439,7 @@ export class Scroller extends CompElem implements IColorable {
         },
         el: e?.target
       }, e)
-
-      if (doScroll)
-        this.contentWrapper.scrollLeft = scrollTo
+      if (!doScroll) this.contentWrapper.scrollLeft = prevLeft
     }
 
     if (doScroll)
@@ -365,17 +457,16 @@ export class Scroller extends CompElem implements IColorable {
     } else {
       leftOrTop = e.clientX - this.draggingRect.x - this.draggingOffset + this.draggingTrans// - (this.hasH ? this.size : 0)
     }
-    console.log(leftOrTop, '...........')
     this.moveThumb(leftOrTop, e)
   }
   onDragEnd() {
+    // 会话内部已补过节流窗口内最后一次位移
+    this.#drag?.end()
+    this.#drag = null
     this.dragging = false;
     this.renderRoot?.classList.remove('dragging')
-    this.thumbH.blur()
-    this.thumbV.blur()
-    document.onmousemove = null
-    document.onmouseup = null
-    window.onblur = null
+    this.thumbH?.blur()
+    this.thumbV?.blur()
   }
   moveThumbV(e: MouseEvent) {
     this.startDragV(e)
@@ -396,7 +487,7 @@ export class Scroller extends CompElem implements IColorable {
     if (this.thumbVHeight < 1) return
     let deltaY = e.deltaY
     if (this.contentWrapper.scrollTop < 1 && deltaY < 0) return
-    if (Math.ceil(this.contentWrapper.scrollTop) >= this.contentWrapper.scrollHeight - this.renderRoot!.offsetHeight && deltaY > 0) return
+    if (Math.ceil(this.contentWrapper.scrollTop) >= this.contentWrapper.scrollHeight - (this.renderRoot?.offsetHeight ?? 0) && deltaY > 0) return
 
     this.startDragV({ clientY: 0 } as any)
     this.thumbV.blur()
@@ -471,12 +562,15 @@ export class Scroller extends CompElem implements IColorable {
     return this.__lastMoveV >= this.totalLen
   }
   isOverflow(type: string) {
+    // 路由切换时销毁的组件仍可能被上一帧的定时器/观察者回调问到；
+    // 此时 renderRoot 已被置空，按「不溢出」回答而不是抛异常
+    if (!this.renderRoot || !this.contentWrapper) return false
     if (type === 'v') {
       let sh = (this.sHeight || this.contentWrapper.scrollHeight) - (this.hasV ? this.size : 0)
-      return sh > this.renderRoot!.offsetHeight
+      return sh > this.renderRoot.offsetHeight
     } else {
       let sw = (this.sWidth || this.contentWrapper.scrollWidth) - (this.hasH ? this.size : 0);
-      return sw > this.renderRoot!.offsetWidth
+      return sw > this.renderRoot.offsetWidth
     }
   }
 }

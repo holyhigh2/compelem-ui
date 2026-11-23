@@ -37,11 +37,11 @@ export class Prompt extends Modal {
         .esc="${(this.esc)}"
         ${model(this.visible, 'visible')}
       >
-        <ce-card title="${this._title}" style="width:100%">
+        <ce-card title="${this._title}" style="width:100%;box-sizing:border-box">
           ${ifTrue(isEmpty(this.slots.default), () => h`<div style="padding-block: 1rem;">${this.message}<ce-input style="display: block;width: 96%;margin-left: 2%;" maxlength="500"></ce-input></div>`)}
           <slot></slot>
           <ce-button slot="actions" appearance="pale" @click="${this.onConfirmClick}">${(this.confirmBtnText)}</ce-button>
-          <ce-button slot="actions" style="margin-left:.5rem" color="text" appearance="subtle" @click="${this.onCancelClick}">${(this.cancelBtnText)}</ce-button>
+          <ce-button slot="actions" color="text" appearance="subtle" @click="${this.onCancelClick}">${(this.cancelBtnText)}</ce-button>
         </ce-card>
       </ce-dialog>
     `;

@@ -40,11 +40,57 @@
     }
   }
 
+  /*
+   * 激活项外观（appearance）：由宿主 class 切换，高亮色走 --ce-navbar-active-color
+   * （color prop 写入 host；未设时回退 --ce-color-primary）。slotted 菜单项仍留在
+   * light DOM、直接挂在 host 下，因此能继承 host 上的这两个变量。
+   */
+  // 注：菜单项是 light DOM 的 slotted 节点，外部 reset（如 a { color: inherit }）
+  // 会压过 ::slotted() 的普通声明，故这里的 color 需 !important 才能确保反色/高亮。
+  &.ce-navbar-appearance-default {
+    .ce-navbar-container .ce-navbar-left-part .ce-navbar-items {
+      ::slotted(.active) {
+        color: var(--ce-navbar-active-color, var(--ce-color-primary)) !important;
+        font-weight: 600;
+      }
+    }
+  }
+
+  &.ce-navbar-appearance-underlined {
+    .ce-navbar-container .ce-navbar-left-part .ce-navbar-items {
+      ::slotted(.active) {
+        color: var(--ce-navbar-active-color, var(--ce-color-primary)) !important;
+        border-bottom: 2px solid var(--ce-navbar-active-color, var(--ce-color-primary));
+      }
+    }
+  }
+
+  &.ce-navbar-appearance-pill {
+    .ce-navbar-container .ce-navbar-left-part .ce-navbar-items {
+      ::slotted(.active) {
+        color: var(--ce-navbar-active-color, var(--ce-color-primary)) !important;
+        background-color: fn.color(--ce-color-primary-rgb, 0.14);
+        border-radius: var(--ce-round-pill);
+      }
+    }
+  }
+
+  &.ce-navbar-appearance-block {
+    .ce-navbar-container .ce-navbar-left-part .ce-navbar-items {
+      ::slotted(.active) {
+        color: var(--ce-color-on-primary) !important;
+        background-color: var(--ce-navbar-active-color, var(--ce-color-primary));
+      }
+    }
+  }
+
   .ce-navbar-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 100%;
+    /* 中部插槽的绝对定位参照（2026-10-21） */
+    position: relative;
 
     .ce-navbar-left-part {
       display: flex;
@@ -63,7 +109,7 @@
         //匹配默认插槽
         ::slotted(*) {
           font-weight: 500;
-          font-size: 0.875rem;
+          font-size: var(--ce-font-sm);
           line-height: 1.25rem;
           padding: 0.5rem 0.75rem;
           cursor: pointer;
@@ -74,6 +120,36 @@
         ::slotted(:not(.active):hover) {
           background-color: var(--hover-bg-color);
         }
+      }
+    }
+
+    /*
+     * 中部插槽（2026-10-21 新增）：**相对整条 navbar 绝对居中**，而不是夹在
+     * left / right 之间参与 flex 分配 —— 后者会让标题随两侧内容宽度漂移
+     * （左侧"文件"菜单、右侧动作条数量不同就偏一点），"居中"名不副实。
+     *
+     * 空插槽时盒子宽 0、不影响任何既有布局（width 由内容决定 + 水平 translate
+     * 居中，不占 flex 空间）。max-width 兜住极端窄容器：标题过长时靠宿主侧
+     * 的 text-overflow 省略，不会盖住左右两段。
+     */
+    .ce-navbar-center-part {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 46%;
+      min-width: 0;
+
+      /* 中部内容超长时省略（标题类文本的通用需求），宿主无需再写一遍 */
+      ::slotted(*) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
       }
     }
 

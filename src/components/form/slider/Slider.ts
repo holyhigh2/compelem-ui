@@ -1,10 +1,23 @@
-import { classes, computed, csscope, Csscope, emits, forEach, h, ifTrue, prop, query, queryAll, state, styles, tag, Template, watch } from "compelem";
-import { find, flatMap, isEmpty, map, range, toFixed } from "myfx";
-import { tooltip } from "../../../directives/tooltip/Tooltip";
+import { classes, computed, csscope, Csscope, emits, forEach, h, ifElse, ifTrue, prop, query, queryAll, state, styles, tag, Template, watch } from "compelem";
+import { clamp, find, flatMap, isEmpty, lerp, map, range, toFixed } from "myfx";
+import { relocateTooltip, tooltip } from "../../../directives/tooltip/Tooltip";
 import { getOpacityColor } from "../../../utils/color";
+import { beginDrag, type DragSessionHandle } from "../../../utils/dragSession";
 import { FormControl } from "../FormControl";
 import formStyle from "../style.scss?tmpl";
 import style from "./style.scss?tmpl";
+
+/**
+ * `.ce-form-slider-bottom-tip` 的"高度撑子"：mark 全是绝对定位，容器本身
+ * 没有在流内容 ⇒ 高度会塌成 0，需要一行不可见文字把行高撑起来。
+ *
+ * ⚠️⚠️ 不能用 HTML 实体写 `&nbsp;`：`h` 模板的静态文本**不做实体解码**，
+ * 会字面渲染出 6 个字符 "&nbsp;"（实测 DOM 文本 = `"0 严谨1 发散0.3 推荐&nbsp;"`，
+ * 用户可见且正好压在第一个 mark 上）。也不能写成裸 U+00A0 字符：编译器对静态
+ * 文本做 trim 时会把 U+00A0 一起吃掉（`"\u00A0".trim() === ""`），撑子失效。
+ * 用**文本位插值**送一个真实的不换行空格最稳（插值不进静态文本处理）。
+ */
+const MARK_SPACER = "\u00A0";
 /**
  * 滑杆组件
  * @attrs
@@ -39,9 +52,6 @@ import style from "./style.scss?tmpl";
 @emits('update:value')
 @tag("ce-slider")
 export class Slider extends FormControl {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   //////////////////////////////////// props
   @prop({ type: [Boolean, String] }) tooltip: boolean | string = true;
   @prop({ type: [String, Number] }) thumbRadius: string | number = 2;
@@ -62,10 +72,10 @@ export class Slider extends FormControl {
   @prop showTicks = false;
   @prop vertical = false;
   @prop hideThumb = false
-  @prop({ type: Number }) value: number;
+  @prop({ type: Number }) value!: number;
 
   @state private filled = 0;
-  @state({ prop: 'value' }) private __innerValue = 0
+  @state private __innerValue = this.value
 
   private lastLeft = 0;
   private interval = 0;
@@ -86,9 +96,21 @@ export class Slider extends FormControl {
   /////////////////////////////////// watches
   @watch('value')
   watchValue(nv: number) {
-    let left = this.trackEl.offsetWidth * (nv / this.max)
+    // ⚠️ plaintext 模式下 render 只输出 value 文本，没有 track/thumb；
+    // mounted() 里有 `if (!this.trackEl) return` 守卫，watch 路径却没有 ⇒
+    // 切到 plaintext 后再改 value 会 `undefined.offsetWidth` 直接抛 TypeError。
+    if (!this.trackEl) return
+    // ⚠️ 必须减 min 再归一：min≠0 时（如 4~60 的档位滑杆）直接 nv/max 会把
+    // 初始位置算错（24/60=40%，正确 35.7%）。_moveThumbH 里的反向换算
+    // （(perc/100)*(max-min)+min）一直是 min-aware 的，只有这里漏了。
+    // max===min（退化为单点）时除零会出 NaN，钳到 0。
+    const span = this.max - this.min
+    const ratio = span > 0 ? (nv - this.min) / span : 0
+    let left = this.trackEl.offsetWidth * ratio
     this._moveThumbH(left)
     this.lastLeft = left
+    // thumb 被程序化挪走 ⇒ 挂在它上面的 tooltip（alwaysShow）不会自己跟（没有任何事件可听）
+    relocateTooltip(this.thumbEl)
   }
   @watch('segments')
   function(nv: number[]) {
@@ -122,8 +144,38 @@ export class Slider extends FormControl {
   }
 
   //////////////////////////////////// lifecycles
+  /**
+   * 挂载后按当前值重钉一次 thumb。
+   *
+   * 为什么需要：`@watch('value')` 可能在挂载期就触发，那时轨道尚未布局
+   * （trackEl.offsetWidth === 0）⇒ left = 0 × ratio = 0，thumb 被钉在
+   * 轨道左端；而此后 value  prop 不再变化、watch 不再触发，thumb 永远
+   * 停在 0%（实测：value=0.2 的滑杆 thumb 在轨道最左边）。
+   *
+   * ⚠️ 刻意不走 watchValue / _moveThumbH：那两个结尾会 emit
+   * `update:value`，挂载期不该对外广播「值变了」（受控方会收到一次
+   * 凭空的变化通知）。这里只做定位 + 同步 __innerValue。
+   */
+  mounted() {
+    this.nextTick(() => {
+      if (!this.trackEl || !this.thumbEl) return;
+      const span = this.max - this.min;
+      const ratio = span > 0 ? (Number(this.value) - this.min) / span : 0;
+      this.lastLeft = this.trackEl.offsetWidth * ratio;
+      this.thumbEl.style.left = `${ratio * 100}%`;
+      if (this.trackFilledEl) this.trackFilledEl.style.width = `${ratio * 100}%`;
+      this.__innerValue = Number(this.value);
+      // 同上：重钉 thumb 后同步提示框（挂载期 tooltip 往往已经先算过一次坐标）
+      relocateTooltip(this.thumbEl);
+    });
+  }
+
   render(): Template {
-    return this.plaintext ? h`${this.value}` : h`
+    // 0.30 要求 render() 只有一个主视图 h`` 模板，根级三元会触发 "2 个主视图模板" 阻断
+    return h`${ifElse(
+      this.plaintext,
+      () => h`${this.value}`,
+      () => h`
       <div
         class="ce-form-slider"
         ${classes({
@@ -143,7 +195,7 @@ export class Slider extends FormControl {
         >
           <slot name="prepend"></slot>
         </div>
-        <div class="ce-form-slider-control" @mousedown="${this.onMousedown}">
+        <div class="ce-form-slider-control" @pointerdown="${this.onMousedown}">
           <div
             class="ce-form-slider-track"
             ${styles({
@@ -209,39 +261,48 @@ export class Slider extends FormControl {
               ${label}
             </div>
           `)}
-          ${ifTrue(!isEmpty(this.marks), () => h`<div>&nbsp;</div>`)}
+          ${ifTrue(!isEmpty(this.marks), () => h`<div>${MARK_SPACER}</div>`)}
         </div>
       </div>
-    `;
+    `)}`;
   }
 
   //////////////////////////////////// methods
 
+  #drag: DragSessionHandle | null = null
+
+  destroyed(): void {
+    this.#drag?.end(false)
+    this.#drag = null
+  }
+
   onMousedown(e: MouseEvent) {
     if (this.hideThumb || this.disabled) return;
     let thisRect = this.trackEl.getBoundingClientRect()
-    let that = this;
     let left = e.clientX - thisRect.x
-    that._moveThumbH(left)
+    this._moveThumbH(left)
     this.renderRoot?.classList.add('is-dragging')
     e.preventDefault();
     this.lastLeft = left;
 
-    document.onmousemove = function (ev: MouseEvent) {
-      thisRect = that.trackEl.getBoundingClientRect()
-      let left = ev.clientX - thisRect.x
-      that._moveThumbH(left)
-      that.lastLeft = left;
-    }
-    document.onmouseup = document.onblur = function () {
-      document.onmousemove = document.onmouseup = document.onblur = null;
-      that.renderRoot?.classList.remove('is-dragging')
-    }
+    this.#drag?.end(false)
+    this.#drag = beginDrag(this, e as PointerEvent, {
+      onMove: (ev) => {
+        thisRect = this.trackEl.getBoundingClientRect()
+        left = ev.clientX - thisRect.x
+        this._moveThumbH(left)
+        this.lastLeft = left
+      },
+      onEnd: () => this.onDragEnd()
+    })
+  }
+  onDragEnd() {
+    this.#drag = null
+    this.renderRoot?.classList.remove('is-dragging')
   }
   _moveThumbH(left: number) {
     let totalLen = this.trackEl.offsetWidth
-    if (left < 0) left = 0;
-    if (left > totalLen) left = totalLen
+    left = clamp(left, 0, totalLen)
     let perc = left / totalLen * 100
 
     if (this.step > 0) {
@@ -269,7 +330,7 @@ export class Slider extends FormControl {
     this.trackFilledEl.style.width = perc + "%";
 
     //计算value
-    this.__innerValue = parseFloat(toFixed((perc / 100) * (this.max - this.min) + this.min, 1))
+    this.__innerValue = parseFloat(toFixed(lerp(this.min, this.max, perc / 100), 1))
     this.emit('update:value', { value: this.__innerValue })
   }
   onChange(e: Event) {

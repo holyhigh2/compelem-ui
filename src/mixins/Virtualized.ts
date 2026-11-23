@@ -11,25 +11,53 @@ import { filter, size } from "myfx"
  */
 export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
     return class Virtualized extends spuerClass {
-        vRowHeight: number
+        /**
+         * ⚠️ 这些字段**只能**是 `declare`（纯类型声明，零运行期发射）。
+         *
+         * 它们真正的存储由**子类**的五族装饰器提供：`@state vList` / `@query('#vpillar') vPillar` …
+         * 编译器把这些访问器装在**原型**上（读写 `this.__s.<k>.value`）。
+         * 若这里写成普通类字段（`vPillar: HTMLElement`），esbuild 会按 define 语义发射
+         * `Object.defineProperty(this,'vPillar',{value:undefined})` —— 实例自有属性**遮蔽**原型访问器，
+         * 于是 `this.vList === undefined` 而 `this.__s.vList.value` 有真值：
+         * Tree 整棵虚拟列表渲染不出节点、ListPicker 显示「无可选项」、Table 只剩 17px 空壳。
+         *
+         * ⚠️ 不要用「给个初始化器」来绕过（`vPillar: HTMLElement = undefined!`）—— 照样发射 own 属性。
+         * 同 `mixins/FieldContainer.ts` 的 `invisibleFields` / `sortOrders` / `filterData` 范式。
+         */
+        declare vRowHeight: number
         vBufferSize: number = 3
-        vScrollWidth: number
-        vScrollHeight: number
+        declare vScrollWidth: number
+        declare vScrollHeight: number
 
         //行间隔
         vRowGap = 0
-        vPillar: HTMLElement
+        declare vPillar: HTMLElement
         //dom rows
-        vList: HTMLElement[]
+        declare vList: HTMLElement[]
         //窗口可显示的最大行数
-        vViewRows: number
+        declare vViewRows: number
         //包含上下缓存的虚拟行数，>= vViewRows
-        vCachedRows: number
+        declare vCachedRows: number
         //总数据行数
-        vAllRows: number
+        declare vAllRows: number
 
-        constructor(...args: any[]) {
-            super(...args)
+
+        /**
+         * 把宿主 prop `rowHeight` 派生进 `vRowHeight`（虚拟列表实际使用的行高）。
+         *
+         * 此前二者只在构造期播种一次：`@state vRowHeight = this.rowHeight` 被编译成
+         * `states.vRowHeight = {prop:'rowHeight'}`，运行期 `CompElem#initStates` 只做一次
+         * `cloneDeep(src.peek())` 快照 —— 不是活链接。于是运行时改 `rowHeight` 后，
+         * 窗口行数 / 滚动总高 / 首行索引 / 行位移全部停在旧值（Tree、ListPicker 实测
+         * `vScrollHeight` 一动不动）。派生放在这里一次，五个宿主共用。
+         *
+         * 边界：`rowHeight > 0` 以 prop 为准；`<= 0` 是 Table 的自动测量档，
+         * 必须留给 `TableExtensionConfig#_setRowHeightType` 写入的测量值，不能覆盖。
+         * 没有 `rowHeight` prop 的宿主（YearMonthPanel / ColorPicker）读到 undefined，同样不覆盖。
+         */
+        syncVRowHeight() {
+            const rh = (this as any).rowHeight
+            if (rh > 0 && this.vRowHeight !== rh) this.vRowHeight = rh
         }
 
         __vLastInViewList: HTMLElement[] = []
@@ -118,7 +146,7 @@ export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
 
                     let newTy = r * (this.vRowHeight + this.vRowGap);
                     c.dataset.rowIndex = r + ''
-                    c.style.transform = `translateY(${newTy}px`;
+                    c.style.transform = `translateY(${newTy}px)`;
                     cbk(c, r)
                 }
             } else {
@@ -151,7 +179,7 @@ export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
                     rowIndexMap[r] = true
                     let newTy = r * (this.vRowHeight + this.vRowGap);
                     c.dataset.rowIndex = r + ''
-                    c.style.transform = `translateY(${newTy}px`;
+                    c.style.transform = `translateY(${newTy}px)`;
                     cbk(c, r)
                 }
             }
@@ -166,6 +194,7 @@ export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
          * @param holdCache 当缓存行数小于当前设置时是否忽略
          */
         updateV(allRows: number, windowHeight: number, setVPillar = true, holdCache = false) {
+            this.syncVRowHeight()
             this.vAllRows = allRows
             let count = Math.ceil(windowHeight / this.vRowHeight)
             let vCachedRows = count + this.vBufferSize * 2
@@ -193,6 +222,9 @@ export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
          * @returns 索引数组
          */
         initV(vList: HTMLElement[], scrollTop: number, onRowInit?: (row: HTMLElement, rowIndex: number) => void) {
+            // 与 updateV 各调一次：宿主的调用顺序不一致（ListPicker 先 initV 后 updateV，
+            // Table 相反），两个几何入口都必须拿到当前行高，否则先跑的那个会用到旧快照。
+            this.syncVRowHeight()
             this.vList = vList
             let firstRowNoInView = scrollTop / this.vRowHeight >> 0
             if (firstRowNoInView > this.vAllRows) {

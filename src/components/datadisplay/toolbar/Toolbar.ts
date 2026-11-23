@@ -1,5 +1,5 @@
-import { csscope, Csscope, emits, h, prop, query, show, tag, Template } from "compelem";
-import { isEmpty } from "myfx";
+import { classes, csscope, Csscope, emits, h, prop, query, show, tag, Template } from "compelem";
+import { isBlank, isEmpty } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 import style from "./style.scss?tmpl";
 /**
@@ -49,11 +49,14 @@ export class Toolbar extends AppearanceElem {
         <div class="ce-toolbar-prepend">
           <slot name="prepend"></slot>
         </div>
-        <div class="ce-toolbar-title">
+        <div class="ce-toolbar-title" ${show(!isBlank(this.title) || !isEmpty(this.slots.title))}>
           ${this.title}
           <slot name="title"></slot>
         </div>
-        <div class="ce-toolbar-content">
+        <div class="is-left">
+          <slot name="left"></slot>
+        </div>
+        <div ${classes({ 'ce-toolbar-content': true, 'is-right': !isBlank(this.title) || !isEmpty(this.slots.title) })}>
           <slot></slot>
         </div>
       </header>
@@ -64,6 +67,8 @@ export class Toolbar extends AppearanceElem {
   __lastOverflowRootWidth = -1
   __lastOverflow = false
   onResize() {
+    // resize 走 debounce，迟到回调里 @query 已解析为 undefined
+    if (!this.isMounted || this.isDestroyed || !this.leftDiv || !this.contentDiv) return
     let overflow = false
     if (this.leftDiv.scrollWidth + this.contentDiv.scrollWidth > this.offsetWidth) {
       overflow = true

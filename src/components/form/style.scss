@@ -11,18 +11,8 @@
     width 0.2s;
 }
 
-:host([layout="inline"]) {
-  ::slotted(ce-form-item) {
-    margin-right: var(--ce-spacing-md);
-    display: inline-block;
-  }
-}
-
-:host([layout="vertical"]) {
-  ::slotted(ce-form-item) {
-    margin-bottom: 0.25rem;
-  }
-}
+// 表单项整行排列（display / 间距）由 ce-form-item 自身 :host(.ce-form-layout-*) 控制：
+// ::slotted(ce-form-item) 的特异性低于组件内 :host{display:block}，无法覆盖，故不下发 display。
 
 :host([space="loose"]) {
   min-height: calc(var(--input-height) + 8px);
@@ -40,7 +30,7 @@
   &-item {
     .ce-form-form-item-label {
       display: inline-block;
-      font-size: 0.875rem;
+      font-size: var(--ce-font-sm);
     }
 
     .ce-form-form-item-wrapper {
@@ -58,13 +48,28 @@
     &.ce-form-layout-vertical {
       .ce-form-form-item-label {
         display: block;
+        // vertical 布局 label 与控件之间需要间隙（主流 4~8px）
+        margin-bottom: 0.375rem;
+      }
+    }
+
+    &.ce-form-layout-horizontal {
+      display: flex;
+      align-items: center;
+
+      .ce-form-form-item-label {
+        flex-shrink: 0;
+        margin-right: var(--ce-spacing-sm);
+      }
+
+      .ce-form-form-item-wrapper {
+        flex: 1;
       }
     }
 
     &.ce-form-layout-inline {
       display: flex;
       align-items: center;
-      width: 100%;
 
       .ce-form-form-item-label {
         margin-right: var(--ce-spacing-sm);
@@ -74,6 +79,10 @@
         flex: 1;
       }
     }
+  }
+
+  &.layout-inline {
+    display: inline-flex;
   }
 
   &-control {

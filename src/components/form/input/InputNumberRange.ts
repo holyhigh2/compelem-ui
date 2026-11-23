@@ -1,5 +1,5 @@
 import { classes, css, csscope, Csscope, debounced, emits, h, model, prop, query, show, state, tag, Template, watch } from "compelem";
-import { compact, isArray, isNil, isNumber, isNumeric, trim } from "myfx";
+import { isArray, isNil, isNumber, isNumeric } from "myfx";
 
 import { formStyleSheet } from "../styleSheets";
 import { RangeInput } from "./RangeInput";
@@ -27,21 +27,12 @@ import { inputStyleSheet } from "./styleSheets";
 @emits('input', 'change', 'clear')
 @tag("ce-input-number-range")
 export class InputNumberRange extends RangeInput {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
 
   //////////////////////////////////// props
   @prop inside = true;
   @prop({ type: String }) pattern: string
 
-  @prop({
-    type: Array, model: true, hasChanged(newValue, oldValue, changeChain, subNewValue, subOldValue) {
-      let nv = isArray(newValue) ? compact(newValue) : trim(newValue)
-      let ov = isArray(oldValue) ? compact(oldValue) : trim(oldValue)
-      return nv[0] != ov[0] || nv[1] != ov[1]
-    },
-  }) value: Array<number> = []
+  @prop({ type: Array, model: true }) value: Array<number | undefined> = []
   @state startValue: number
   @state endValue: number
   clearable = true
@@ -84,7 +75,9 @@ export class InputNumberRange extends RangeInput {
   watchValue(nv: any, ov: any) {
     if (nv === ov) return
 
-    let newValue = [this.startValue, this.endValue]
+    // NaN 只在内部当空值哨兵（compareRange / isRangeEmpty 依赖它），
+    // 出写到 model 前一律归一成 undefined
+    let newValue = [this.__toNumber(this.startValue), this.__toNumber(this.endValue)]
     let oldValue = this.value
     this.value = newValue
     // 刷新 clamp 的回滚基线：外部直接赋 startValue/endValue 不经过 change 事件，
@@ -116,9 +109,9 @@ export class InputNumberRange extends RangeInput {
         <span class="ce-input-prepend" ${show(!this.inside)}><slot name="prepend"></slot></span>
         <div part="control" class="ce-form-control" ?disabled="${this.disabled}">
           <span class="ce-input-prepend-inside" ${show(this.inside)}><slot name="prepend" ></slot></span>
-          <ce-input-number name="min-input" pattern="${this.pattern}" border="0" placeholder="${this.placeholderStart}" ${model(this.startValue)} @change="${this.onChangeMin}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearStart}"></ce-input-number>
+          <ce-input-number name="min-input" align="${this.align}" pattern="${this.pattern}" border="0" placeholder="${this.placeholderStart}" ${model(this.startValue)} @change="${this.onChangeMin}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearStart}"></ce-input-number>
           <span class="ce-input-separator">${this.separator}</span>
-          <ce-input-number name="max-input" pattern="${this.pattern}" border="0" placeholder="${this.placeholderEnd}" ${model(this.endValue)} @change="${this.onChangeMax}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearEnd}"></ce-input-number>
+          <ce-input-number name="max-input" align="${this.align}" pattern="${this.pattern}" border="0" placeholder="${this.placeholderEnd}" ${model(this.endValue)} @change="${this.onChangeMax}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearEnd}"></ce-input-number>
           <span class="ce-input-append-inside" ${show(this.inside)}><slot name="append" ></slot></span>
         </div>
         <span class="ce-input-append" ${show(!this.inside)}><slot name="append" ></slot></span>
@@ -128,6 +121,11 @@ export class InputNumberRange extends RangeInput {
   }
 
   //////////////////////////////////// methods
+  /** 内部 NaN 哨兵 → 对外空值 undefined */
+  private __toNumber(v: any): number | undefined {
+    const n = typeof v === 'number' ? v : parseFloat(v + '');
+    return Number.isNaN(n) ? undefined : n;
+  }
   @debounced(50)
   emitInput() {
     this.emit('input', { value: this.value })
@@ -136,19 +134,28 @@ export class InputNumberRange extends RangeInput {
     this.startValue = NaN
     this.__lastValidStart = undefined
     this.__setRangeError(false)
-    this.emit('clear', { value: [NaN, this.endValue] })
+    this.emit('clear', { value: this.__rangeValue() })
+    // 清空同样是值变更：只派发 clear 的话，监听 change 的消费方
+    // （表格数值过滤、范围联动）会停在清空前的值上
+    this.emitChange()
   }
   onClearEnd() {
     this.endValue = NaN
     this.__lastValidEnd = undefined
     this.__setRangeError(false)
-    this.emit('clear', { value: [this.startValue, NaN] })
+    this.emit('clear', { value: this.__rangeValue() })
+    this.emitChange()
   }
   clear() {
     this.startValue = this.endValue = NaN
     this.__lastValidStart = this.__lastValidEnd = undefined
     this.__setRangeError(false)
-    // this.emit('clear', { value: [NaN, NaN] })
+    // 内部 state 是 NaN 哨兵，直接透传给子输入框会被它当成"非法输入"回退成旧值，
+    // 必须走子组件自己的 clear()
+    const root: any = this.renderRoot ?? this
+    root.querySelector?.('ce-input-number[name="min-input"]')?.clear?.()
+    root.querySelector?.('ce-input-number[name="max-input"]')?.clear?.()
+    this.emitChange()
   }
 
   //////////////////////////////////// range 原语
@@ -182,8 +189,12 @@ export class InputNumberRange extends RangeInput {
     super.onChangeMax(obj)
     this.nextTick(() => this.emitChange())
   }
+  /** 对外范围值：两端各归一成 number | undefined */
+  private __rangeValue(): Array<number | undefined> {
+    return [this.__toNumber(this.getStart()), this.__toNumber(this.getEnd())]
+  }
   emitChange() {
-    let value = this.value = [this.getStart(), this.getEnd()]
-    this.emit('change', { value: value })
+    const value = this.value = this.__rangeValue()
+    this.emit('change', { value })
   }
 }

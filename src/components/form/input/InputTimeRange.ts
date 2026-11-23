@@ -1,5 +1,5 @@
 import { classes, css, csscope, Csscope, debounced, emits, h, model, prop, query, show, state, tag, Template, watch } from "compelem";
-import { compact, isArray, isBlank, isNil, trim } from "myfx";
+import { formatTime, isArray, isBlank, isNil, parseTime, trim } from "myfx";
 
 import { formStyleSheet } from "../styleSheets";
 import { RangeInput } from "./RangeInput";
@@ -33,21 +33,12 @@ const TIME_RE = /^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/
 @emits('input', 'change', 'clear')
 @tag("ce-input-time-range")
 export class InputTimeRange extends RangeInput {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
 
   //////////////////////////////////// props
   @prop inside = true;
   @prop hideSeconds = false
 
-  @prop({
-    type: Array, model: true, hasChanged(newValue, oldValue, changeChain, subNewValue, subOldValue) {
-      let nv = isArray(newValue) ? compact(newValue) : trim(newValue)
-      let ov = isArray(oldValue) ? compact(oldValue) : trim(oldValue)
-      return nv[0] != ov[0] || nv[1] != ov[1]
-    },
-  }) value: Array<string> = []
+  @prop({ type: Array, model: true }) value: Array<string> = []
   @state startValue: string = ''
   @state endValue: string = ''
   clearable = true
@@ -112,7 +103,7 @@ export class InputTimeRange extends RangeInput {
     if (!isArray(oldValue) || newValue[0] != oldValue[0] || newValue[1] != oldValue[1])
       this.emitInput()
   }
-  @watch('value')
+  @watch('value', { immediate: true })
   function(nv: Array<any>) {
     if (!isArray(nv)) return
 
@@ -135,9 +126,9 @@ export class InputTimeRange extends RangeInput {
         <span class="ce-input-prepend" ${show(!this.inside)}><slot name="prepend"></slot></span>
         <div part="control" class="ce-form-control" ?disabled="${this.disabled}">
           <span class="ce-input-prepend-inside" ${show(this.inside)}><slot name="prepend" ></slot></span>
-          <ce-input-time name="min-input" border="0" placeholder="${this.placeholderStart}" ?hide-seconds="${this.hideSeconds}" ${model(this.startValue)} @change="${this.onChangeMin}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearStart}"></ce-input-time>
+          <ce-input-time name="min-input" align="${this.align}" border="0" placeholder="${this.placeholderStart}" ?hide-seconds="${this.hideSeconds}" ${model(this.startValue)} @change="${this.onChangeMin}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearStart}"></ce-input-time>
           <span class="ce-input-separator">${this.separator}</span>
-          <ce-input-time name="max-input" border="0" placeholder="${this.placeholderEnd}" ?hide-seconds="${this.hideSeconds}" ${model(this.endValue)} @change="${this.onChangeMax}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearEnd}"></ce-input-time>
+          <ce-input-time name="max-input" align="${this.align}" border="0" placeholder="${this.placeholderEnd}" ?hide-seconds="${this.hideSeconds}" ${model(this.endValue)} @change="${this.onChangeMax}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearEnd}"></ce-input-time>
           <span class="ce-input-append-inside" ${show(this.inside)}><slot name="append" ></slot></span>
         </div>
         <span class="ce-input-append" ${show(!this.inside)}><slot name="append" ></slot></span>
@@ -163,20 +154,11 @@ export class InputTimeRange extends RangeInput {
   }
   /** 'HH:mm[:ss]' → 秒数；非法输入返回 NaN */
   toSeconds(v: any): number {
-    if (isBlank(v)) return NaN
-    const m = TIME_RE.exec(String(v).trim())
-    if (!m) return NaN
-    return parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3] ?? '0', 10)
+    return parseTime(v)
   }
   /** 秒数 → 当前精度的时间串；越界钳制到 00:00:00 ~ 23:59:59（不跨午夜回绕） */
   fromSeconds(sec: number): string {
-    if (Number.isNaN(sec)) return ''
-    sec = Math.max(0, Math.min(86399, sec))
-    const hh = Math.floor(sec / 3600)
-    const mm = Math.floor((sec % 3600) / 60)
-    const ss = sec % 60
-    const p = (n: number) => String(n).padStart(2, '0')
-    return this.hideSeconds ? `${p(hh)}:${p(mm)}` : `${p(hh)}:${p(mm)}:${p(ss)}`
+    return formatTime(sec, this.hideSeconds)
   }
 
   @debounced(50)

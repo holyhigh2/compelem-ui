@@ -1,0 +1,136 @@
+ce-panel-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  // 连接式手风琴（默认形态）：阴影只存在于组最外层，成员面板不加阴影——
+  // 展开面板若自带阴影，会在与相邻面板的 1px 分隔线处叠加显得线条加粗
+  border-radius: var(--ce-panel-group-radius, 8px);
+  overflow: hidden;
+  // 阴影档位：vuetify elevation-1（可覆盖或置 none 关闭）
+  --ce-panel-group-elevation: 0 2px 1px -1px rgba(0, 0, 0, 0.2),
+    0 1px 1px 0 rgba(0, 0, 0, 0.14), 0 1px 3px 0 rgba(0, 0, 0, 0.12);
+  box-shadow: var(--ce-panel-group-elevation);
+  // 阴影随连接/分离形态切换平滑过渡（stagger 展开态会关闭外层阴影）
+  transition: box-shadow 0.3s;
+
+  > ce-panel {
+    display: block;
+    // 成员面板一律不带阴影（含 Panel 默认 shadowed=true 的宿主 elevation）——
+    // 连接式形态阴影只保留组最外层，避免展开面板在 1px 分隔线处叠加显得线条加粗；
+    // gapped / popout 等分离形态在下方按需恢复成员阴影
+    box-shadow: none;
+    // inset / popout / stagger 变体切换时的尺寸过渡（stagger 间隔走 margin-bottom）
+    transition: margin 0.3s, border-radius 0.3s, box-shadow 0.3s;
+  }
+
+  > ce-panel:first-child {
+    border-top-left-radius: var(--ce-panel-group-radius, 8px);
+    border-top-right-radius: var(--ce-panel-group-radius, 8px);
+  }
+
+  > ce-panel:last-child {
+    border-bottom-left-radius: var(--ce-panel-group-radius, 8px);
+    border-bottom-right-radius: var(--ce-panel-group-radius, 8px);
+  }
+
+  > ce-panel + ce-panel {
+    margin-top: -1px;
+  }
+
+  // gap>0（gapped，非 stagger）：分离圆角卡片形态（对齐 vuetify gap 示例），
+  // 各卡片完全分离、自带阴影，容器不再绘制外阴影
+  &[gapped]:not([stagger]) {
+    row-gap: var(--ce-panel-group-gap);
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+
+    > ce-panel {
+      border-radius: var(--ce-panel-group-radius, 8px);
+      box-shadow: var(--ce-panel-group-elevation);
+    }
+
+    > ce-panel + ce-panel {
+      margin-top: 0;
+    }
+  }
+
+  // stagger：有面板展开时，在展开面板与上下相邻面板之间出现间隔；
+  // 间隔大小 gap>0 时为 gap，否则用默认 12px（--ce-panel-group-gap 仅在 gap>0 时由
+  // watchGap 下发，因此这里的回退值即「无 gap 时的默认间隔」）。
+  // 实现要点：用 margin-bottom 而非 row-gap —— row-gap 无法参与 transition，
+  // 而成员面板已声明 transition: margin，间隔因此可随展开/折叠动画平滑出现与收起。
+  // 阴影策略：成员卡片随间隔相互分离后（展开面板四周出现间隔），卡片各自的
+  // thin 边框成为可见轮廓，容器若再画外阴影会在组外缘形成「外阴影 + 卡片边框」
+  // 的重复描边——分离形态下关闭容器外阴影，成员恢复各自投影（与 gapped 卡片一致）
+  // 标记由 PanelGroup.syncStaggerState() 维护：[has-expanded] / [prev-expanded]。
+  // 原先用 :has() 直接选择，旧 Firefox（<121）整条规则不生效——见组件内注释。
+  &[stagger][has-expanded] {
+    box-shadow: none;
+
+    > ce-panel {
+      box-shadow: var(--ce-panel-group-elevation);
+    }
+
+    // 上邻面板：底缘随间隔分离，恢复底部圆角（顶缘仍与前面的面板相连，保持直角）
+    > ce-panel[prev-expanded] {
+      border-bottom-left-radius: var(--ce-panel-group-radius, 8px);
+      border-bottom-right-radius: var(--ce-panel-group-radius, 8px);
+    }
+
+    // 展开面板自身：四周分离，整体恢复圆角，去掉与上邻的 -1px 边框重叠
+    > ce-panel[expanded] {
+      border-radius: var(--ce-panel-group-radius, 8px);
+      margin-top: 0;
+    }
+
+    // 下邻面板：顶缘随间隔分离，恢复顶部圆角并去掉 -1px 重叠（底缘仍相连，保持直角）
+    > ce-panel[expanded] + ce-panel {
+      border-top-left-radius: var(--ce-panel-group-radius, 8px);
+      border-top-right-radius: var(--ce-panel-group-radius, 8px);
+      margin-top: 0;
+    }
+
+    // 间隔撑开位置：展开面板的上邻与自身（下方仍有面板时）；
+    // :not(:last-child) 避免末位展开时在组底部留下多余空白
+    > ce-panel[prev-expanded],
+    > ce-panel[expanded]:not(:last-child) {
+      margin-bottom: var(--ce-panel-group-gap, 12px);
+    }
+  }
+
+  // inset 变体（对齐 vuetify expansion-panels inset）：
+  // 展开的面板向内缩进并恢复圆角；垂直方向仍与相邻面板相连，不加成员阴影
+  &[inset] {
+    > ce-panel[expanded] {
+      margin-inline: var(--ce-panel-group-inset, 16px);
+      border-radius: var(--ce-panel-group-radius, 8px);
+    }
+  }
+
+  // popout 变体（对齐 vuetify expansion-panels popout）：
+  // 展开的面板向外弹出（负外边距）并带投影，覆盖相邻面板——
+  // 外弹面板溢出容器边界，容器需放开裁剪与外阴影，成员各自带阴影互相遮挡
+  &[popout] {
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+
+    > ce-panel {
+      box-shadow: var(--ce-panel-group-elevation);
+    }
+
+    > ce-panel[expanded] {
+      position: relative;
+      z-index: 1;
+      margin-inline: calc(-1 * var(--ce-panel-group-inset, 16px));
+      border-radius: var(--ce-panel-group-radius, 8px);
+      box-shadow: var(
+        --ce-panel-group-popout-shadow,
+        0 3px 1px -2px rgba(0, 0, 0, 0.2),
+        0 2px 2px 0 rgba(0, 0, 0, 0.14),
+        0 1px 5px 0 rgba(0, 0, 0, 0.12)
+      );
+    }
+  }
+}

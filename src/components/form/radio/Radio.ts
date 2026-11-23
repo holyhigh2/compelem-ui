@@ -29,9 +29,6 @@ import style from "./style.scss?tmpl";
 @emits('change', 'update:checked')
 @tag("ce-radio")
 export class Radio extends FormControl {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   //////////////////////////////////// props
   @prop indeterminate = false;
   @prop reverse = false;
@@ -76,8 +73,7 @@ export class Radio extends FormControl {
         </div>
         <div class="ce-form-radio-label">
         ${ifElse(this.card, () => h`
-          <ce-card title="${this.title}" subtitle="${this.subtitle}" shadow="never">
-          </ce-card>
+          <slot></slot>
         `, () => h`<div class="ce-form-radio-title">${this.title}</div><p class="ce-form-radio-subtitle">${this.subtitle}</p><slot></slot>`)}
         </div>
       `)}
@@ -98,6 +94,18 @@ export class Radio extends FormControl {
   //////////////////////////////////// methods
   onChange(e: Event) {
     let t = e.target as HTMLInputElement
+    // readonly/disabled：拦截选择，还原 DOM 与 group 状态。
+    // 由于 input 外层包在 <label> 内，点击 label 仍会激活关联控件（spec 行为，
+    // 即使 input 设了 pointer-events:none 也无法阻止 label 穿透），故必须在 change 处拦截。
+    if (this.disabled || this.readonly) {
+      e.preventDefault();
+      if (this.#radioGroup) {
+        this.#radioGroup._restoreFromValue();
+      } else {
+        this.input.checked = this.checked;
+      }
+      return;
+    }
 
     this.checked = t.checked
 

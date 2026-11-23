@@ -34,6 +34,11 @@
 
     .ce-divider-inner-wrapper {
       padding: 0 0.5rem;
+
+      // 无默认插槽内容时隐藏 wrapper，避免两条线中间出现 padding 空隙
+      &.is-hidden {
+        display: none;
+      }
     }
 
     width: calc(100% - var(--inset));
@@ -78,6 +83,7 @@
       vertical-align: middle;
       flex-direction: column;
       height: calc(100% - var(--inset));
+      min-height: 1em;
       width: 100%;
 
       &::before {

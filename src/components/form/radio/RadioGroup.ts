@@ -1,4 +1,4 @@
-import { classes, css, csscope, Csscope, emits, h, prop, tag, Template, watch } from "compelem";
+import { classes, css, csscope, Csscope, emits, h, ifElse, prop, tag, Template, watch } from "compelem";
 import { FormControl } from "../FormControl";
 import { Radio } from './Radio';
 import style from "./style.scss?tmpl";
@@ -18,9 +18,6 @@ import style from "./style.scss?tmpl";
 @emits('update:value')
 @tag("ce-radio-group")
 export class RadioGroup extends FormControl {
-  changeDisplay(stateName: string, enabled: boolean): void {
-    throw new Error("Method not implemented.");
-  }
   radioList: Set<Radio> = new Set
   //////////////////////////////////// props
   @prop({ type: String, model: true }) value: string = '';
@@ -44,6 +41,20 @@ export class RadioGroup extends FormControl {
       this.radioList.forEach(el => el.removeAttribute('reverse'))
     }
   }
+  // 表单级状态透传到子 Radio（plaintext 由 group render 直接输出文本，无需下沉）
+  @watch(['disabled', 'readonly'])
+  watchDisplayState() {
+    this.radioList.forEach(radio => {
+      // 必须走 updateProps：prop setter 对非 model prop 的赋值会直接丢弃
+      radio.updateProps({ disabled: this.disabled, readonly: this.readonly });
+    })
+  }
+  // value 变更（含 reset 把 value 置空、外部 setModel、用户选择）统一按 group.value 回放各 radio 选中态，
+  // 使视觉与受控值始终一致。toggleCheck 不发事件，不会触发回环。
+  @watch('value')
+  watchValue() {
+    this._restoreFromValue();
+  }
 
   //////////////////////////////////// lifecycles
   constructor() {
@@ -51,10 +62,15 @@ export class RadioGroup extends FormControl {
   }
 
   render(): Template {
-    return this.plaintext ? h`${this.value}` : h`
+    // 0.30 要求 render() 只有一个主视图 h`` 模板，根级三元会触发 "2 个主视图模板" 阻断
+    return h`${ifElse(
+      this.plaintext,
+      () => h`${this.value}`,
+      () => h`
       <div class="ce-form-radio-group" ${classes({ "ce-form-radio-inline": this.inline })}>
         <slot></slot>
-      </div>`;
+      </div>`
+    )}`;
   }
 
   mounted(): void {
@@ -67,20 +83,33 @@ export class RadioGroup extends FormControl {
     }
 
     this.radioList.add(radio)
+
+    // 子 radio 挂载时同步当前禁用/只读态：仅靠 @watch('disabled') 只能覆盖运行时变化，
+    // 初始即禁用的 group，其子 radio 在此注册时不会触发 watch，需主动下发。
+    radio.updateProps({ disabled: this.disabled, readonly: this.readonly });
   }
-  onClick(e: Event) {
-    if (this.readonly)
-      e.preventDefault();
+  /**
+   * 按当前 group.value 回放所有 radio 的选中态（选中 = value 相等）。
+   * 用于 readonly/disabled 拦截后还原，以及 reset/setModel 后同步视觉。
+   */
+  _restoreFromValue() {
+    this.radioList.forEach(radio => {
+      radio.toggleCheck(radio.value === this.value);
+    });
   }
   onCheckChange(value: string, target: Radio) {
 
     this.radioList.forEach(radio => {
       if (radio === target) {
-        this.value = value;
+        // 必须走 updateProps：prop setter 对 model prop 的赋值只会 emit 而不写入
+        this.updateProps({ value });
       } else {
         radio.toggleCheck(false);
       }
     })
+
+    // 通知父组件 value 已变更（updateProps 只写入不会 emit）
+    this.emit('update:value', { value });
   }
   clear(): void {
 

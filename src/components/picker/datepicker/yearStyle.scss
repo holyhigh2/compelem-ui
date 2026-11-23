@@ -1,6 +1,9 @@
+@use "../../../css/mixins";
+
 :host(ce-year-month-panel) {
   display: block;
-  height: 230px;
+  // 面板高度需为年份行高（60px）的整数倍，否则底部行总被裁掉一截
+  height: 240px;
 }
 
 .ce-year-month {
@@ -23,11 +26,7 @@
   overflow: hidden;
   min-height: 100%;
 
-  #vpillar {
-    width: 1px;
-    z-index: -1;
-    position: relative;
-  }
+  @include mixins.virtual-pillar;
 
   .ce-date-picker-v-wrapper {
     display: flex;

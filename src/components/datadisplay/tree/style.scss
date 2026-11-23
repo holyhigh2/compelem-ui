@@ -1,3 +1,4 @@
+@use "../../../css/mixins";
 @use "../../../css/functions" as fn;
 
 %hover {
@@ -25,7 +26,12 @@
 .ce-tree {
   overflow: hidden;
   position: relative;
-  height: inherit;
+  // 宿主高度常常是 flex/grid 拉伸出来的：拉伸只决定 used height，宿主的
+  // computed height 仍是 auto。`inherit` 继承的是 computed 值 ⇒ 拿到 auto，
+  // 根容器退化成「内容高」，虚拟列表随之把视口算成内容那么高（行池、滚动
+  // 总高全按错误视口算）。百分比走 definite 解析，能拿到拉伸后的实际高度；
+  // 宿主真为 auto（靠内容撑开）时 100% 同样退化为 auto，与旧行为一致。
+  height: 100%;
   display: flex;
 
   .ce-tree-checkbox {
@@ -59,9 +65,11 @@
       pointer-events: none;
       transition: all 0.2s;
     }
+    // 放置区三段贴片：图标在各自格子里水平+垂直居中（只写 align-items 会左对齐）
     .ce-tree-drag-di {
-      display: grid;
+      display: flex;
       align-items: center;
+      justify-content: center;
     }
     div {
       height: 100%;
@@ -79,7 +87,9 @@
   &-node {
     position: relative;
     text-align: left;
-    margin-top: 0.1rem;
+    // 行高由 --tree-row-height 定死（虚拟列表按 行数×行高 算滚动高度），
+    // 这里的 margin-top 不参与行距（相邻行是 translateY 绝对定位），只会让
+    // 内容总高比 vScrollHeight 多 0.1rem，滚到底差这么一点、末行露不全。
     height: var(--tree-row-height);
     // cursor: default;
 
@@ -113,10 +123,10 @@
       .ce-tree-caret,
       .ce-tree-dragflag {
         width: 1.25rem;
-        line-height: 1;
+        line-height: var(--ce-lineh-xs, 1); // 箭头/拖拽图标：显式紧凑
         text-align: center;
         display: inline-block;
-        font-size: 1rem;
+        font-size: var(--ce-font-md);
         user-select: none;
         color: fn.color(--ce-color-placeholder-rgb);
 
@@ -143,7 +153,7 @@
       padding: 0.3rem 0.4rem;
       padding-left: 0.2rem;
       flex: 1;
-      font-size: 0.875rem;
+      font-size: var(--ce-font-sm);
 
       overflow: hidden;
       text-overflow: ellipsis;
@@ -189,6 +199,19 @@
       @extend %hover;
     }
 
+    // 选中高亮：状态由 Tree.ts 以 `is-active` 类落到行元素上。
+    // 放在 hover 规则之后，hover 态不能盖掉选中态。
+    &.is-active > &-content,
+    &.is-active > &-content:hover {
+      color: var(--active-color);
+      background-color: var(--active-bg-color);
+      font-weight: bold;
+    }
+
+    &.is-active .ce-tree-indent-line {
+      border-color: var(--active-color);
+    }
+
     &.ce-tree-round &-content {
       border-radius: var(--ce-round-md);
     }
@@ -210,22 +233,42 @@
   }
   &-container {
     list-style: none;
+    // ul 的 UA 默认 margin 是 1em（13px 字号 ⇒ 上下各 13px），虚拟列表按
+    // 行数×行高 算滚动高度（vScrollHeight）并交给 ce-scroller 的 sHeight，
+    // 这里多出来的 26px 会让"滚到底"仍差一行、最后一行永远露不全。
+    margin: 0;
+    padding: 0;
     .ce-tree-node {
       position: absolute;
       top: 0;
       left: 0;
       overflow: hidden;
       text-align: left;
-      margin-top: 0.1rem;
       width: 100%;
     }
-    #vpillar {
-      width: 1px;
-      z-index: -1;
-      position: relative;
-    }
+    @include mixins.virtual-pillar;
   }
   > ce-scroller {
     flex: 1;
+  }
+}
+
+// 过渡只在树展开/折叠窗口内存在。行池复用物理节点，常驻过渡会让滚动回收
+// 每次都播放缩进滑动与箭头旋转。
+:host([data-tree-anim]) {
+  .ce-tree-node-content {
+    transition: padding-left var(--ce-tree-duration, var(--ce-list-transition-duration, .3s)) var(--ce-tree-easing, var(--ce-list-transition-timing-function, ease));
+  }
+
+  .ce-tree-caret ce-icon {
+    transition: transform var(--ce-tree-duration, var(--ce-list-transition-duration, .3s)) var(--ce-tree-easing, var(--ce-list-transition-timing-function, ease));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  :host([data-tree-anim]) .ce-tree-node-content,
+  :host([data-tree-anim]) .ce-tree-caret ce-icon {
+    transition: none;
   }
 }

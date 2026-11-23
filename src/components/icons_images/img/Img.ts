@@ -11,7 +11,7 @@ enum ImgFit {
 }
 /**
  * 图像组件
- * @props
+ * @attrs
  *  src {string} 图像地址
  *  low-src {string} 低精度图像地址
  *  alt {string} 备用文本描述

@@ -42,11 +42,17 @@ export class ColumnConfigPane extends CompElem {
   @query('.stats-panel') statsPanel: Overlay | undefined
   @query('.col-align-panel') colAlignPanel: Overlay | undefined
 
+  // 记录面板内容已初始化。只能用整数组赋值更新：数组 mutation 不进更新队列，
+  // 用 push 时读取本字段的 ifTrue 分支不会重渲染，面板内容不落地 ⇒ 浮层量不到尺寸。
   @state overlayInitedList: string[] = []
   //////////////////////////////////// styles
   @csscope(Csscope.GLOBAL)
   static get globalCss() {
     return css`
+        /* 配置面板是密度上下文：内部控件未显式给字号时按正文档继承 */
+        ce-column-config-pane {
+          font-size: var(--ce-font-md);
+        }
         .filter-date,
         .filter-datetime{
           width:24rem;
@@ -66,9 +72,9 @@ export class ColumnConfigPane extends CompElem {
         .config-card.st-asc .st-asc ,
         .config-card.st-desc .st-desc ,
         
-        .config-card.scp-filled .scp-filled
-        .config-card.scp-not-filled .scp-not-filled
-        .config-card.scp-filled-percent .scp-filled-percent
+        .config-card.scp-filled .scp-filled,
+        .config-card.scp-not-filled .scp-not-filled,
+        .config-card.scp-filled-percent .scp-filled-percent,
         .config-card.scp-not-filled-percent .scp-not-filled-percent{
           display:block;
         }
@@ -109,12 +115,7 @@ export class ColumnConfigPane extends CompElem {
   componentStateMap: WeakMap<CompElem, typeof this.statsColStatMap> = new WeakMap()
 
   @state allKindsOfTags: Record<string, string> = {}
-  @state({
-    hasChanged(newValue, oldValue, changeChain, subNewValue, subOldValue) {
-      //变量只会通过赋值变更，其他变动不触发
-      return newValue !== oldValue
-    },
-  }) tagsOrUsers: Record<string, string>[] = []
+  @state tagsOrUsers: Record<string, string>[] = []
   @state filteredTagsOrUsers: string[] = []
   @state filteredTags: string[] = []
   @state tagAppearance = ''
@@ -262,17 +263,17 @@ export class ColumnConfigPane extends CompElem {
   render(): Template {
     return h`
     <!-- 填色面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="fill-color-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="fill-color-panel">
     <div>
     ${ifTrue(this.overlayInitedList.includes('fill-color-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;" ref="${this.fillColorPane}" >
         <header style="display: flex;justify-content: space-between;align-items: center;">
-          <div style="font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);">设置填色</div>
+          <div style="color: var(--ce-color-text-desc);">设置填色</div>
           <ce-button slot="append" appearance="text" color="red" size="sm" style="padding: 0;" ripple="false" @click="${this.clearFills}">清空</ce-button>
         </header>
         <ce-list class="ce-fill-color-list" gap=".5rem">
           ${forEach(this.fillColorConditions, (condi, i) => i, (condi, i) => h`
-            <ce-list-item ripple="false" appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:0;gap:1rem">
+            <ce-list-item ripple="false" appearance="pale" style="padding-inline:0;gap:1rem">
               <ce-input-color ${model(condi.color)}></ce-input-color>
               <ce-select ${model(condi.type)} .data="${this.fillColorTypes}" style="width: 6rem;min-width: 6rem;"></ce-select>
               <ce-select ${model(condi.column)} .data="${this.fillColorColumns}" style="width: 8rem;min-width: 8rem;"></ce-select>
@@ -306,30 +307,30 @@ export class ColumnConfigPane extends CompElem {
     </div>
     </ce-overlay>
     <!-- 过滤面板 -->
-    <ce-overlay placement="bottom-start" auto-active close-on-click opacity="0.25" class="filter-panel">
+    <ce-overlay surface placement="bottom-start" auto-active close-on-click opacity="0.25" class="filter-panel">
     <div>
     ${ifTrue(this.overlayInitedList.includes('filter-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;" ref="${this.filterPane}" >
         <header style="display: flex;justify-content: space-between;align-items: center;">
-          <div style="font-size:var(--ce-font-sm-em);color: var(--ce-color-text-desc);">快捷筛选</div>
+          <div style="color: var(--ce-color-text-desc);">快捷筛选</div>
           <ce-button slot="append" appearance="text" color="red" size="sm" style="padding: 0;" ripple="false" @click="${this.clearInput}">清空</ce-button>
         </header>
-        <div class="ce-table-t-c-dt ce-table-dt-number">
+        <div class="t-c-dt dt-number">
           <ce-input-number-range class="ce-table-filter-number" style="width:16rem" .placeholder="${['最小值', '最大值']}" maxlength="100" @change="${this.onFilterNumber}" @clear="${this.onFilterNumber}" clearable></ce-input-number-range>
         </div>
-        <ce-input class="ce-table-t-c-dt ce-table-dt-text " class="ce-table-filter-text" hide-hint space="default" maxlength="100" ${model(this.filterText)} clearable @change="${this.onFilterText}" @clear="${this.clearInput}"></ce-input>
-        <div class="ce-table-t-c-dt ce-table-dt-date" >
+        <ce-input class="t-c-dt dt-text ce-table-filter-text" hide-hint space="default" maxlength="100" ${model(this.filterText)} clearable @change="${this.onFilterText}" @clear="${this.clearInput}"></ce-input>
+        <div class="t-c-dt dt-date" >
           <ce-input-date-range class="ce-table-filter-date" maxlength="12" @change="${this.onFilterDate}" @clear="${this.onFilterDate}" clearable></ce-input-date-range>
         </div>
-        <div class="ce-table-t-c-dt ce-table-dt-time">
-          <ce-input-time class="ce-table-filter-time" hide-hint space="compact" clearable maxlength="8" @change="${this.onFilterTime}" @clear="${this.onFilterTime}" ></ce-input>
+        <div class="t-c-dt dt-time">
+          <ce-input-time class="ce-table-filter-time" hide-hint space="compact" clearable maxlength="8" @change="${this.onFilterTime}" @clear="${this.onFilterTime}" ></ce-input-time>
             ~ 
-          <ce-input-time class="ce-table-filter-time" hide-hint space="compact" clearable maxlength="8" @change="${this.onFilterTime}" @clear="${this.onFilterTime}" ></ce-input>
+          <ce-input-time class="ce-table-filter-time" hide-hint space="compact" clearable maxlength="8" @change="${this.onFilterTime}" @clear="${this.onFilterTime}" ></ce-input-time>
         </div>
-        <div class="ce-table-t-c-dt ce-table-dt-datetime" >
+        <div class="t-c-dt dt-datetime" >
           <ce-input-date-range type="datetime" class="ce-table-filter-datetime" maxlength="19" @change="${this.onFilterDateTime}" @clear="${this.onFilterDateTime}" clearable></ce-input-date-range>
         </div>
-        <div class="ce-table-t-c-dt ce-table-dt-tag ce-table-dt-user">
+        <div class="t-c-dt dt-tag dt-user">
           <ce-list-picker multiple filterable .data="${this.tagsOrUsers}" maxHeight="300" ${model(this.filteredTagsOrUsers)} ref="${this.filterPaneSelectPanel}">
             ${slot((data) => h`
               ${ifElse(this.settingsColDataType === DataType.Tag,
@@ -342,11 +343,11 @@ export class ColumnConfigPane extends CompElem {
         </div>
         <ce-divider color="Gainsboro" style="margin-top: var(--ce-spacing-sm);"></ce-divider>
         <ce-list nav gap=".2rem" selectable style="min-width: 10rem;padding-top: var(--ce-spacing-xs)" @select="${this.onFilterFill}" ${model(this.colFilterFill, 'select')}>
-          <ce-list-item value="${MetricType.Filled}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${MetricType.Filled}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
             ${get(STATS_METRICS_BASE, [MetricType.Filled, 'k'])}
             <ce-icon slot="append" ${show(this.colFilterFill === MetricType.Filled)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
-          <ce-list-item value="${MetricType.NotFilled}" hoverable style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${MetricType.NotFilled}" hoverable style="padding-inline:var(--ce-spacing-md)">
             ${get(STATS_METRICS_BASE, [MetricType.NotFilled, 'k'])}
             <ce-icon slot="append" ${show(this.colFilterFill === MetricType.NotFilled)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
@@ -356,59 +357,59 @@ export class ColumnConfigPane extends CompElem {
     </div>
     </ce-overlay>
     <!-- 操作面板 -->
-    <ce-overlay placement="bottom-start" close-on-click opacity="0.25" class="config-panel">
+    <ce-overlay surface placement="bottom-start" close-on-click opacity="0.25" class="config-panel">
     <div>
     ${ifTrue(this.overlayInitedList.includes('config-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;" ref="${this.configPane}">
         <ce-list class="sort-pane" nav gap=".2rem" selectable style="min-width: 10rem;padding-block: var(--ce-spacing-xs)" @select="${this.onSort}">
-          <ce-list-header space="compact" style="font-size:var(--ce-font-sm-em);">快捷操作</ce-list-header>
-          <ce-list-item ${show(this.sortable)} ?disabled="${!this.singleSort && this.sortedSize >= MAX_SORT_COUNT && !this.configSortedMap[this.settingsColProp]}" name="${SortType.Asc}" value="${SortType.Asc}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-            <ce-icon slot="append" class="ce-table-t-c-st ce-table-st-asc" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
+          <ce-list-header space="compact">快捷操作</ce-list-header>
+          <ce-list-item ${show(this.sortable)} ?disabled="${!this.singleSort && this.sortedSize >= MAX_SORT_COUNT && !this.configSortedMap[this.settingsColProp]}" name="${SortType.Asc}" value="${SortType.Asc}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
+            <ce-icon slot="append" class="t-c-st st-asc" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
             <ce-icon .svg="${SortUp}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
             按 [
-            <span class="ce-table-t-c-dt ce-table-dt-number">0 - 9</span>
-            <span class="ce-table-t-c-dt ce-table-dt-text ce-table-dt-tag ce-table-dt-user">A - Z</span>
-            <span class="ce-table-t-c-dt ce-table-dt-date ce-table-dt-time ce-table-dt-datetime">早 - 晚</span>] 排序
+            <span class="t-c-dt dt-number">0 - 9</span>
+            <span class="t-c-dt dt-text dt-tag dt-user">A - Z</span>
+            <span class="t-c-dt dt-date dt-time dt-datetime">早 - 晚</span>] 排序
           </ce-list-item>
-          <ce-list-item ${show(this.sortable)} ?disabled="${!this.singleSort && this.sortedSize >= MAX_SORT_COUNT && !this.configSortedMap[this.settingsColProp]}" name="${SortType.Desc}" value="${SortType.Desc}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item ${show(this.sortable)} ?disabled="${!this.singleSort && this.sortedSize >= MAX_SORT_COUNT && !this.configSortedMap[this.settingsColProp]}" name="${SortType.Desc}" value="${SortType.Desc}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
             <div slot="append" >
-              <ce-icon class="ce-table-t-c-st ce-table-st-desc" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
+              <ce-icon class="t-c-st st-desc" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
             </div>
             <ce-icon .svg="${SortDown}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
             按 [
-            <span class="ce-table-t-c-dt ce-table-dt-number">9 - 0</span>
-            <span class="ce-table-t-c-dt ce-table-dt-text ce-table-dt-tag ce-table-dt-user">Z - A</span>
-            <span class="ce-table-t-c-dt ce-table-dt-date ce-table-dt-time ce-table-dt-datetime">晚 - 早</span>] 排序
+            <span class="t-c-dt dt-number">9 - 0</span>
+            <span class="t-c-dt dt-text dt-tag dt-user">Z - A</span>
+            <span class="t-c-dt dt-date dt-time dt-datetime">晚 - 早</span>] 排序
           </ce-list-item>
         </ce-list>
         <ce-divider color="Gainsboro"></ce-divider>
         <ce-list nav gap=".2rem" selectable multiple style="min-width: 10rem;padding-top: var(--ce-spacing-xs)" @select="${this.onSettings}">
           ${ifTrue(this.colorable, () => h`
-            <ce-list-item selectable="false" value="${Operation.FillColor}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+            <ce-list-item selectable="false" value="${Operation.FillColor}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
               <ce-icon svg="c-svg-fill-color" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
               整列填色
             </ce-list-item>
             <ce-divider color="Gainsboro"></ce-divider>
           `)}
-          <ce-list-item ${show(this.groupable)} value="${Operation.Group}" ?active="${this.configSettingsMap[this.settingsColProp]?.includes(Operation.Group)}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item ${show(this.groupable)} value="${Operation.Group}" ?active="${this.configSettingsMap[this.settingsColProp]?.includes(Operation.Group)}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
             <div slot="append" >
               ${ifElse(this.configSettingsMap[this.settingsColProp]?.includes(Operation.Group), () => h`<ce-icon .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>`, () => h``)}
             </div>
             <ce-icon .svg="${Group}" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
             按值分组
           </ce-list-item>
-          <ce-list-item value="${Operation.Freeze}" ?active="${this.configSettingsMap[this.settingsColProp]?.includes(Operation.Freeze)}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${Operation.Freeze}" ?active="${this.configSettingsMap[this.settingsColProp]?.includes(Operation.Freeze)}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
             <div slot="append" >
               ${ifElse(this.configSettingsMap[this.settingsColProp]?.includes(Operation.Freeze), () => h`<ce-icon .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>`, () => h``)}
             </div>
             <ce-icon .svg="${Pin}" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
             冻结
           </ce-list-item>
-          <ce-list-item class="hide-col" ${show(this.hidable)} value="hide" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item class="hide-col" ${show(this.hidable)} value="hide" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon .svg="${EyeClosed}" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
             隐藏
           </ce-list-item>
-          <ce-list-item ripple="false" value="${Operation.Align}" hoverable style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)" @click.capture.stop="${this.openAlignPane}">
+          <ce-list-item ripple="false" value="${Operation.Align}" hoverable style="padding-inline:var(--ce-spacing-md)" @click.capture.stop="${this.openAlignPane}">
             <ce-icon svg="c-svg-align-center" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
             对齐方式
             <ce-icon slot="append" svg="c-svg-chevron-right" size="sm" style="color: var(--ce-color-text);"></ce-icon>
@@ -419,24 +420,24 @@ export class ColumnConfigPane extends CompElem {
       </div>
     </ce-overlay>
     <!-- 对齐面板 -->
-    <ce-overlay placement="right-start" close-on-click opacity="0.25" class="col-align-panel">
+    <ce-overlay surface placement="right-start" close-on-click opacity="0.25" class="col-align-panel">
       <div>
     ${ifTrue(this.overlayInitedList.includes('col-align-panel'), () => h`
       <ce-card class="config-card" style="min-width: 14rem;max-width: 16rem;" ref="${this.colAlignPane}" >
         <ce-list nav gap=".2rem" class="align-list" selectable style="min-width: 10rem;padding: var(--ce-spacing-xs)" @select="${this.onAlignChange}">
-          <ce-list-item value="${AlignType.Justify}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Justify}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${AlignType.Justify}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Justify}" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon svg="c-svg-align-justify" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>默认
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Justify)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
-          <ce-list-item value="${AlignType.Left}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Left}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${AlignType.Left}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Left}" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon svg="c-svg-align-left-block" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居左
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Left)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
-          <ce-list-item value="${AlignType.Center}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Center}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${AlignType.Center}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Center}" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon svg="c-svg-align-center-block" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居中
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Center)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
-          <ce-list-item value="${AlignType.Right}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Right}" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${AlignType.Right}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Right}" style="padding-inline:var(--ce-spacing-md)">
             <ce-icon svg="c-svg-align-right-block" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居右
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Right)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
@@ -446,36 +447,36 @@ export class ColumnConfigPane extends CompElem {
       </div>
     </ce-overlay>
     <!-- 统计面板 -->
-    <ce-overlay placement="top-end" auto-active close-on-click opacity="0.25" class="stats-panel">
+    <ce-overlay surface placement="top-end" auto-active close-on-click opacity="0.25" class="stats-panel">
     <div>
     ${ifTrue(this.overlayInitedList.includes('stats-panel'), () => h`
       <ce-card class="config-card" ref="${this.statPane}">
         <ce-list gap=".2rem" nav selectable style="min-width: 10rem;" @select="${this.onStat}" ${model(this.statsColValue, 'select')}>
-          <ce-list-header space="compact" style="font-size:var(--ce-font-sm-em);">设置统计指标</ce-list-header>
+          <ce-list-header space="compact">设置统计指标</ce-list-header>
           ${forEach(this.statsFns, fn => fn.value, fn => h`
-            <ce-list-item value="${fn.value}"  hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+            <ce-list-item value="${fn.value}"  hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
               <ce-icon slot="append"  .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
               ${fn.name}
             </ce-list-item>
           `)}
           <ce-divider></ce-divider>
-          <ce-list-item value="${MetricType.Filled}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-            <ce-icon slot="append" class="ce-table-t-c-scp ce-table-scp-filled" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
+          <ce-list-item value="${MetricType.Filled}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
+            <ce-icon slot="append" class="t-c-scp scp-filled" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
             ${get(STATS_METRICS_BASE, [MetricType.Filled, 'k'])}
           </ce-list-item>
-          <ce-list-item value="${MetricType.NotFilled}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-            <ce-icon slot="append" class="ce-table-t-c-scp ce-table-scp-not-filled" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
+          <ce-list-item value="${MetricType.NotFilled}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
+            <ce-icon slot="append" class="t-c-scp scp-not-filled" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
             ${get(STATS_METRICS_BASE, [MetricType.NotFilled, 'k'])}
           </ce-list-item>
-          <ce-list-item value="${MetricType.FilledPercent}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-            <ce-icon slot="append" class="ce-table-t-c-scp ce-table-scp-filled-percent" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
+          <ce-list-item value="${MetricType.FilledPercent}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
+            <ce-icon slot="append" class="t-c-scp scp-filled-percent" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
             ${get(STATS_METRICS_BASE, [MetricType.FilledPercent, 'k'])}
           </ce-list-item>
-          <ce-list-item value="${MetricType.NotFilledPercent}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
-            <ce-icon slot="append" class="ce-table-t-c-scp ce-table-scp-not-filled-percent" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
+          <ce-list-item value="${MetricType.NotFilledPercent}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
+            <ce-icon slot="append" class="t-c-scp scp-not-filled-percent" .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
             ${get(STATS_METRICS_BASE, [MetricType.NotFilledPercent, 'k'])}
           </ce-list-item>
-          <ce-list-item value="${MetricType.None}" hoverable appearance="pale" style="font-size:var(--ce-font-sm-em);padding-inline:var(--ce-spacing-md)">
+          <ce-list-item value="${MetricType.None}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
             ${get(STATS_METRICS_BASE, [MetricType.None, 'k'])}
           </ce-list-item>
         </ce-list>
@@ -492,7 +493,7 @@ export class ColumnConfigPane extends CompElem {
     switch (type) {
       case ColumnConfigPane.Filter:
         if (!this.overlayInitedList.includes('filter-panel')) {
-          this.overlayInitedList.push('filter-panel')
+          this.overlayInitedList = [...this.overlayInitedList, 'filter-panel']
 
           this.nextTick(() => {
             this.open(table, prop, dataType, type, btn, filterCondition, side)
@@ -502,7 +503,7 @@ export class ColumnConfigPane extends CompElem {
         break
       case ColumnConfigPane.Config:
         if (!this.overlayInitedList.includes('config-panel')) {
-          this.overlayInitedList.push('config-panel')
+          this.overlayInitedList = [...this.overlayInitedList, 'config-panel']
 
           this.nextTick(() => {
             this.open(table, prop, dataType, type, btn, filterCondition, side)
@@ -512,7 +513,7 @@ export class ColumnConfigPane extends CompElem {
         break;
       case ColumnConfigPane.Stats:
         if (!this.overlayInitedList.includes('stats-panel')) {
-          this.overlayInitedList.push('stats-panel')
+          this.overlayInitedList = [...this.overlayInitedList, 'stats-panel']
 
           this.nextTick(() => {
             this.open(table, prop, dataType, type, btn, filterCondition, side)
@@ -522,7 +523,7 @@ export class ColumnConfigPane extends CompElem {
         break;
       case ColumnConfigPane.FillColor:
         if (!this.overlayInitedList.includes('fill-color-panel')) {
-          this.overlayInitedList.push('fill-color-panel')
+          this.overlayInitedList = [...this.overlayInitedList, 'fill-color-panel']
 
           this.nextTick(() => {
             this.open(table, prop, dataType, type, btn, filterCondition, side)
@@ -634,10 +635,10 @@ export class ColumnConfigPane extends CompElem {
 
     switch (type) {
       case ColumnConfigPane.Filter:
-        let input = this.filterPane.current?.querySelector('.ce-table-dt-' + dataType)
+        let input = this.filterPane.current?.querySelector('.dt-' + dataType)
 
         if (!this.overlayInitedList.includes('filter-panel'))
-          this.overlayInitedList.push('filter-panel')
+          this.overlayInitedList = [...this.overlayInitedList, 'filter-panel']
 
         if (input?.classList.contains('dt-tag')) {
           this.filteredTags = parseJSON<string[]>((filterCondition + '') || '[]')
@@ -913,7 +914,7 @@ export class ColumnConfigPane extends CompElem {
   /////////////////////////////////////////////////// align
   openAlignPane(obj: Record<string, any>) {
     if (!this.overlayInitedList.includes('col-align-panel')) {
-      this.overlayInitedList.push('col-align-panel')
+      this.overlayInitedList = [...this.overlayInitedList, 'col-align-panel']
 
       this.nextTick(() => {
         this.colAlignPanel?.openBy(obj.target as HTMLElement)

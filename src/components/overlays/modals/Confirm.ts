@@ -30,13 +30,12 @@ export class Confirm extends Modal {
         backdrop="true"
         .esc="${(this.esc)}"
         ${model(this.visible, 'visible')}
-        .title="${(this._title)}"
       >
-        <ce-card title="${this._title}" style="width:100%">
+        <ce-card title="${this._title}" style="width:100%;box-sizing:border-box">
           ${ifTrue(!!this.message, () => h`<div style="padding-block: 1rem;">${this.message}</div>`)}
           <slot></slot>
           <ce-button slot="actions" appearance="pale" @click="${this.onConfirmClick}">${(this.confirmBtnText)}</ce-button>
-          <ce-button slot="actions" style="margin-left:.5rem" color="text" appearance="subtle" @click="${this.onCancelClick}">${(this.cancelBtnText)}</ce-button>
+          <ce-button slot="actions" color="text" appearance="subtle" @click="${this.onCancelClick}">${(this.cancelBtnText)}</ce-button>
         </ce-card>
       </ce-dialog>
     `;

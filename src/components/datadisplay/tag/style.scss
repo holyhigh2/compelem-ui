@@ -2,10 +2,29 @@
 @use "../../../css/utils";
 
 ////////////////////////////////// size
-:host([size="sm"]) {
-  --ce-tag-h: 1.25em;
-  --ce-tag-fs: .75em;
+// 文本角色是 label（元信息）：字号固定 --ce-font-sm，不随 size 变；
+// size 只压盒模型。height / padding / gap 用 em 相对标签自身字号派生。
+:host {
+  --ce-tag-fs: var(--ce-font-sm);
+  --ce-tag-h: 1.5em;
   --ce-tag-px: .5em;
+  --ce-tag-gap: .25em;
+}
+
+:host([size="xs"]) {
+  --ce-tag-h: 1.25em;
+  --ce-tag-px: .375em;
+  --ce-tag-gap: .1875em;
+
+  &::part(dot) {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+:host([size="sm"]) {
+  --ce-tag-h: 1.35em;
+  --ce-tag-px: .4375em;
   --ce-tag-gap: .1875em;
 
   &::part(dot) {
@@ -15,10 +34,9 @@
 }
 
 :host([size="md"]) {
-  --ce-tag-h: 1.625em;
-  --ce-tag-fs: .8125em;
-  --ce-tag-px: .625em;
-  --ce-tag-gap: .375em;
+  --ce-tag-h: 1.5em;
+  --ce-tag-px: .5em;
+  --ce-tag-gap: .25em;
 
   &::part(dot) {
     width: 6px;
@@ -28,8 +46,18 @@
 
 :host([size="lg"]) {
   --ce-tag-h: 1.75em;
-  --ce-tag-fs: .875em;
   --ce-tag-px: .75em;
+  --ce-tag-gap: .375em;
+
+  &::part(dot) {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+:host([size="xl"]) {
+  --ce-tag-h: 2em;
+  --ce-tag-px: .875em;
   --ce-tag-gap: .375em;
 
   &::part(dot) {
@@ -46,6 +74,7 @@
   --color: initial;
   height: var(--ce-tag-h);
   padding-inline: var(--ce-tag-px);
+  font-size: var(--ce-tag-fs);
 }
 
 :host([closable]) {
@@ -66,8 +95,6 @@
   width: 100%;
   border-radius: inherit;
 
-  font-size: var(--ce-tag-fs);
-
   .ce-tag-dot {
     display: inline-block;
     border-radius: var(--ce-round-pill);
@@ -87,8 +114,8 @@
     transition: all .2s;
 
     &:hover {
-      // font-size: var(--ce-font-md-em);
-      color: #fff;
+      // font-size: var(--ce-font-md);
+      color: var(--ce-color-on-primary, #fff);
       background: rgb(var(--ce-color-text-desc-rgb) / .5);
     }
   }

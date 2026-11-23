@@ -20,6 +20,9 @@
     z-index: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    // 行高不显式设置时会继承 1em，文本行盒矮于字形盒，
+    // 被 overflow: hidden 裁掉下缘（descender）
+    line-height: var(--ce-lineh-md);
   }
 
   .ce-toolbar-prepend,
@@ -37,6 +40,9 @@
     width: 100%;
     height: 100%;
     z-index: 0;
+    // 背景层始终渲染（Toolbar.ts 的 show 只作用于内部 ce-img）且铺满 toolbar，
+    // 纯装饰层不参与命中测试，否则会吞掉默认插槽里所有按钮的点击。
+    pointer-events: none;
 
     ce-img {
       width: 100%;
@@ -47,5 +53,17 @@
   .ce-toolbar-content {
     display: flex;
     align-items: center;
+    flex: 1;
+    min-width: 0;
+    // 有标题时默认内容作为右侧操作区：flex: 1 会让它从容器中线开始，
+    // 不靠右则按钮停在中间
+    &.is-right {
+      justify-content: flex-end;
+    }
+    // .ce-toolbar-image 是 position:absolute;z-index:0 的定位层，按层叠规则会
+    // 绘制在非定位的 flex item 之上。与 .ce-toolbar-title / .is-left 一致提层，
+    // 避免默认插槽内容可见却被背景层盖住而无法点击。
+    position: relative;
+    z-index: 1;
   }
 }

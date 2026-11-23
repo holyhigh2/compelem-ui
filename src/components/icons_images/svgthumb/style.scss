@@ -1,0 +1,19 @@
+// SVG 缩略图：容器撑满可用空间，内部 svg 自适应
+:host {
+  display: inline-block;
+}
+
+.ce-svg-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 0;
+
+  > svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}

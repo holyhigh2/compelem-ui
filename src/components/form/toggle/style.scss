@@ -23,7 +23,9 @@
     .ce-form-toggle-track {
       // filter: opacity(0.5);
       // background-color: fn.color(--ce-color-disabled-rgb);
-      background-color: fn.color(--ce-color-gray-200-rgb);
+      // 灰轨改引语义 token：浅色下同为 gray-200（外观不变），暗色下为 gray-800，
+      // 不会在深色页面里留一块浅灰白轨。
+      background-color: var(--ce-color-border-secondary);
 
       ~.ce-form-toggle-thumb {
         box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 3px;
@@ -82,7 +84,7 @@
     min-width: 2.75rem;
     height: 0.875rem;
     width: 100%;
-    background-color: fn.color(--ce-color-gray-200-rgb, 0.5);
+    background-color: fn.color(--ce-color-border-secondary-rgb, 0.5);
     border-radius: var(--round-size) !important;
     border: 1px solid rgb(var(--ce-color-placeholder-rgb) / 0.5);
     padding: 0 0.4rem;
@@ -105,7 +107,11 @@
 
     .is-active,
     .is-inactive {
-      font-size: var(--ce-font-sm-em);
+      // 档位：用 rem 档。此处曾用 --ce-font-sm-em，嵌在 12.25px 的列表项里会
+      // 复合成 10.7px，再进一层就是 9.4px；轨道高 21px 足以承载 12.25px 文字。
+      // 轨道文案默认用 sm 档；表格/看板面板通过 --ce-toggle-track-font-size
+      // 覆盖成与面板文字同档（md），避免 14px 根下 12.25 与 14 混排。
+      font-size: var(--ce-toggle-track-font-size, var(--ce-font-sm));
     }
 
     .is-inactive {
@@ -130,7 +136,7 @@
     top: -0.175rem;
     width: 1.25rem;
     height: 1.25rem;
-    background-color: #fff;
+    background-color: var(--ce-color-bg, #fff);
     border-radius: var(--round-size);
     transition: all 0.2s ease-out;
     box-shadow:

@@ -7,7 +7,7 @@ import style from "./style.scss?tmpl";
 
 /**
  * 线性进度条
- * @props
+ * @attrs
  *  value {number} 进度数值，支持小数，最大100。默认0
  *  height {number} 进度条高度
  *  indeterminate {boolean} 模糊状态，显示loading效果。默认false

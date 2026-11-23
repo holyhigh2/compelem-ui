@@ -3,7 +3,7 @@
 }
 
 .ce-command-palette-pane {
-  background: #fff;
+  background: var(--ce-color-bg, #fff);
   overflow: hidden;
   border-radius: var(--ce-round-lg);
   border: 1px solid var(--ce-color-border-secondary);
@@ -36,8 +36,10 @@
     display: flex;
     align-items: center;
     padding-inline: var(--ce-spacing-md);
+    // 原写法直接用了调色板的通道值串（"250 250 252"），background-color 不接受裸通道，
+    // 这条声明其实一直无效；改用完整语义色，顺带获得暗色主题下的深色底。
     background-color: var(
-      --command-palette-footer-color, var(--ce-color-gray-50-rgb)
+      --command-palette-footer-color, var(--ce-color-bg-secondary)
     );
   }
 }

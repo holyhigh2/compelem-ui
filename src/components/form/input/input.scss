@@ -4,6 +4,12 @@
 :host(ce-input) {
   display: block;
   margin-bottom: 0;
+  /* 输入框自身要有底色。
+     不带底色时，凡是放在有色/图案背景上的输入框（门户卡片背景图、玻璃效果标题栏…）
+     都会把后层透上来，看起来像"半透明输入框"，边框里的文字对比度也跟着掉。
+     用主题变量而不是写死 #fff：暗色主题下 --ce-color-bg 是深色，自适应。
+     underlined / plaintext 两种外观单独回落透明，见下。 */
+  background: var(--ce-color-bg);
   transition: margin-bottom 0.2s;
 }
 
@@ -28,6 +34,10 @@
   border-width: 0;
   border-bottom: 1px solid fn.color(--ce-color-border-rgb);
   border-radius: 0 !important;
+  /* 底色沿用 :host(ce-input) 的主题底色，不在这里置空。
+     早先这里写过 background: transparent，理由是"下划线贴着版面写字不该填底色"；
+     但实际放到门户那种带背景图的卡片标题栏里，透明会让后层透上来、文字对比度掉，
+     与其它外观的行为也不一致（default 有底色）。底色由内层统一负责。 */
 
   &::part(control) {
 
@@ -37,6 +47,12 @@
       padding-bottom: 0;
     }
   }
+}
+
+// plaintext 模式：无边框无背景的纯文本观感
+:host(ce-input[plaintext]) {
+  border-color: transparent !important;
+  background: transparent;
 }
 
 // :host(ce-input[error]) {
@@ -50,7 +66,10 @@
     "a message b";
   grid-template-columns: auto minmax(0, 1fr) max-content;
   grid-template-rows: 1fr auto;
-  height: inherit;
+  // 100% 而非 inherit：inherit 会继承 host 的 border-box 高度，
+  // 被 host 的 border+padding 推下/溢出，导致 input 文字垂直不居中；
+  // 100% 对 content box 解析，host 高度 auto 时按 auto 处理，行为不变。
+  height: 100%;
   border-radius: inherit;
 
   .ce-form-control input {
@@ -109,6 +128,25 @@
       padding-block: 0;
       line-height: 1.5;
     }
+
+    // 多行模式（type="textarea"）：外观与单行一致，但高度由 rows 决定、内容多了内部滚。
+    // flex:1 + min-width:0 让它吃掉可用宽度，右侧 append 插槽（按钮）才会被挤到边上。
+    // resize 由组件的 resize prop 以内联 style 输出，这里不写死。
+    textarea {
+      font-size: inherit;
+      flex: 1;
+      min-width: 0;
+      background-color: transparent;
+      outline: none;
+      border: none;
+      padding-right: 0.25rem;
+      padding-block: 0;
+      font-family: inherit;
+      line-height: 1.6;
+      overflow-y: auto;
+      // 默认不限高（由使用方按需给 --ce-input-textarea-max-height 封顶）
+      max-height: var(--ce-input-textarea-max-height, none);
+    }
   }
 
   .ce-message {
@@ -134,7 +172,8 @@
   .ce-input-label.is-empty {
     font-size: var(--ce-font-xs);
     padding-left: var(--ce-spacing-xxs);
-    transform: translateY(-150%);
+    top: 0;
+    transform: none;
 
     &:not(:empty)+input {
       &::placeholder {
@@ -151,14 +190,14 @@
   .ce-input-label {
     position: absolute;
     padding-left: 0.5rem;
-    font-size: var(--ce-font-md);
+    font-size: inherit;
     top: 50%;
     transform: translateY(-50%);
     color: fn.color(--ce-color-placeholder-rgb);
     transition: all 0.2s;
     pointer-events: none;
     white-space: nowrap;
-    overflow: hidden;
+    // overflow: hidden;
     text-overflow: ellipsis;
     text-align: left;
     width: 100%;
@@ -196,6 +235,28 @@
 
   .ce-input-append {
     grid-area: append;
+  }
+
+  // 密码可见性切换图标（show-password）：常显，点一下在明文 / 密文之间切换。
+  // 与清除图标同处 .ce-form-control 的 flex 行内，位于输入框右侧。
+  .ce-input-eye {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding-inline: var(--ce-spacing-xxs);
+    color: fn.color(--ce-color-placeholder-rgb);
+    cursor: pointer;
+    transition: color 0.2s;
+
+    ce-icon {
+      display: flex;
+      align-items: center;
+    }
+
+    &:hover {
+      color: fn.color(--ce-color-text-rgb);
+    }
   }
 
   .ce-input-floating {
@@ -268,38 +329,67 @@
 }
 
 //size
+// 字号：md / sm 跟随上下文（1em），只有 xs 降档、lg / xl 升档。
+// 高度统一走 --ce-control-h-*，与同档 ce-button 等高。
+// 多行（type="textarea"）与标签输入（.ce-input-tag）不锁高度：前者由 rows 决定，
+// 后者要随标签换行。
+:host(ce-input[size="xl"]) {
+  --ce-input-h: var(--ce-control-h-xl);
+  padding-inline: .625em;
+  padding-block: var(--ce-spacing-xs);
+  font-size: var(--ce-font-xl);
+}
+
 :host(ce-input[size="lg"]) {
-  padding-inline: var(--ce-spacing-md);
-  padding-block: var(--ce-spacing-sm);
+  --ce-input-h: var(--ce-control-h-lg);
+  padding-inline: .5em;
+  padding-block: var(--ce-spacing-xs);
   font-size: var(--ce-font-lg);
 }
 
 :host(ce-input[size="md"]) {
-  padding-inline: var(--ce-spacing-sm);
+  --ce-input-h: var(--ce-control-h-md);
+  padding-inline: .375em;
   padding-block: var(--ce-spacing-xs);
-  font-size: var(--ce-font-md);
+  font-size: inherit;
 }
 
 :host(ce-input[size="sm"]) {
-  padding-inline: var(--ce-spacing-xs);
+  --ce-input-h: var(--ce-control-h-sm);
+  padding-inline: .3125em;
   padding-block: var(--ce-spacing-xxs);
-  font-size: var(--ce-font-sm);
+  font-size: inherit;
 }
 
 :host(ce-input[size="xs"]) {
-  padding-inline: var(--ce-spacing-xxs);
+  --ce-input-h: var(--ce-control-h-xs);
+  padding-inline: .25em;
   padding-block: var(--ce-spacing-xxs);
-  font-size: var(--ce-font-sm);
+  font-size: var(--ce-font-xs);
 
   &::part(input) {
     line-height: 1.25;
   }
 }
 
+// 定高只作用于「单行 + 无悬浮标签」的输入框：有 label 时框内要容纳标签行 +
+// 输入行，高度由内容撑开（标签留在框内是这套输入的既有形态）。
+:host(ce-input[label=""]:not([type="textarea"]):not(.ce-input-tag)),
+:host(ce-input:not([label]):not([type="textarea"]):not(.ce-input-tag)) {
+  height: var(--ce-input-h, var(--ce-control-h-md));
+}
+
 // Option A（标签输入 / 多选标签）：标签与输入框同处一个可换行的 flex 容器。
 // 通过 display:contents 把 prepend 里的标签提升到 .ce-input 的同一 flex 容器中，
 // 使标签与输入框真正按行流动：输入框只在没有 >=80px 的剩余空间时才换行。
 :host(ce-input.ce-input-tag) {
+  // 内层 ce-input 仅作为输入引擎（取值/焦点/事件/clear 均委托于此），
+  // 视觉盒模型由 InputTag 宿主承担。若内层仍按上方
+  // `:host(ce-input[appearance=""])` 规则画框，将与宿主框形成「框中框」双边框
+  // ——ce-select（宿主 .ctl 框 + 内层框）与独立 ce-input-tag 均受累。
+  // 声明位置在本规则（后声明胜出同权重的 appearance 规则）。
+  border: 0;
+
   .ce-input {
     display: flex;
     flex-wrap: wrap;
@@ -327,5 +417,41 @@
 
   .ce-input-append {
     flex: 0 0 auto;
+  }
+}
+
+// Select 单选模式：InputTag 的 hide-input 置位时，隐藏内部 ce-input 的输入区。
+// 仅隐藏 input 并不够——.ce-form-control 仍受 `.ce-input-tag` 的
+// `flex: 1 0 80px / min-width: 80px` 约束，会在 flex 行里保留至少 80px 的空占位，
+// 当剩余宽度不足时把 append（caret 图标）挤到第二行。故整体隐藏该容器，
+// 再用 margin-left: auto 让 append（clear + caret）贴右，保持与普通输入框一致的右对齐观感。
+:host(ce-input.ce-input-tag-hideinput) {
+  // 高度校平：control 隐藏后宿主只剩 prepend 文本 + append caret，比同档
+  // ce-input 矮，同一表单里 select 与 input 会不齐。取该档统一的控件高度
+  // （--ce-input-h 由 [size] 档位给出，缺省 md），与 ce-button 同档等高。
+  min-height: var(--ce-input-h, var(--ce-control-h-md));
+
+  /* 宿主被 min-height 撑高、但它自己的高度是 auto 时，内部 `.ce-input` 的
+     `height: 100%` 解析不出来（百分比高度要求父高确定）—— 结果是内容只有一行高、
+     贴着宿主顶边排，下方留一大截空白。窄宽度下尤其明显（ce-select 收窄到 100px
+     左右时，"框比字高一大截、字偏上"就是这个原因）。
+     改成 flex + center：内容（prepend 文本 / append caret）在撑高的宿主里垂直居中，
+     子项宽度由 flex 分配，不依赖百分比高度。 */
+  display: flex;
+  align-items: center;
+
+  .ce-input {
+    // flex 子项宽度默认按内容收缩，这里要吃掉整行（caret 才能靠右）
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ce-form-control {
+    display: none;
+  }
+
+  .ce-input-append {
+    margin-left: auto;
   }
 }

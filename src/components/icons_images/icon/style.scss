@@ -15,24 +15,29 @@ ce-icon {
   color: inherit;
   line-height: 0;
 
+  // 默认档：--ce-icon-unit 默认 1.2em（24-viewBox 图标墨迹只占 0.833，
+  // 乘 1.2 后墨迹与汉字等重）。父组件可覆盖该变量做光学微调；
+  // size="" 与不传 size 都落到这一档。
+  font-size: var(--ce-icon-unit);
+
   &[size="xs"] {
     font-size: calc(var(--ce-icon-unit) * 0.75);
   }
 
   &[size="sm"] {
-    font-size: calc(var(--ce-icon-unit) * 1);
+    font-size: calc(var(--ce-icon-unit) * 0.875);
   }
 
   &[size="md"] {
-    font-size: calc(var(--ce-icon-unit) * 1.25);
+    font-size: calc(var(--ce-icon-unit) * 1);
   }
 
   &[size="lg"] {
-    font-size: calc(var(--ce-icon-unit) * 1.5);
+    font-size: calc(var(--ce-icon-unit) * 1.25);
   }
 
   &[size="xl"] {
-    font-size: calc(var(--ce-icon-unit) * 2);
+    font-size: calc(var(--ce-icon-unit) * 1.75);
   }
 
   >svg {
@@ -40,5 +45,17 @@ ce-icon {
     height: 1em;
     fill: currentColor;
     display: block;
+  }
+
+  &[flip="x"] > svg {
+    transform: scaleX(-1);
+  }
+
+  &[flip="y"] > svg {
+    transform: scaleY(-1);
+  }
+
+  &[flip="xy"] > svg {
+    transform: scale(-1);
   }
 }

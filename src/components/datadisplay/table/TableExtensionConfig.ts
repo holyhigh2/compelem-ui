@@ -15,15 +15,30 @@ import { ColumnType, ConfigType, Operation, RowHeightType, TableEvents } from ".
  */
 export function TableExtensionConfig<T extends Constructor<any>>(spuerClass: T) {
   return class TableExtensionConfig extends spuerClass {
-    groupOrders: Array<{ prop: string, condition?: string, name?: string }> | undefined
-    groupedData: Record<string, any>[] | undefined
+    /**
+     * ⚠️ 这三个字段**必须**是 `declare`（纯类型声明，零运行期发射）。
+     *
+     * 它们的真实存储由**子类 Table** 的同名装饰器提供（`@state groupOrders` /
+     * `@state groupedData` / `@state filterTreeData` —— 见
+     * `Table.ts` 的 tree/分组段）。编译器把访问器装在**原型**上，读写走 `this.__s.<k>.value`。
+     *
+     * 若这里写成无初始化器的普通类字段，`target: ESNext` 下 `useDefineForClassFields`
+     * 默认为 true，esbuild 会发射 `Object.defineProperty(this,'groupOrders',{value:undefined})`
+     * —— **实例自有属性遮蔽原型访问器**：`this.groupOrders === undefined` 而
+     * `this.__s.groupOrders.value` 有真值 ⇒ 分组（`table.groupOrders` 读不到，列配置面板
+     * 勾不上分组）、树过滤（`arrayToTree(filterTreeData, …)` 恒得到空数组）全部静默失效。
+     *
+     * 实测（2026-10-09 `.ce-p10.mjs` 的「diag 遮蔽字段」段）：
+     * `shadowedFields: ["groupOrders","groupedData","filterTreeData"]`（ce-table / ce-editable 均命中）。
+     * 同 `mixins/Virtualized.ts` / `mixins/VirtualLoop.ts` / `mixins/FieldContainer.ts`
+     * 与 `mixins/TreeStructured.ts` 的 `declare filterTreeData`。
+     */
+    declare groupOrders: Array<{ prop: string, condition?: string, name?: string }> | undefined
+    declare groupedData: Record<string, any>[] | undefined
     grouping: boolean = false
 
-    filterTreeData: Record<string, any>[] | undefined
+    declare filterTreeData: Record<string, any>[] | undefined
 
-    constructor(...args: any[]) {
-      super(...args)
-    }
 
     ////////////////////////////////////////// 列头
     doColumnHeadClick(col: Column, action: string) {
@@ -70,26 +85,44 @@ export function TableExtensionConfig<T extends Constructor<any>>(spuerClass: T) 
     /////////////////////////////////////////////////// configs
     __rowHeightType: string
     _setRowHeightType(rowHeightType: string, cancelEmit = false) {
+      // ⭐ 性能：末尾那次 `forceUpdate()` 原先**无条件**执行 ⇒ 每次行高下发都换来一次
+      //    同步全量重渲染（实测 314ms/次；应用侧首屏挂载 + 网格重建会各下发一次，
+      //    合计 628ms，占首屏 CPU 的 ~9%）。
+      //    而 `this.vRowHeight = h` 走 @state setter，**同值赋值会被 setterValue 的
+      //    `Object.is` 短路**（连派发都不会发生）—— 所以"档位与行高都没变"时，
+      //    这次 forceUpdate 是彻头彻尾的浪费。改为：**真的变了才全量重渲染**。
+      //    副作用（__onRowHeightChange 的 emit / tableBar 同步）保持无条件执行。
+      const typeChanged = this.__rowHeightType !== rowHeightType
       this.__rowHeightType = rowHeightType
+      let h: number
       switch (rowHeightType) {
         case RowHeightType.Compact:
-          this.vRowHeight = this.__fontSize * 1.5/* lineheight */ + this.__fontSize * 0.75 /* padding */
+          h = this.__fontSize * 1.5/* lineheight */ + this.__fontSize * 0.75 /* padding */
           break;
         case RowHeightType.Medium:
-          this.vRowHeight = this.__fontSize * 1.5 * 3/* lineheight */ + this.__fontSize * 0.65  /* padding */
+          h = this.__fontSize * 1.5 * 3/* lineheight */ + this.__fontSize * 0.65  /* padding */
           break;
         case RowHeightType.Loose:
-          this.vRowHeight = this.__fontSize * 1.5 * 5/* lineheight */ + this.__fontSize * 0.65  /* padding */
+          h = this.__fontSize * 1.5 * 5/* lineheight */ + this.__fontSize * 0.65  /* padding */
+          break;
+        default:
+          // 非三档（如应用侧覆写后的 'custom'）：保持当前行高不变（与原 switch 无命中时一致）
+          h = this.vRowHeight
           break;
       }
-      if (this.vRowHeight < 36) {
-        this.vRowHeight = 36
+      // 行高与控件高度同源（Compact = 2.25 × 表格正文字号，与 --ce-control-h-md 一致）。
+      // 只保留一个触控下限，不用绝对 36px 兜底：那会让 14px 根字号下出现
+      // 14px 的字配 36px 的行，行内余量随字号变小而变大。
+      if (h < 26) {
+        h = 26
       }
+      const heightChanged = this.vRowHeight !== h
+      this.vRowHeight = h
       this.__onRowHeightChange(rowHeightType)
       if (!cancelEmit) {
         this.emit(TableEvents.ConfigChange, { type: ConfigType.RowHeight })
       }
-      this.forceUpdate()
+      if (typeChanged || heightChanged) this.forceUpdate()
     }
 
     _setSort(prop: string, sort: string | null, cancelEmit = false) {
@@ -144,7 +177,7 @@ export function TableExtensionConfig<T extends Constructor<any>>(spuerClass: T) 
       if (size(this.__filterMap) > 0) {
         const pidMap: Record<string, any> = []
         let filterTreeData = filterTree(this.groupedData || this.innerData, (node, parentNode, chain) => {
-          let rs = every(this.__filterMap, (fType: string, k) => {
+          let rs = every(this.__filterMap, (fType: string, k: string) => {
             const f = FilterFunctionMap[fType]
             let value: string | Record<string, any> = this.__filterConditionMap[k]!
             try {
@@ -200,7 +233,8 @@ export function TableExtensionConfig<T extends Constructor<any>>(spuerClass: T) 
     __groupList(list: typeof this.data, groupColProps: typeof this.groupOrders, rootColProp: string) {
       if (isEmpty(groupColProps)) return list
 
-      let { prop, condition } = groupColProps!.shift()!
+      // shift() 会真的消费掉分组列，必须保留调用，只解构用到的 prop
+      let { prop } = groupColProps!.shift()!
       let grouped = groupBy(list, prop)
       const groupedData: typeof this.data = []
       each(grouped, (subList: typeof this.data, key) => {

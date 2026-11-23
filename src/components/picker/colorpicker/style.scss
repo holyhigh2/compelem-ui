@@ -7,6 +7,9 @@
 
 .ce-color-picker {
   padding: var(--ce-spacing-md);
+  // 底边可单独覆盖：嵌入 ce-card 等已有内距的容器时，把底边收到与下方
+  // 分区（footer/divider）一致，避免分隔线上下留白不对称。默认仍是 --ce-spacing-md。
+  padding-bottom: var(--ce-color-picker-padding-bottom, var(--ce-spacing-md));
   z-index: 3;
   display: flex;
 
@@ -153,6 +156,19 @@
     height: 100%;
     position: absolute;
   }
+
+  // 「未设置颜色」标识：棋盘格（底图）+ 红斜线（2026-10-31 按使用者要求恢复，
+  // 此前的弃用决策见 form/input/style.scss 的历史注释）
+  &.ce-color-picker-none-color::after {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: calc(50% - 1px);
+    width: calc(100% + 10px);
+    height: 2px;
+    background: var(--ce-color-error, #e5484d);
+    transform: rotate(-45deg);
+  }
 }
 
 
@@ -199,7 +215,7 @@
   outline: none;
   height: 18px;
   padding: 1px 3px;
-  line-height: 1;
+  line-height: var(--ce-lineh-xs, 1); // 固定高18px数值输入：显式紧凑
   position: relative;
   top: -1px;
   border: 0px solid #00B4FF;
@@ -221,7 +237,7 @@
   position: absolute;
   left: -1em;
   color: #aaa;
-  font-size: 1rem !important;
+  font-size: var(--ce-font-md) !important;
 }
 
 .ce-color-picker-gradientbar .ce-color-picker-grad-belt i:hover {

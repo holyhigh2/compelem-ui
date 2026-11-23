@@ -2,7 +2,7 @@ import { CompElem, prop, state, tag, watch } from "compelem";
 import { Row } from "./Row";
 /**
  * 格栅布局 - 列
- * @props
+ * @attrs
  *  span {number} 栅格占位格数最大24，或使用断点定义 如：sm="12" md="6"，可用断点包括 xxs/xs/sm/md/lg/xl/xxl。如果同row内所有列都未设置offset属性，
  * 则会自动扩展未设置该属性的列
  *  offset {number} 栅格左侧的偏移间隔格数，如果某列设置了该属性，则同row内所有列必须设置span或断点属性

@@ -1,5 +1,4 @@
 import { prop } from "compelem";
-import { isArray } from "myfx";
 import { FormControl } from "../components/form/FormControl";
 import { IClearable } from "../interfaces/IClearable";
 
@@ -20,18 +19,18 @@ export abstract class ControlBox extends FormControl implements IClearable {
     /**
      * 占位符
      */
-    @prop({
-        type: [String, Array], hasChanged(newValue, oldValue, changeChain, subNewValue, subOldValue) {
-            if (isArray(newValue)) {
-                return newValue[0] != oldValue[0] || newValue[1] != oldValue[1]
-            }
-            return newValue != oldValue
-        },
-    }) placeholder: string | Array<string> = ''
+    @prop({ type: [String, Array] }) placeholder: string | Array<string> = ''
     /**
      * 可清除内容
      */
     @prop clearable = false;
+    /**
+     * 输入内容的水平对齐方式，可选 left / center / right
+     *
+     * 默认为空（跟随组件自身样式，通常左对齐）；设置后透传到内部输入框的 CSS text-align。
+     * 数值型输入（ce-input / ce-input-number）常用 right 让数字靠右
+     */
+    @prop align = '';
 
     abstract clear(): void;
 }

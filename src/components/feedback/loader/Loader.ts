@@ -1,5 +1,5 @@
 
-import { classes, CompElem, h, prop, tag, Template, csscope, Csscope } from "compelem";
+import { classes, CompElem, h, prop, tag, Template, watch, csscope, Csscope } from "compelem";
 import { Loading } from "../../../icons/icons";
 import style from "./style.scss?tmpl";
 /**
@@ -33,24 +33,44 @@ export class Loader extends CompElem {
   static get css() {
     return [style];
   }
+  /**
+   * 是否显示遮罩。
+   *
+   * `backdrop` 是默认 `true` 的布尔 prop：dev 构建下会被字段初始化器遮蔽，
+   * `backdrop="false"` 读不回来；同时未写属性时默认值也不会出现在 DOM 属性上。
+   * 因此按「属性优先（"false" 视为关闭）、prop 兜底」计算，模板用类名落状态。
+   */
+  get showBackdrop(): boolean {
+    const attr = this.getAttribute('backdrop');
+    if (attr !== null) return attr !== 'false';
+    return this.backdrop !== false;
+  }
   /////////////////////////////////// watches
+  @watch(['backdrop'])
+  syncMaskClass() {
+    // 遮罩模式下宿主需要铺满父级（父级需 position:relative），否则宿主
+    // 作为 inline 元素尺寸为 0，绝对定位的遮罩按宿主算 100% 也会变成 0。
+    this.classList.toggle('ce-loader-mask', this.showBackdrop)
+  }
   //////////////////////////////////// lifecycles
+  mounted(): void {
+    this.syncMaskClass()
+  }
   constructor() {
     super();
   }
 
   render(): Template {
-    let tmpl = h`
+    return h`
     <div class="ce-loader" ${classes({
       ["ce-loader-size-" + this.size]: true,
-      "is-center": this.center,
+      "is-center": this.center || this.hasAttribute('center'),
       "ce-loader-fullscreen": this.fullscreen
     })}>
       <ce-icon spin spin-speed="${this.speed}" .svg="${Loading}" ></ce-icon> ${this.content}
     </div>
-    <div class="ce-loader-backdrop"></div>
+    <div class="ce-loader-backdrop" ${classes({ "is-shown": this.showBackdrop })}></div>
     `;
-    return tmpl;
   }
 
   //////////////////////////////////// methods

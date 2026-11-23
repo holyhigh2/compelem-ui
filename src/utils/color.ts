@@ -54,79 +54,114 @@ export function getOpacityColor(color: string, opacity: number = 1) {
   }
   return `rgba(${rgb}/${opacity})`
 }
-function hue2RGB(v1: number, v2: number, vH: number) {
-  if (vH < 0) vH += 1;
-  if (vH > 1) vH -= 1;
-  if ((6 * vH) < 1) return v1 + (v2 - v1) * 6 * vH;
-  if ((2 * vH) < 1) return v2;
-  if ((3 * vH) < 2) return v1 + (v2 - v1) * (2 / 3 - vH) * 6;
-  return v1;
-}
 /**
- * HSL转RGB颜色
+ * HSL转RGB颜色（h/s/l 均为 0~1，返回 0~255 的三通道）
  * @param h 
  * @param s 
  * @param l 
  * @returns 
  */
 export function HSL2RGB(h: number, s: number, l: number) {
-  let r, g, b;
-  if (s === 0) {
-    r = l * 255;
-    g = l * 255;
-    b = l * 255;
-  } else {
-    let v1, v2;
-    if (l < 0.5)
-      v2 = l * (1 + s);
-    else {
-      v2 = (l + s) - (s * l);
-    }
-
-    v1 = 2 * l - v2;
-
-    r = 255 * hue2RGB(v1, v2, h + 1 / 3);
-    g = 255 * hue2RGB(v1, v2, h);
-    b = 255 * hue2RGB(v1, v2, h - 1 / 3);
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1
+    if (t > 1) t -= 1
+    if (t < 1 / 6) return p + (q - p) * 6 * t
+    if (t < 1 / 2) return q
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+    return p
   }
-  var m = Math;
-  return [m.round(r), m.round(g), m.round(b)];
+  let r: number
+  let g: number
+  let b: number
+  if (s === 0) {
+    r = g = b = l
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+    const p = 2 * l - q
+    r = hue2rgb(p, q, h + 1 / 3)
+    g = hue2rgb(p, q, h)
+    b = hue2rgb(p, q, h - 1 / 3)
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)]
 }
 
+/**
+ * RGB转HSL颜色（返回 [h,s,l] 均为 0~1）
+ * @param r 
+ * @param g 
+ * @param b 
+ * @returns 
+ */
 export function RGB2HSL(r: number, g: number, b: number) {
-  let l = 0, s = 0, h = 0
-
-  r = (r || 0) / 255
-  g = (g || 0) / 255
-  b = (b || 0) / 255
-  let cmin = Math.min(r, g, b)
-  let cmax = Math.max(r, g, b)
-  let cdel = cmax - cmin
-
-  l = (cmin + cmax) / 2;
-  s = 0;
-  h = 0;
-
-  if (cmax > 0 && cdel > 0) {
-    if (l < 0.5)
-      s = cdel / (cmax + cmin);
-    else {
-      s = cdel / (2 - cmax - cmin);
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  let h = 0
+  let s = 0
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break
+      case g: h = (b - r) / d + 2; break
+      default: h = (r - g) / d + 4
     }
-
-
-    let delR = (((cmax - r) / 6) + (cdel / 2)) / cdel
-    let delG = (((cmax - g) / 6) + (cdel / 2)) / cdel
-    let delB = (((cmax - b) / 6) + (cdel / 2)) / cdel
-
-    if (r === cmax) h = delB - delG;
-    else if (g === cmax) h = 1 / 3 + delR - delB;
-    else if (b === cmax) h = 2 / 3 + delG - delR;
-
-    if (h < 0) h += 1;
-    if (h > 1) h -= 1;
+    h /= 6
   }
   return [h, s, l]
+}
+
+/**
+ * RGB转HSV颜色（返回 [h,s,v] 均为 0~1）。
+ *
+ * 与色板 CSS 背景 `linear-gradient(#0000,#000), linear-gradient(90deg,#fff,#fff0)` 用的是
+ * 同一套坐标系：s = 水平饱和度（左 0 → 右 1），v = 垂直明度（上 1 → 下 0）。
+ * 色相条的纯色 `HSL2RGB(h,1,0.5)` 正好等于 `HSV2RGB(h,1,1)`，二者可无损互转。
+ */
+export function RGB2HSV(r: number, g: number, b: number) {
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const d = max - min
+  const v = max
+  let s = 0
+  let h = 0
+  if (d !== 0) {
+    s = d / max
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break
+      case g: h = (b - r) / d + 2; break
+      default: h = (r - g) / d + 4
+    }
+    h /= 6
+  }
+  return [h, s, v]
+}
+
+/**
+ * HSV转RGB颜色（h/s/v 均为 0~1，返回 0~255 的三通道）
+ */
+export function HSV2RGB(h: number, s: number, v: number) {
+  const i = Math.floor(h * 6)
+  const f = h * 6 - i
+  const p = v * (1 - s)
+  const q = v * (1 - f * s)
+  const t = v * (1 - (1 - f) * s)
+  let r: number, g: number, b: number
+  switch (i % 6) {
+    case 0: r = v; g = t; b = p; break
+    case 1: r = q; g = v; b = p; break
+    case 2: r = p; g = v; b = t; break
+    case 3: r = p; g = q; b = v; break
+    case 4: r = t; g = p; b = v; break
+    default: r = v; g = p; b = q
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)]
 }
 
 export const ColorHelper = {
@@ -145,9 +180,27 @@ export const ColorHelper = {
     switch (color) {
       case 'info': case 'success': case 'warning': case 'error': case 'text':
         c = `var(--ce-color-${color})`
+        // 成对注入实心表面的前景色：背景是语义色时，文字色必须与该背景匹配
+        // （warning 黄底、深色主题下提亮的 info / 反相后的 text 都不能用白字），
+        // 由 --ce-color-on-* 按主题给出。用 var() 引用，主题切换时自动跟随，
+        // 无需重算或监听主题变化。
+        if (varName === '--color') {
+          style.setProperty('--on-color', `var(--ce-color-on-${color})`, isImportant ? 'important' : '')
+        }
         break;
       default:
-        c = `rgb(${getRGBColorValue(c)})`
+        // 自定义颜色无法静态判断明暗，前景显式回落到强调色表面的通用前景
+        // （--ce-color-on-primary，浅色主题下为白）。写成显式赋值而不是
+        // removeProperty，让"host 先设 info 后改自定义色"时不会残留旧值。
+        if (varName === '--color') {
+          style.setProperty('--on-color', 'var(--ce-color-on-primary)', isImportant ? 'important' : '')
+        }
+        // 直接传 CSS 变量时原样透传。
+        // 否则 `rgb(${getRGBColorValue('var(--x)')})` 会产出 `rgb(rgb(75 85 99))`
+        // 这种非法值，属性静默失效、颜色退回继承值——暗色主题下图标就会"消失"。
+        // 透传后组件可用语义 token 表达颜色（如 var(--ce-color-text-secondary)），
+        // 从而跟随主题切换。
+        c = color.startsWith('var(') ? color : `rgb(${getRGBColorValue(c)})`
     }
 
     style.setProperty(varName, c, isImportant ? 'important' : '')

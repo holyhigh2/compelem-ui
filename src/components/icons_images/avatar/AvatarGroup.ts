@@ -5,7 +5,7 @@ import { Avatar } from './Avatar';
 import style from "./style.scss?tmpl";
 /**
  * 头像组
- * @props
+ * @attrs
  *  size {string} xs/sm/md/lg/xl/xxl，默认md
  *  round {string} 默认circle
  *  max {number} 最大可见头像数，0表示不限制

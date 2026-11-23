@@ -6,7 +6,7 @@ import { List } from "./List";
 import style from "./style-header.scss?tmpl";
 /**
  * 列表标题，可用于标识分组列表项
- * @props
+ * @attrs
  *  inset {boolean|string} 嵌入模式，分割线长度会减小，默认4rem
  * @slots
  *  - 标题内容

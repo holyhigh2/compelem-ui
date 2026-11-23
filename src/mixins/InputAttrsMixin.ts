@@ -10,9 +10,6 @@ export function InputAttrsMixin<T extends Constructor<any>>(spuerClass: T) {
   return class InputAttrsMixin extends spuerClass {
 
 
-    constructor(...args: any[]) {
-      super(...args)
-    }
 
     ////////////////////////////////////////// methods
 

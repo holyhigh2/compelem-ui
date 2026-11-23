@@ -1,10 +1,18 @@
+// 列宿主是 <ce-table> 的 **slot 内容**，实际住在使用方的文档树里，拿不到组件
+// shadow 内 `reset.scss` 的 `* { box-sizing: border-box }`。默认 content-box 下
+// `border-right`（列分割线，`thin` = 1px）被算在 `width` 之外 ⇒ 表头每列比同名的
+// 表体单元格宽 1px（表体 `.ce-table-cell` 在 shadow 内是 border-box），逐列累积，
+// 第 N 列的数据就相对表头左移 N-1 px；`vScrollWidth` 也会跟着虚高。
+// 宿主自己声明盒模型，不依赖使用方是否有全局 reset。
 :host(ce-column) {
   display: inline-block;
+  box-sizing: border-box;
   width: var(--column-width);
   min-width: var(--column-min-width);
 }
 
 :host(ce-column-foot) {
+  box-sizing: border-box;
   width: var(--column-width);
 }
 

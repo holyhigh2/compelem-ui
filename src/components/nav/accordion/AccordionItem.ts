@@ -1,9 +1,9 @@
-import { css, csscope, Csscope, h, prop, tag, Template } from "compelem";
+import { css, csscope, Csscope, h, ifTrue, prop, tag, Template } from "compelem";
 import { isEmpty } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 /**
  * 手风琴项
- * @props
+ * @attrs
  *  header {string} 标题信息
  *  defaultExpanded {boolean} 默认展开，默认true
  *  bodyStyle {string|object} 面板body样式
@@ -37,8 +37,8 @@ export class AccordionItem extends AppearanceElem {
 
   render(): Template {
     return h`
-    <ce-panel .header="${this.header}" .default-expanded="${this.defaultExpanded}" collapsible shadow="never" ?readonly="${this.readonly}" .body-style="${this.bodyStyle}">
-      ${!isEmpty(this.slots.header) ? h`<slot name="header" slot="header" slot-props></slot>` : ''}
+    <ce-panel .title="${this.header}" .default-expanded="${this.defaultExpanded}" collapsible shadow="never" ?readonly="${this.readonly}" .body-style="${this.bodyStyle}">
+      ${ifTrue(!isEmpty(this.slots.header), () => h`<slot name="header" slot="title" slot-props></slot>`)}
       <slot></slot>
     </ce-panel>
     `;

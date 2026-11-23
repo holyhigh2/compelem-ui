@@ -1,18 +1,19 @@
 import { CompElem, directive, EnterPointType } from "compelem";
 import { find, isUndefined } from "myfx";
 import { getRGBColorValue } from "../../utils/color";
-import { getCompElemOf } from "../../utils/utils";
+import { adoptStyleSheets, getCompElemOf } from "../../utils/utils";
+import { settleTransition } from "../../utils/transition";
 import style from './style.scss?inline';
 
 export function rippleOut(ripple: HTMLElement) {
   ripple.style.opacity = '0'
+  ripple.ontransitionend = ripple.ontransitioncancel = null
 
-  ripple.ontransitionend = () => {
+  settleTransition(ripple, () => {
     ripple.parentNode?.removeChild(ripple)
-    ripple.ontransitioncancel = ripple.ontransitionend = null;
     if (RippleCache.length < MAX_CACHE_SIZE)
       RippleCache.push(ripple)
-  }
+  }, 'opacity')
 }
 
 const NodeMap = new WeakMap
@@ -24,7 +25,7 @@ export function bindSheet(target: Element) {
   let compEl = getCompElemOf(target)
   if (!compEl) return
 
-  compEl.shadowRoot!.adoptedStyleSheets.includes(RippleSheet) || (compEl.shadowRoot!.adoptedStyleSheets = [...compEl.shadowRoot!.adoptedStyleSheets, RippleSheet])
+  adoptStyleSheets(compEl.shadowRoot, RippleSheet)
 }
 
 export enum RipplePalette {
@@ -118,16 +119,12 @@ export function onMousedown(target: Element, e: PointerEvent) {
   }
 
   ripple.className='ce-ripple '
+  ripple.ontransitionend = ripple.ontransitioncancel = null
   ripple.style.width = ripple.style.height = diameter + 'px'
 
   ripple.style.opacity = '0'
   ripple.style.backgroundColor = `rgb(${Math.floor(rgb.r)},${Math.floor(rgb.g)},${Math.floor(rgb.b)})`
   ripple.style.transform = `translate(${rippleSx - diameter / 2}px,${rippleSy - diameter / 2}px) scale3d(0.2,0.2,1)`
-
-  ripple.ontransitioncancel = ripple.ontransitionend = (e) => {
-    if (e.propertyName !== 'transform') return;
-    rippleOut(ripple)
-  }
 
   if (opts.inner) {
     target.appendChild(ripple)
@@ -138,6 +135,8 @@ export function onMousedown(target: Element, e: PointerEvent) {
   setTimeout(() => {
     ripple.style.opacity = '0.2'
     ripple.style.transform = `translate(${(width - diameter) / 2}px,${(height - diameter) / 2}px) scale3d(1,1,1)`
+    const finish = settleTransition(ripple, () => rippleOut(ripple), 'transform')
+    ripple.ontransitioncancel = () => finish()
   }, 20);
 }
 

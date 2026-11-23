@@ -1,64 +1,10 @@
-@use "../../../css/functions" as fn;
-@use "../../../css/mixins";
-
+// ce-dialog 当前渲染 <ce-overlay> + <div class="ce-dialog-surface">，
+// surface 与关闭按钮的样式由 overlay/style.scss 通过 @csscope(GLOBAL) 注入，
+// 因此本组件不再需要任何组件内规则。
+//
+// 旧版 <dialog> 实现遗留的 .ce-dialog / ::backdrop / .ce-dialog-visible /
+// .ce-dialog-shake / .ce-dialog-no-backdrop 与 @keyframes ani-shake，
+// 在当前 DOM 中均无匹配节点（ani-shake 已由 overlay/style.scss 全局定义），
+// 2026-11-10 整体清除。
 :host {
-}
-
-.ce-dialog {
-  padding: 0;
-  border: none;
-  outline: none;
-  overflow: visible;
-  position: fixed;
-  border-radius: var(--ce-round-lg);
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-  box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-    rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px;
-
-  box-shadow: var(--ce-shadow-lg);
-
-  opacity: 0;
-  transform: scale(0.5);
-  transition: transform 0.2s cubic-bezier(0.62, 1.36, 0.9, 1.1), opacity 0.2s,
-    width 0.2s;
-
-  &::backdrop {
-    opacity: 0;
-    transition: opacity 0.2s;
-    background-color: rgba(0, 0, 0, 0.25);
-  }
-
-  &.ce-dialog-visible {
-    opacity: 1;
-    transform: scale(1);
-
-    &.ce-dialog-no-backdrop[open] {
-      top: 50%;
-      transform: translateY(-50%);
-    }
-
-    &::backdrop {
-      opacity: 1;
-    }
-  }
-
-  &.ce-dialog-shake {
-    animation-duration: 0.125s;
-    animation-timing-function: cubic-bezier(0.17, 1.26, 1, 0.96);
-    animation-name: ani-shake;
-  }
-}
-
-@keyframes ani-shake {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.0375);
-  }
-  100% {
-    transform: scale(1);
-  }
 }

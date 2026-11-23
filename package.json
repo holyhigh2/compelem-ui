@@ -1,36 +1,527 @@
 {
   "name": "compelem-ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A UI component library built with compelem, myfx and uiik",
+  "keywords": [
+    "web components",
+    "custom elements",
+    "ui",
+    "components",
+    "compelem"
+  ],
+  "homepage": "https://github.com/holyhigh2/compelem-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holyhigh2/compelem-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/holyhigh2/compelem-ui/issues"
+  },
+  "license": "MIT",
   "type": "module",
-  "main": "compelem-ui.umd.js",
-  "module": "compelem-ui.es.js",
-  "types": "index.d.ts",
+  "main": "./dist/compelem-ui.es.js",
+  "module": "./dist/compelem-ui.es.js",
+  "types": "./dist/index.d.ts",
+  "browserslist": [
+    "chrome >= 99",
+    "edge >= 99",
+    "firefox >= 101",
+    "safari >= 16.4"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "./dist/compelem-ui.es.js",
+    "./dist/register.es.js",
+    "./dist/ce-*.es.js",
+    "./dist/icons/full.es.js"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/compelem-ui.es.js"
+    },
+    "./index.css": "./dist/index.css",
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*",
+    "./icons": {
+      "types": "./dist/icons/icons.d.ts",
+      "import": "./dist/icons.es.js"
+    },
+    "./icons/full": {
+      "types": "./dist/icons/full.d.ts",
+      "import": "./dist/icons/full.es.js"
+    },
+    "./locale": {
+      "types": "./dist/locale/index.d.ts",
+      "import": "./dist/locale.es.js"
+    },
+    "./register": {
+      "types": "./dist/register.d.ts",
+      "import": "./dist/register.es.js"
+    },
+    "./icons/icons": {
+      "types": "./dist/icons/icons.d.ts",
+      "import": "./dist/icons.es.js"
+    },
+    "./ce-accordion": {
+      "types": "./dist/entries/ce-accordion.d.ts",
+      "import": "./dist/ce-accordion.es.js"
+    },
+    "./ce-accordion-item": {
+      "types": "./dist/entries/ce-accordion-item.d.ts",
+      "import": "./dist/ce-accordion-item.es.js"
+    },
+    "./ce-alert": {
+      "types": "./dist/entries/ce-alert.d.ts",
+      "import": "./dist/ce-alert.es.js"
+    },
+    "./ce-aside": {
+      "types": "./dist/entries/ce-aside.d.ts",
+      "import": "./dist/ce-aside.es.js"
+    },
+    "./ce-avatar": {
+      "types": "./dist/entries/ce-avatar.d.ts",
+      "import": "./dist/ce-avatar.es.js"
+    },
+    "./ce-avatar-group": {
+      "types": "./dist/entries/ce-avatar-group.d.ts",
+      "import": "./dist/ce-avatar-group.es.js"
+    },
+    "./ce-badge": {
+      "types": "./dist/entries/ce-badge.d.ts",
+      "import": "./dist/ce-badge.es.js"
+    },
+    "./ce-board": {
+      "types": "./dist/entries/ce-board.d.ts",
+      "import": "./dist/ce-board.es.js"
+    },
+    "./ce-board-bar": {
+      "types": "./dist/entries/ce-board-bar.d.ts",
+      "import": "./dist/ce-board-bar.es.js"
+    },
+    "./ce-button": {
+      "types": "./dist/entries/ce-button.d.ts",
+      "import": "./dist/ce-button.es.js"
+    },
+    "./ce-button-group": {
+      "types": "./dist/entries/ce-button-group.d.ts",
+      "import": "./dist/ce-button-group.es.js"
+    },
+    "./ce-card": {
+      "types": "./dist/entries/ce-card.d.ts",
+      "import": "./dist/ce-card.es.js"
+    },
+    "./ce-checkbox": {
+      "types": "./dist/entries/ce-checkbox.d.ts",
+      "import": "./dist/ce-checkbox.es.js"
+    },
+    "./ce-checkbox-group": {
+      "types": "./dist/entries/ce-checkbox-group.d.ts",
+      "import": "./dist/ce-checkbox-group.es.js"
+    },
+    "./ce-col": {
+      "types": "./dist/entries/ce-col.d.ts",
+      "import": "./dist/ce-col.es.js"
+    },
+    "./ce-color-picker": {
+      "types": "./dist/entries/ce-color-picker.d.ts",
+      "import": "./dist/ce-color-picker.es.js"
+    },
+    "./ce-column": {
+      "types": "./dist/entries/ce-column.d.ts",
+      "import": "./dist/ce-column.es.js"
+    },
+    "./ce-column-config-pane": {
+      "types": "./dist/entries/ce-column-config-pane.d.ts",
+      "import": "./dist/ce-column-config-pane.es.js"
+    },
+    "./ce-column-foot": {
+      "types": "./dist/entries/ce-column-foot.d.ts",
+      "import": "./dist/ce-column-foot.es.js"
+    },
+    "./ce-combobox": {
+      "types": "./dist/entries/ce-combobox.d.ts",
+      "import": "./dist/ce-combobox.es.js"
+    },
+    "./ce-command-palette": {
+      "types": "./dist/entries/ce-command-palette.d.ts",
+      "import": "./dist/ce-command-palette.es.js"
+    },
+    "./ce-command-palette-content": {
+      "types": "./dist/entries/ce-command-palette-content.d.ts",
+      "import": "./dist/ce-command-palette-content.es.js"
+    },
+    "./ce-confirm": {
+      "types": "./dist/entries/ce-confirm.d.ts",
+      "import": "./dist/ce-confirm.es.js"
+    },
+    "./ce-container": {
+      "types": "./dist/entries/ce-container.d.ts",
+      "import": "./dist/ce-container.es.js"
+    },
+    "./ce-context-menu": {
+      "types": "./dist/entries/ce-context-menu.d.ts",
+      "import": "./dist/ce-context-menu.es.js"
+    },
+    "./ce-date-picker": {
+      "types": "./dist/entries/ce-date-picker.d.ts",
+      "import": "./dist/ce-date-picker.es.js"
+    },
+    "./ce-dialog": {
+      "types": "./dist/entries/ce-dialog.d.ts",
+      "import": "./dist/ce-dialog.es.js"
+    },
+    "./ce-divider": {
+      "types": "./dist/entries/ce-divider.d.ts",
+      "import": "./dist/ce-divider.es.js"
+    },
+    "./ce-drawer": {
+      "types": "./dist/entries/ce-drawer.d.ts",
+      "import": "./dist/ce-drawer.es.js"
+    },
+    "./ce-dropdown": {
+      "types": "./dist/entries/ce-dropdown.d.ts",
+      "import": "./dist/ce-dropdown.es.js"
+    },
+    "./ce-editable": {
+      "types": "./dist/entries/ce-editable.d.ts",
+      "import": "./dist/ce-editable.es.js"
+    },
+    "./ce-empty": {
+      "types": "./dist/entries/ce-empty.d.ts",
+      "import": "./dist/ce-empty.es.js"
+    },
+    "./ce-field": {
+      "types": "./dist/entries/ce-field.d.ts",
+      "import": "./dist/ce-field.es.js"
+    },
+    "./ce-footer": {
+      "types": "./dist/entries/ce-footer.d.ts",
+      "import": "./dist/ce-footer.es.js"
+    },
+    "./ce-form": {
+      "types": "./dist/entries/ce-form.d.ts",
+      "import": "./dist/ce-form.es.js"
+    },
+    "./ce-form-item": {
+      "types": "./dist/entries/ce-form-item.d.ts",
+      "import": "./dist/ce-form-item.es.js"
+    },
+    "./ce-grid": {
+      "types": "./dist/entries/ce-grid.d.ts",
+      "import": "./dist/ce-grid.es.js"
+    },
+    "./ce-header": {
+      "types": "./dist/entries/ce-header.d.ts",
+      "import": "./dist/ce-header.es.js"
+    },
+    "./ce-heading": {
+      "types": "./dist/entries/ce-heading.d.ts",
+      "import": "./dist/ce-heading.es.js"
+    },
+    "./ce-highlight": {
+      "types": "./dist/entries/ce-highlight.d.ts",
+      "import": "./dist/ce-highlight.es.js"
+    },
+    "./ce-hover": {
+      "types": "./dist/entries/ce-hover.d.ts",
+      "import": "./dist/ce-hover.es.js"
+    },
+    "./ce-icon": {
+      "types": "./dist/entries/ce-icon.d.ts",
+      "import": "./dist/ce-icon.es.js"
+    },
+    "./ce-img": {
+      "types": "./dist/entries/ce-img.d.ts",
+      "import": "./dist/ce-img.es.js"
+    },
+    "./ce-input": {
+      "types": "./dist/entries/ce-input.d.ts",
+      "import": "./dist/ce-input.es.js"
+    },
+    "./ce-input-color": {
+      "types": "./dist/entries/ce-input-color.d.ts",
+      "import": "./dist/ce-input-color.es.js"
+    },
+    "./ce-input-date": {
+      "types": "./dist/entries/ce-input-date.d.ts",
+      "import": "./dist/ce-input-date.es.js"
+    },
+    "./ce-input-date-range": {
+      "types": "./dist/entries/ce-input-date-range.d.ts",
+      "import": "./dist/ce-input-date-range.es.js"
+    },
+    "./ce-input-mask": {
+      "types": "./dist/entries/ce-input-mask.d.ts",
+      "import": "./dist/ce-input-mask.es.js"
+    },
+    "./ce-input-number": {
+      "types": "./dist/entries/ce-input-number.d.ts",
+      "import": "./dist/ce-input-number.es.js"
+    },
+    "./ce-input-number-range": {
+      "types": "./dist/entries/ce-input-number-range.d.ts",
+      "import": "./dist/ce-input-number-range.es.js"
+    },
+    "./ce-input-otp": {
+      "types": "./dist/entries/ce-input-otp.d.ts",
+      "import": "./dist/ce-input-otp.es.js"
+    },
+    "./ce-input-tag": {
+      "types": "./dist/entries/ce-input-tag.d.ts",
+      "import": "./dist/ce-input-tag.es.js"
+    },
+    "./ce-input-time": {
+      "types": "./dist/entries/ce-input-time.d.ts",
+      "import": "./dist/ce-input-time.es.js"
+    },
+    "./ce-input-time-range": {
+      "types": "./dist/entries/ce-input-time-range.d.ts",
+      "import": "./dist/ce-input-time-range.es.js"
+    },
+    "./ce-link": {
+      "types": "./dist/entries/ce-link.d.ts",
+      "import": "./dist/ce-link.es.js"
+    },
+    "./ce-list": {
+      "types": "./dist/entries/ce-list.d.ts",
+      "import": "./dist/ce-list.es.js"
+    },
+    "./ce-list-group": {
+      "types": "./dist/entries/ce-list-group.d.ts",
+      "import": "./dist/ce-list-group.es.js"
+    },
+    "./ce-list-header": {
+      "types": "./dist/entries/ce-list-header.d.ts",
+      "import": "./dist/ce-list-header.es.js"
+    },
+    "./ce-list-item": {
+      "types": "./dist/entries/ce-list-item.d.ts",
+      "import": "./dist/ce-list-item.es.js"
+    },
+    "./ce-list-picker": {
+      "types": "./dist/entries/ce-list-picker.d.ts",
+      "import": "./dist/ce-list-picker.es.js"
+    },
+    "./ce-loader": {
+      "types": "./dist/entries/ce-loader.d.ts",
+      "import": "./dist/ce-loader.es.js"
+    },
+    "./ce-loop-list": {
+      "types": "./dist/entries/ce-loop-list.d.ts",
+      "import": "./dist/ce-loop-list.es.js"
+    },
+    "./ce-main": {
+      "types": "./dist/entries/ce-main.d.ts",
+      "import": "./dist/ce-main.es.js"
+    },
+    "./ce-menu": {
+      "types": "./dist/entries/ce-menu.d.ts",
+      "import": "./dist/ce-menu.es.js"
+    },
+    "./ce-message": {
+      "types": "./dist/entries/ce-message.d.ts",
+      "import": "./dist/ce-message.es.js"
+    },
+    "./ce-nav": {
+      "types": "./dist/entries/ce-nav.d.ts",
+      "import": "./dist/ce-nav.es.js"
+    },
+    "./ce-navbar": {
+      "types": "./dist/entries/ce-navbar.d.ts",
+      "import": "./dist/ce-navbar.es.js"
+    },
+    "./ce-notification": {
+      "types": "./dist/entries/ce-notification.d.ts",
+      "import": "./dist/ce-notification.es.js"
+    },
+    "./ce-overlay": {
+      "types": "./dist/entries/ce-overlay.d.ts",
+      "import": "./dist/ce-overlay.es.js"
+    },
+    "./ce-pagination": {
+      "types": "./dist/entries/ce-pagination.d.ts",
+      "import": "./dist/ce-pagination.es.js"
+    },
+    "./ce-panel": {
+      "types": "./dist/entries/ce-panel.d.ts",
+      "import": "./dist/ce-panel.es.js"
+    },
+    "./ce-panel-group": {
+      "types": "./dist/entries/ce-panel-group.d.ts",
+      "import": "./dist/ce-panel-group.es.js"
+    },
+    "./ce-portal": {
+      "types": "./dist/entries/ce-portal.d.ts",
+      "import": "./dist/ce-portal.es.js"
+    },
+    "./ce-portal-editor": {
+      "types": "./dist/entries/ce-portal-editor.d.ts",
+      "import": "./dist/ce-portal-editor.es.js"
+    },
+    "./ce-portal-item": {
+      "types": "./dist/entries/ce-portal-item.d.ts",
+      "import": "./dist/ce-portal-item.es.js"
+    },
+    "./ce-portal-widget": {
+      "types": "./dist/entries/ce-portal-widget.d.ts",
+      "import": "./dist/ce-portal-widget.es.js"
+    },
+    "./ce-portal-widget-editor": {
+      "types": "./dist/entries/ce-portal-widget-editor.d.ts",
+      "import": "./dist/ce-portal-widget-editor.es.js"
+    },
+    "./ce-progress-circular": {
+      "types": "./dist/entries/ce-progress-circular.d.ts",
+      "import": "./dist/ce-progress-circular.es.js"
+    },
+    "./ce-progress-linear": {
+      "types": "./dist/entries/ce-progress-linear.d.ts",
+      "import": "./dist/ce-progress-linear.es.js"
+    },
+    "./ce-prompt": {
+      "types": "./dist/entries/ce-prompt.d.ts",
+      "import": "./dist/ce-prompt.es.js"
+    },
+    "./ce-radio": {
+      "types": "./dist/entries/ce-radio.d.ts",
+      "import": "./dist/ce-radio.es.js"
+    },
+    "./ce-radio-group": {
+      "types": "./dist/entries/ce-radio-group.d.ts",
+      "import": "./dist/ce-radio-group.es.js"
+    },
+    "./ce-rate": {
+      "types": "./dist/entries/ce-rate.d.ts",
+      "import": "./dist/ce-rate.es.js"
+    },
+    "./ce-row": {
+      "types": "./dist/entries/ce-row.d.ts",
+      "import": "./dist/ce-row.es.js"
+    },
+    "./ce-scroller": {
+      "types": "./dist/entries/ce-scroller.d.ts",
+      "import": "./dist/ce-scroller.es.js"
+    },
+    "./ce-segmented": {
+      "types": "./dist/entries/ce-segmented.d.ts",
+      "import": "./dist/ce-segmented.es.js"
+    },
+    "./ce-select": {
+      "types": "./dist/entries/ce-select.d.ts",
+      "import": "./dist/ce-select.es.js"
+    },
+    "./ce-skeleton-loader": {
+      "types": "./dist/entries/ce-skeleton-loader.d.ts",
+      "import": "./dist/ce-skeleton-loader.es.js"
+    },
+    "./ce-slider": {
+      "types": "./dist/entries/ce-slider.d.ts",
+      "import": "./dist/ce-slider.es.js"
+    },
+    "./ce-spacer": {
+      "types": "./dist/entries/ce-spacer.d.ts",
+      "import": "./dist/ce-spacer.es.js"
+    },
+    "./ce-stat": {
+      "types": "./dist/entries/ce-stat.d.ts",
+      "import": "./dist/ce-stat.es.js"
+    },
+    "./ce-svg-thumb": {
+      "types": "./dist/entries/ce-svg-thumb.d.ts",
+      "import": "./dist/ce-svg-thumb.es.js"
+    },
+    "./ce-tab": {
+      "types": "./dist/entries/ce-tab.d.ts",
+      "import": "./dist/ce-tab.es.js"
+    },
+    "./ce-table": {
+      "types": "./dist/entries/ce-table.d.ts",
+      "import": "./dist/ce-table.es.js"
+    },
+    "./ce-table-bar": {
+      "types": "./dist/entries/ce-table-bar.d.ts",
+      "import": "./dist/ce-table-bar.es.js"
+    },
+    "./ce-tabs": {
+      "types": "./dist/entries/ce-tabs.d.ts",
+      "import": "./dist/ce-tabs.es.js"
+    },
+    "./ce-tag": {
+      "types": "./dist/entries/ce-tag.d.ts",
+      "import": "./dist/ce-tag.es.js"
+    },
+    "./ce-timer-picker": {
+      "types": "./dist/entries/ce-timer-picker.d.ts",
+      "import": "./dist/ce-timer-picker.es.js"
+    },
+    "./ce-toggle": {
+      "types": "./dist/entries/ce-toggle.d.ts",
+      "import": "./dist/ce-toggle.es.js"
+    },
+    "./ce-toolbar": {
+      "types": "./dist/entries/ce-toolbar.d.ts",
+      "import": "./dist/ce-toolbar.es.js"
+    },
+    "./ce-tooltip": {
+      "types": "./dist/entries/ce-tooltip.d.ts",
+      "import": "./dist/ce-tooltip.es.js"
+    },
+    "./ce-tree": {
+      "types": "./dist/entries/ce-tree.d.ts",
+      "import": "./dist/ce-tree.es.js"
+    },
+    "./ce-year-month-panel": {
+      "types": "./dist/entries/ce-year-month-panel.d.ts",
+      "import": "./dist/ce-year-month-panel.es.js"
+    }
+  },
   "scripts": {
-    "dev": "vite --port 5174 --host",
     "build:lib": "vite build --config vite.lib.config.ts",
     "build:debug": "vite build --config vite.lib.config.ts --minify false --sourcemap --outDir dist-debug",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run typecheck && npm run check && npm run test:coverage && npm run build:lib && npm run verify:pkg",
+    "gen": "node scripts/gen.mjs all",
+    "check": "node scripts/gen.mjs all --check && node scripts/check.mjs all --strict",
+    "verify:pkg": "node scripts/verify-package.mjs"
   },
-  "dependencies": {
-    "bootstrap-icons": "^1.13.1",
-    "compelem": "^0.26.5",
-    "myfx": "^1.15.10",
-    "uiik": "^1.4.2"
+  "peerDependencies": {
+    "compelem": ">=0.30.0-beta.13 <0.31.0",
+    "compelem-router": "^0.3.0-beta.4",
+    "exceljs": "^4.4.0",
+    "myfx": ">=2.0.0-beta.4 <2.1.0",
+    "uiik": "^1.5.0"
+  },
+  "peerDependenciesMeta": {
+    "compelem-router": {
+      "optional": true
+    },
+    "exceljs": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "compelem": "^0.30.0-beta.13",
+    "@compelem/compiler": "^0.30.0-beta.13",
     "@vitest/coverage-v8": "^2.1.9",
-    "@vitest/ui": "^2.1.9",
-    "jsdom": "^25.0.1",
-    "sass": "^1.102.0",
-    "typescript": "^5.5.4",
+    "exceljs": "^4.4.0",
+    "jsdom": "^30.1.3",
+    "myfx": "2.0.0",
+    "sass": "^1.106.1",
+    "typescript": "^5.9.3",
+    "uiik": "1.5.1",
     "vite": "^5.4.2",
-    "vite-plugin-compelem-css": "0.1.0",
-    "vite-plugin-compelem-strip-comments": "0.1.0",
+    "vite-plugin-compelem-css": "^0.2.0",
+    "vite-plugin-compelem-strip-comments": "^0.2.0",
     "vite-plugin-dts": "^4.2.1",
     "vitest": "^2.1.9"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ]
 }

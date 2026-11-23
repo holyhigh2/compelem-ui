@@ -1,7 +1,12 @@
-// compelem-router 的测试替身：Card.ts 等组件通过动态 import 引用它做路由跳转，
-// 测试环境无真实路由，仅提供可空转的最小实现。
-export function useRouter() {
-  return {
-    push: async (_to: string) => {}
-  }
+/**
+ * 库构建把 compelem-router 标记为 external，测试环境用这个空替身，
+ * 避免测试用例意外拉起路由实现。
+ */
+export const router = {
+  push: () => Promise.resolve(),
+  replace: () => Promise.resolve(),
+  back: () => {},
+  current: () => ''
 }
+
+export default router

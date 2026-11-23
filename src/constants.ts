@@ -157,7 +157,18 @@ const MetricsTime = {
         }
     }
 }
-export const STATS_METRICS: Record<string, Record<string, { k: string, v: Function }>> = {
+/**
+ * 列统计口径：v 是取值函数。入参是该列的原始值数组 —— 元素类型随列的
+ * DataType 而变（number[] / string[] / 日期串…），各 Metrics* 常量在自己的
+ * 形参上写窄类型。这里必须是 `any[]` 而不是 `unknown[]`：strictFunctionTypes
+ * 下形参逆变，`(dates: string[]) => …` 不能赋给 `(values: unknown[]) => …`。
+ * 返回值同样保持 `any`：消费侧（TableExtensionStats）把它当 string|number 用，
+ * 收口成 `string | number | undefined` 需要一并处理 `undefined` 落进
+ * `statsColValueMap` 的路径，属独立一轮改动。
+ */
+export type StatCalculator = (values: any[]) => any
+export type StatMetric = { k: string, v: StatCalculator }
+export const STATS_METRICS: Record<string, Record<string, StatMetric>> = {
     [DataType.Number]: MetricsNumber,
     [DataType.Date]: MetricsDate,
     [DataType.DateTime]: MetricsDate,
@@ -182,7 +193,18 @@ export const STATS_METRICS_BASE = {
 }
 export const EMPTY_TAG_LABEL_COLOR = "#a3a3a3"
 export const EMPTY_TAG_LABEL = '[空]'
-export const FilterFunctionMap: Record<string, Function> = {
+/**
+ * 行过滤器：判定某一行的某一列在给定的过滤条件下是否命中。
+ * condition 的形状随 FilterType 而变（文本 / 区间对象 / 标签数组…），
+ * 三个参数都是必填的：`notfilled` / `filled` 只看前两参，靠「形参可少」吸收。
+ */
+export type RowFilterFn = (row: Record<string, any>, prop: string, condition: string | Record<string, any> | string[]) => boolean
+/**
+ * 显示格式化器：把一条数据（树节点、列表项）映射成展示文本。
+ * 列表选择器与树共用这一契约（`setFormatter`），条目形状由使用者决定。
+ */
+export type FormatterFn = (item: Record<string, any>) => string
+export const FilterFunctionMap: Record<string, RowFilterFn> = {
     notfilled: (row: Record<string, any>, prop: string) => {
         let data = row[prop]
         return isBlank(data) || isNil(data) || fx.isNaN(data)
@@ -254,6 +276,70 @@ export const FilterFunctionMap: Record<string, Function> = {
 export enum KeyboardKey {
     Backspace = ' ',
     Esc = 'Escape'
+}
+
+// ============================================================================
+// 组件 API 词汇表（单一来源）
+// 组件声明 prop 取值/事件名/slot 名时应引用这里的枚举，而非自造字面量。
+// ============================================================================
+
+/** 尺寸档位：全部尺寸型组件共用（xs→xl），组件默认值一律 MD */
+export enum AppearanceSize {
+    XS = 'xs',
+    SM = 'sm',
+    MD = 'md',
+    LG = 'lg',
+    XL = 'xl'
+}
+
+/** 垂直间距档位（表单/列表类组件的 space 属性） */
+export enum AppearanceSpace {
+    //紧凑
+    Compact = 'compact',
+    //舒适
+    Default = 'default',
+    //宽松
+    Loose = 'loose'
+}
+
+/** 语义色：color 与（历史）type 属性共用的命名色，与 --ce-color-* 令牌一一对应 */
+export enum SemanticColor {
+    Primary = 'primary',
+    Info = 'info',
+    Success = 'success',
+    Warning = 'warning',
+    Error = 'error',
+    Text = 'text'
+}
+
+/**
+ * 通用事件名词汇表。
+ * Change = 用户提交/确认后的值变化；Input = 输入过程中的实时值；
+ * Update 前缀（update:<prop>）= model prop 的双向同步，不应用于用户动作语义；
+ * Close = 弹层关闭（含用户取消）；Confirm / Cancel = 需要显式二选一操作的确认层。
+ */
+export enum ComponentEvent {
+    Change = 'change',
+    Input = 'input',
+    Focus = 'focus',
+    Blur = 'blur',
+    Clear = 'clear',
+    Close = 'close',
+    Confirm = 'confirm',
+    Cancel = 'cancel',
+    UpdatePrefix = 'update:',
+    UpdateValue = 'update:value'
+}
+
+/** 通用 slot 名词汇表；方向型内容优先 Prepend/Append（见规范文档） */
+export enum ComponentSlot {
+    Default = 'default',
+    Prepend = 'prepend',
+    Append = 'append',
+    Header = 'header',
+    Footer = 'footer',
+    Label = 'label',
+    Icon = 'icon'
 }
 
 export const Operators = [
