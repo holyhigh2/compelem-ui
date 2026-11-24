@@ -56,6 +56,8 @@ export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
          * 没有 `rowHeight` prop 的宿主（YearMonthPanel / ColorPicker）读到 undefined，同样不覆盖。
          */
         syncVRowHeight() {
+            const rowHeightType = (this as any).__rowHeightType
+            if (rowHeightType && rowHeightType !== 'custom') return
             const rh = (this as any).rowHeight
             if (rh > 0 && this.vRowHeight !== rh) this.vRowHeight = rh
         }

@@ -1,6 +1,6 @@
 {
   "name": "compelem-ui",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A UI component library built with compelem, myfx and uiik",
   "keywords": [
     "web components",

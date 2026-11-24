@@ -371,7 +371,7 @@ export class Tree extends TreeStructured(Virtualized(CompElem<any>)) {
             ${forEach(range(this.vCachedRows), (data, i) => i, (data, i) => h`
             <li part="node" @click="${this.onClick}" @contextmenu="${this.onContextMenu}" data-row-index="${i}" ${styles({ transform: `translateY(${i * this.rowHeight}px)` })}
                 class="ce-tree-node" ${classes({
-      [`__hover-${this.clickType}`]: this.hover,
+      [`ce-tree-hover-${this.clickType}`]: this.hover,
       "ce-tree-round": this.round,
       "ce-tree-indent-line": this.showIndentLine || this.hasAttribute('show-indent-line'),
     })}

@@ -406,6 +406,8 @@ export class Column extends Field {
           justify = 'center'
       }
       this.tableRef.style.setProperty('--column-align-justify-' + kebabCase(this.prop.replaceAll('.', '-')), justify)
+      this.tableRef.style.setProperty('--column-align-flex-' + kebabCase(this.prop.replaceAll('.', '-')),
+        this.align === 'right' ? 'flex-end' : this.align === 'center' ? 'center' : 'flex-start')
     }
   }
   __setColumnWidth() {

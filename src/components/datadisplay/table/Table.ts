@@ -1,6 +1,6 @@
-import { classes, CompElem, computed, css, csscope, Csscope, CssHelper, debounced, emits, forEach, h, html, ifElse, ifTrue, onced, prop, query, QueryCache, state, tag, Template, watch } from "compelem";
 import type { CssTemplate } from "compelem";
-import { alphaIndex, alphaLabel, camelCase, clone, cloneDeep, closest, debounce, each, eachRight, filter, find, findIndex, flatDeep, flatMap, formatDate, formatNumber, fval, get, groupBy, isArray, isBlank, isDefined, isEmpty, isNil, isNumeric, isObject, isString, isUndefined, kebabCase, keys, last, map, padStart, randi, range, set, size, some, sortTree, startsWith, take, takeRight, test, upperCase, walkTree } from "myfx";
+import { classes, CompElem, computed, css, csscope, Csscope, CssHelper, debounced, emits, forEach, h, html, ifElse, ifTrue, onced, prop, query, QueryCache, state, tag, Template, watch } from "compelem";
+import { alphaIndex, alphaLabel, camelCase, clone, cloneDeep, closest, debounce, each, eachRight, filter, find, findIndex, flatDeep, flatMap, formatDate, formatNumber, fval, get, groupBy, isArray, isBlank, isDefined, isEmpty, isNil, isNumeric, isObject, isString, isUndefined, kebabCase, keys, last, map, randi, range, set, size, some, sortTree, startsWith, take, takeRight, test, walkTree } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 import { DataType, EMPTY_TAG_LABEL_COLOR, RandomColors, SortType } from "../../../constants";
 import { FieldContainer, FieldContainerEvents } from "../../../mixins/FieldContainer";
@@ -627,6 +627,19 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
       if (!nv && this._firstFilled) this.__fillCells()
     })
   }
+  /**
+   * 宿主显式改 `rowHeight` prop 时，把档位交回 `custom`
+   */
+  @watch('rowHeight')
+  watchRowHeightProp() {
+    if (this.__rowHeightType && this.__rowHeightType !== 'custom') {
+      this.__rowHeightType = 'custom'
+    }
+    this.syncVRowHeight()
+    this.nextTick(() => {
+      this.resetVirtualList()
+    })
+  }
   @watch(['rowHeight', 'vRowHeight'])
   watchRowHeight(v: number) {
     this.nextTick(() => {
@@ -661,10 +674,6 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
 
     this._lastDataSize = size(v)
 
-    // trackIndex（序号列 / 选择列「跟踪原行号」）依赖 rowKey → 原始下标的索引。
-    // compelem 0.30 起 @prop 不再消费 hasChanged（信号相等性恒为 Object.is），
-    // 原先挂在 data.hasChanged 里的重建逻辑因此从未执行，__traceMap 恒为空、
-    // 序号列算出 NaN。改为跟随 innerData 变化重建。
     if (this.rowKey && isArray(v)) {
       const rows = v as Array<Record<string, any>>
       this.__traceMap.clear()
@@ -762,6 +771,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
           })
 
           if (added) {
+            content.classList.add('has-cell-slot')
             content.appendChild(fragment)
           }
         })
@@ -1435,6 +1445,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
           })
 
           if (added) {
+            content.classList.add('has-cell-slot')
             content.appendChild(fragment)
           }
         }
@@ -1816,6 +1827,16 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
           [name="text"]{
             align-items: var(--column-valign-${kebabCase(c.prop.replaceAll('.', '-'))}, center);
           }
+        }
+        .ce-table-cell[column="${c.prop}"] .ce-table-cell-content.has-cell-slot{
+          display: flex;
+          align-items: center;
+          justify-content: var(--column-align-flex-${kebabCase(c.prop.replaceAll('.', '-'))}, flex-start);
+        }
+        .ce-table-cell[column="${c.prop}"] .ce-table-cell-content.has-cell-slot > *{
+          flex: 0 1 auto;
+          min-width: 0;
+          max-width: 100%;
         }
         `
       }
@@ -2555,16 +2576,8 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
     }
     this.__initDefaultHiddenList(defaultHiddenList)
     this.allColumns = [...this.#fxLCols, ...this.#scrollCols, ...this.#fxRCols]
-    /*
-     * 分槽区刚变过 ⇒ 合并的隐藏策略必须按新区界重算。
-     * 跨冻结边界的合并不能用 display:none（会把同槽其余列挤位），改走
-     * `keep-span-cell`；而这份判定是在 `__getSpanCellStyle()` 里按
-     * `fixedLeftColumns / fixedRightColumns` 算的，只能在**分槽确定之后**算。
-     * 预览态正是"先设 data（还没冻结）→ 再 fixColumns"，不在这里补一次，
-     * 合并就会按旧区界（全部同槽）渲染 —— 表现为合并点之后整行左移。
-     * 见 TableExtensionSpan.__refreshSpanStyle 的注释。
-     */
-    ;(this as any).__refreshSpanStyle?.()
+
+      ; (this as any).__refreshSpanStyle?.()
     //default hide
     this.hideColumns(this._hiddenFieldList, cancelEmit)
     //fit
