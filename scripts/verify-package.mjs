@@ -49,12 +49,45 @@ for (const field of ['main', 'module', 'types']) {
   if (pkg[field]) checkTarget(`./${pkg[field].replace(/^\.\//, '')}`, field)
 }
 
-// 子路径类型声明必须各自存在，不能全部复用 dist/index.d.ts
-const subpathEntries = Object.entries(pkg.exports ?? {}).filter(([k]) => k.startsWith('./ce-'))
-for (const [key, value] of subpathEntries) {
-  const types = typeof value === 'object' ? value.types : undefined
-  if (!types) errors.push(`${key}: 缺少 types`)
-  else if (types === './dist/index.d.ts') errors.push(`${key}: types 复用了总声明 dist/index.d.ts`)
+// 组件子路径统一由通配规则映射到各自独立的 JS / 声明文件。
+const componentExport = pkg.exports?.['./ce-*']
+if (!componentExport || typeof componentExport !== 'object' || Array.isArray(componentExport)) {
+  errors.push('./ce-*: 缺少组件通配导出')
+} else {
+  if (componentExport.types !== './dist/entries/ce-*.d.ts') {
+    errors.push('./ce-*: types 必须映射到 ./dist/entries/ce-*.d.ts')
+  }
+  if (componentExport.import !== './dist/ce-*.es.js') {
+    errors.push('./ce-*: import 必须映射到 ./dist/ce-*.es.js')
+  }
+}
+const explicitComponents = Object.keys(pkg.exports ?? {}).filter(k => k.startsWith('./ce-') && k !== './ce-*')
+if (explicitComponents.length) {
+  errors.push(`组件导出仍包含显式清单，应使用 ./ce-*: ${explicitComponents.join(', ')}`)
+}
+
+const manifestFile = join(root, '.generated/entries/manifest.json')
+let componentTags = []
+if (!existsSync(manifestFile)) {
+  errors.push('.generated/entries/manifest.json 不存在，请先执行 npm run build:lib')
+} else {
+  try {
+    const { components } = JSON.parse(readFileSync(manifestFile, 'utf8'))
+    componentTags = components.map(c => c.tag)
+    for (const tag of componentTags) {
+      checkTarget(`./dist/${tag}.es.js`, tag)
+      checkTarget(`./dist/entries/${tag}.d.ts`, `${tag} types`)
+      const declaration = join(root, 'dist/entries', `${tag}.d.ts`)
+      if (existsSync(declaration)) {
+        const content = readFileSync(declaration, 'utf8')
+        if (/from\s*['"][^'"]+\.ts['"]/.test(content)) {
+          errors.push(`${tag}: 入口声明仍引用 .ts 源码`)
+        }
+      }
+    }
+  } catch (error) {
+    errors.push(`无法读取构建入口清单: ${error.message}`)
+  }
 }
 
 // 声明文件里不允许重复的 `export *`
@@ -97,9 +130,12 @@ if (!existsSync(distDir)) {
   const jsFiles = readdirSync(distDir).filter(f => f.endsWith('.es.js'))
   const entryJs = jsFiles.filter(f => f.startsWith('ce-'))
   if (entryJs.length === 0) errors.push('dist/ 中没有 ce-*.es.js 子路径产物')
+  if (componentTags.length && entryJs.length !== componentTags.length) {
+    errors.push(`组件 JS 数量(${entryJs.length})与入口清单(${componentTags.length})不一致`)
+  }
   if ((pkg.files ?? []).every(f => f !== 'dist')) errors.push('package.json 的 files 未包含 dist')
 
-  console.log(`[verify-pkg] 子路径 JS: ${entryJs.length}，声明文件: ${dtsCount}，exports: ${Object.keys(pkg.exports ?? {}).length}`)
+  console.log(`[verify-pkg] 子路径 JS: ${entryJs.length}，声明文件: ${dtsCount}，exports 规则: ${Object.keys(pkg.exports ?? {}).length}`)
 }
 
 if (warnings.length) {

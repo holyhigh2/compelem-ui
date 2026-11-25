@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import '../src/entries/ce-portal'
+import '../.generated/entries/ce-portal'
 import { Portal } from '../src/components/datadisplay/portal/Portal'
 import { normalizeLayout, resolveColumns } from '../src/components/datadisplay/portal/layout'
 

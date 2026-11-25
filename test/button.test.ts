@@ -1,8 +1,10 @@
 ﻿import { afterEach, describe, expect, it } from 'vitest'
-import '../src/entries/ce-button'
-import '../src/entries/ce-button-group'
-import '../src/entries/ce-icon'
-import '../src/entries/ce-progress-circular'
+import { Close } from '../src/icons/icons'
+import { getIcon } from '../src/icons/registry'
+import '../.generated/entries/ce-button'
+import '../.generated/entries/ce-button-group'
+import '../.generated/entries/ce-icon'
+import '../.generated/entries/ce-progress-circular'
 import { nextFrame } from './helpers'
 
 const flush = async (times = 3) => {
@@ -89,6 +91,26 @@ describe('ce-button 行为', () => {
     const plain = mount(`<ce-button>删</ce-button>`)
     await flush()
     expect(plain.querySelector('ce-button')!.shadowRoot!.querySelector('[part="icon"]')).toBeNull()
+  })
+
+  it('图标工厂无需注册即可渲染，字符串图标 API 保持兼容', async () => {
+    expect(getIcon('Close')).toBeUndefined()
+    const host = mount('<ce-button>删</ce-button>')
+    const btn = host.querySelector('ce-button') as any
+    btn.icon = Close
+    btn.appendIcon = Close
+    await flush()
+    const icons = btn.shadowRoot!.querySelectorAll('ce-icon')
+    expect(icons).toHaveLength(2)
+    for (const icon of icons) {
+      expect((icon as any).svg).toBe(Close)
+      expect(icon.querySelector('svg')).toBeTruthy()
+    }
+
+    const legacy = mount('<ce-button icon="c-svg-close">删</ce-button>')
+    await flush()
+    const legacyIcon = legacy.querySelector('ce-button')!.shadowRoot!.querySelector('ce-icon')!
+    expect((legacyIcon as any).svg).toBe('c-svg-close')
   })
 
   it('type 默认 button，避免在表单里被当成提交按钮', async () => {

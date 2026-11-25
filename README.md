@@ -107,14 +107,15 @@ npm run build:debug # unminified + sourcemap build → dist-debug/
 npm run typecheck   # tsc --noEmit
 npm test            # vitest
 npm run test:coverage
-npm run gen            # regenerate entries + types + exports
-npm run check          # validate generated artifacts + contracts/fonts/colors
+npm run gen            # regenerate the tag/event type map
+npm run check          # validate generated types + contracts/fonts/colors
 npm run verify:pkg     # verify dist targets / d.ts after a build
 ```
 
-All generators live in `scripts/gen.mjs`, all contract and debt checks in `scripts/check.mjs`.
+All source-derived generators live in `scripts/gen.mjs`, all contract and debt checks in `scripts/check.mjs`.
+Component entry sources are generated into ignored `.generated/entries` by `npm run build:lib`; they are not committed or shipped. Published `ce-*` subpaths use one wildcard `exports` rule, so adding a component does not rewrite `package.json`.
 For a single step, pass the target directly, e.g. `node scripts/gen.mjs types`,
-`node scripts/check.mjs fonts`, `node scripts/gen.mjs all --check`.
+`node scripts/check.mjs fonts`, `node scripts/gen.mjs types --check`.
 
 ### Build output (`dist/`)
 
@@ -122,13 +123,12 @@ For a single step, pass the target directly, e.g. `node scripts/gen.mjs types`,
 - `ce-<tag>.es.js` — 103 per-component self-registering entries
 - `icons.es.js` — icon factories
 - `index.css` — design tokens + reset (must be imported explicitly)
-- `index.d.ts`, `ce-<tag>.d.ts`, `entries/*.d.ts` — TypeScript declarations
+- `index.d.ts`, `entries/ce-<tag>.d.ts` — TypeScript declarations
 - `*.js` chunks — shared implementation, hashed by content
 
 ### Publishing
 
 ```bash
-npm run gen
 npm run check
 npm run test:coverage
 npm run build:lib

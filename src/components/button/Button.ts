@@ -5,6 +5,7 @@ import { APPEARANCE_LAYER } from "../../base/Appearance";
 import { AriaElem } from "../../base/AriaElem";
 import { ripples } from "../../directives/ripples/Ripples";
 import { IActivatable } from "../../interfaces/IActivatable";
+import type { IconFactory } from "../../icons/registry";
 import style from "./btn.scss?tmpl";
 /**
  * 按钮
@@ -20,8 +21,8 @@ import style from "./btn.scss?tmpl";
  *  width {string} 宽度，默认auto
  *  size {string} 尺寸可选 lg/md/sm，默认md
  *  iconSize {string} 同size，用于定义icon大小。为空时与按钮文字同号（1em）
- *  icon {string} 图标名称，支持 c-svg-xx
- *  append-icon {string} 图标名称，支持 c-svg-xx
+ *  icon {string|function} 图标名称（支持 c-svg-xx）或图标工厂
+ *  append-icon {string|function} 图标名称（支持 c-svg-xx）或图标工厂
  *  stacked {boolean} 堆叠模式，默认false
  *  value {string} 用于在ButtonGroup中选中时的唯一值，如果未设置则使用 'button_'+按钮在group中的序号
  *  circle {boolean} 是否圆形按钮，默认false
@@ -47,8 +48,8 @@ export class Button extends AriaElem implements IActivatable {
   @prop block = false;
   @prop circle = false;
   @prop type = "button";
-  @prop icon = "";
-  @prop appendIcon = "";
+  @prop({ type: [String, Function] }) icon: string | IconFactory = "";
+  @prop({ type: [String, Function] }) appendIcon: string | IconFactory = "";
   @prop iconSize = '';
   @prop({ type: [Boolean, String] }) ripple: boolean | string = true;
   @prop stacked = false
@@ -119,7 +120,7 @@ export class Button extends AriaElem implements IActivatable {
         ${ifTrue(!isBlank(this.icon), () => h`
           <ce-icon
             part="icon"
-            svg="${this.icon}"
+            .svg="${this.icon}"
             size="${this.iconSize}"
           >
           </ce-icon>
@@ -130,7 +131,7 @@ export class Button extends AriaElem implements IActivatable {
         
         ${ifTrue(!isBlank(this.appendIcon), () => h`
           <ce-icon
-            svg="${this.appendIcon}"
+            .svg="${this.appendIcon}"
             size="${this.iconSize}"
           >
           </ce-icon>

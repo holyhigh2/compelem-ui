@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import '../src/entries/ce-skeleton-loader'
+import '../.generated/entries/ce-skeleton-loader'
 
 const flush = async (times = 4) => {
   for (let i = 0; i < times; i++) await new Promise(r => setTimeout(r, 30))

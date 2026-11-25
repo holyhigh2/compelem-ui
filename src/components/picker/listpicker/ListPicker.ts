@@ -241,7 +241,7 @@ export class ListPicker extends Virtualized(AppearanceElem) {
               <ce-list-item hoverable appearance="pale" style="height:${this.rowHeight}px;font-size:var(--ce-font-sm);padding-inline:var(--ce-spacing-md)">
                 <span class="ce-list-picker-label"></span>
                 <span class="ce-list-picker-check-icon" slot="append">
-                  <ce-icon svg="c-svg-check" size="lg"></ce-icon>
+                  <ce-icon .svg="${Check}" size="lg"></ce-icon>
                 </span>
               </ce-list-item>
             `)}

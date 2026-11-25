@@ -1,6 +1,7 @@
 import { bind, computed, css, csscope, Csscope, emits, forEach, h, html, ifElse, ifTrue, prop, query, show, state, tag, Template, watch } from "compelem";
 import { isBlank, isEmpty, isString, size, slice, trim } from "myfx";
 import { nodesToHTML } from "../../../utils/utils";
+import { Close } from "../../../icons/icons";
 
 import appearanceStyle from "../../../base/appearance.scss?tmpl";
 import { formStyleSheet } from "../styleSheets";
@@ -161,7 +162,7 @@ export class InputTag extends BaseInput {
         </div>
         ${this.clearable}
         <span slot="append" class="ce-input-floating is-not-empty" >
-          <ce-icon class="ce-input-close" size="sm" svg="c-svg-close" @mousedown.stop @click.prevent="${this.onClear}" ${show(this.clearable && !isEmpty(this.__innerValue))}></ce-icon>
+          <ce-icon class="ce-input-close" size="sm" .svg="${Close}" @mousedown.stop @click.prevent="${this.onClear}" ${show(this.clearable && !isEmpty(this.__innerValue))}></ce-icon>
           <slot name="append"></slot>
         </span>
       </ce-input>

@@ -2,6 +2,7 @@ import { CompElem, csscope, Csscope, emits, h, ifTrue, prop, tag, Template, watc
 import tooltipStyle from "../tooltip/style.scss?tmpl";
 import style from "./style.scss?tmpl";
 import { captureFocus, restoreFocus } from "../overlay/layerHost";
+import { Close } from "../../../icons/icons";
 /**
  * 对话框容器，用于弹出方式打断提醒操作者
  * @attrs
@@ -101,7 +102,7 @@ export class Dialog extends CompElem {
         <div class="ce-dialog-surface" role="dialog" aria-modal="${this.backdrop ? 'true' : 'false'}" tabindex="-1">
           ${ifTrue(this.showClose, () => h`<ce-icon
             class="ce-dialog-close"
-            svg="c-svg-close"
+            .svg="${Close}"
             @click="${this.onClose}"
           ></ce-icon>`)}
           <slot></slot>

@@ -2,7 +2,7 @@ import { CompElem, createRef, css, csscope, Csscope, debounced, forEach, h, ifEl
 import { assign, clone, compact, each, except, filter, find, findIndex, first, flatMap, formatDate, get, groupBy, includes, isArray, isBlank, isEmpty, isEqual, isNaN, isObject, isString, last, map, parseJSON, remove, set, split, union, uuid } from "myfx";
 import { ControlBox } from "../../../base/ControlBox";
 import { AlignType, DataType, FilterType, Operators, SortType, STATS_METRICS, STATS_METRICS_BASE } from "../../../constants";
-import { Check, EyeClosed, Group, Pin, SortDown, SortUp } from "../../../icons/icons";
+import { AlignCenter, AlignCenterBlock, AlignJustify, AlignLeftBlock, AlignRightBlock, CaretRight, Check, Close, EyeClosed, FillColor, Group, Pin, Plus, SortDown, SortUp } from "../../../icons/icons";
 import { Input } from "../../form/input/Input";
 import { Overlay } from "../../overlays/overlay/Overlay";
 import { ListPicker } from "../../picker/listpicker/ListPicker";
@@ -297,11 +297,11 @@ export class ColumnConfigPane extends CompElem {
       [() => true, () => h`<ce-input ${model(condi.values)} style="width: 10rem;min-width: 10rem;" size="md" space="default" maxlength="20" clearable ></ce-input>`]
     ])}
               </span>
-              <ce-button slot="append" prop="${condi.id}" appearance="subtle" size="md" @click="${this.delFillColorCondition}" icon="c-svg-close"></ce-button>
+              <ce-button slot="append" prop="${condi.id}" appearance="subtle" size="md" @click="${this.delFillColorCondition}" .icon="${Close}"></ce-button>
             </ce-list-item>
           `)}
         </ce-list>
-        <ce-button slot="actions" appearance="pale" color="gray" size="sm" style="margin-top: var(--ce-spacing-md);" icon="c-svg-plus" @click="${this.addFillCondition}">添加条件</ce-button>
+        <ce-button slot="actions" appearance="pale" color="gray" size="sm" style="margin-top: var(--ce-spacing-md);" .icon="${Plus}" @click="${this.addFillCondition}">添加条件</ce-button>
       </ce-card>
     `)}
     </div>
@@ -386,7 +386,7 @@ export class ColumnConfigPane extends CompElem {
         <ce-list nav gap=".2rem" selectable multiple style="min-width: 10rem;padding-top: var(--ce-spacing-xs)" @select="${this.onSettings}">
           ${ifTrue(this.colorable, () => h`
             <ce-list-item selectable="false" value="${Operation.FillColor}" hoverable appearance="pale" style="padding-inline:var(--ce-spacing-md)">
-              <ce-icon svg="c-svg-fill-color" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
+              <ce-icon .svg="${FillColor}" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
               整列填色
             </ce-list-item>
             <ce-divider color="Gainsboro"></ce-divider>
@@ -410,9 +410,9 @@ export class ColumnConfigPane extends CompElem {
             隐藏
           </ce-list-item>
           <ce-list-item ripple="false" value="${Operation.Align}" hoverable style="padding-inline:var(--ce-spacing-md)" @click.capture.stop="${this.openAlignPane}">
-            <ce-icon svg="c-svg-align-center" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
+            <ce-icon .svg="${AlignCenter}" size="xs" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>
             对齐方式
-            <ce-icon slot="append" svg="c-svg-chevron-right" size="sm" style="color: var(--ce-color-text);"></ce-icon>
+            <ce-icon slot="append" .svg="${CaretRight}" size="sm" style="color: var(--ce-color-text);"></ce-icon>
           </ce-list-item>
         </ce-list>
       </ce-card>
@@ -426,19 +426,19 @@ export class ColumnConfigPane extends CompElem {
       <ce-card class="config-card" style="min-width: 14rem;max-width: 16rem;" ref="${this.colAlignPane}" >
         <ce-list nav gap=".2rem" class="align-list" selectable style="min-width: 10rem;padding: var(--ce-spacing-xs)" @select="${this.onAlignChange}">
           <ce-list-item value="${AlignType.Justify}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Justify}" style="padding-inline:var(--ce-spacing-md)">
-            <ce-icon svg="c-svg-align-justify" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>默认
+            <ce-icon .svg="${AlignJustify}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>默认
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Justify)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
           <ce-list-item value="${AlignType.Left}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Left}" style="padding-inline:var(--ce-spacing-md)">
-            <ce-icon svg="c-svg-align-left-block" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居左
+            <ce-icon .svg="${AlignLeftBlock}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居左
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Left)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
           <ce-list-item value="${AlignType.Center}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Center}" style="padding-inline:var(--ce-spacing-md)">
-            <ce-icon svg="c-svg-align-center-block" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居中
+            <ce-icon .svg="${AlignCenterBlock}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居中
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Center)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
           <ce-list-item value="${AlignType.Right}" hoverable appearance="pale" ?active="${this.colAlignType === AlignType.Right}" style="padding-inline:var(--ce-spacing-md)">
-            <ce-icon svg="c-svg-align-right-block" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居右
+            <ce-icon .svg="${AlignRightBlock}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>居右
             <ce-icon slot="append" ${show(this.colAlignType === AlignType.Right)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
         </ce-list>

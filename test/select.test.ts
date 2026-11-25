@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import '../src/entries/ce-select'
-import '../src/entries/ce-input-tag'
-import '../src/entries/ce-input'
-import '../src/entries/ce-overlay'
-import '../src/entries/ce-list-picker'
-import '../src/entries/ce-tag'
-import '../src/entries/ce-icon'
-import '../src/entries/ce-progress-circular'
+import '../.generated/entries/ce-select'
+import '../.generated/entries/ce-input-tag'
+import '../.generated/entries/ce-input'
+import '../.generated/entries/ce-overlay'
+import '../.generated/entries/ce-list-picker'
+import '../.generated/entries/ce-tag'
+import '../.generated/entries/ce-icon'
+import '../.generated/entries/ce-progress-circular'
 
 const flush = async (times = 5) => {
   for (let i = 0; i < times; i++) await new Promise(r => setTimeout(r, 30))

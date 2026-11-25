@@ -5,7 +5,7 @@ import { tooltip } from "../../../directives/tooltip/Tooltip";
 import { Field } from "../../base/Field";
 import { Button } from "../../button/Button";
 import { Overlay } from "../../overlays/overlay/Overlay";
-import { SortDown, SortUp } from "../../../icons/icons";
+import { BrushBroad, CaretRight, Check, Close, Drag, EyeClosed, FilterListLight, Plus, Sort, SortDown, SortUp } from "../../../icons/icons";
 import { SortType } from "../../../constants";
 import { Board } from "./Board";
 enum Control {
@@ -118,12 +118,12 @@ export class BoardBar extends BarActions {
         <slot></slot>
       </span>
       <span slot="${!this.reverse ? '' : 'left'}" ${show(this.selectionSize < 1 && this.showControls)} style="display:flex;column-gap: var(--ce-spacing-sm);align-items: center;">
-        <ce-button ${show(this.showControlField)} appearance="${!this.isAllChecked ? 'pale' : 'subtle'}" icon="c-svg-eye-closed" size="${this.size}" color="${!this.isAllChecked ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openField}">隐藏字段</ce-button>
-        <ce-button ${show(this.showControlFilter && !isEmpty(this.filterableFields))} appearance="${this.filterList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-filter-list-light" size="${this.size}" color="${this.filterList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFilter}">筛选</ce-button>
-        <ce-button ${show(this.showControlSort && !isEmpty(this.sortableFields))} .appearance="${this.sortList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-sort" size="${this.size}" .color="${this.sortList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}"  @click="${this.openSort}">
+        <ce-button ${show(this.showControlField)} appearance="${!this.isAllChecked ? 'pale' : 'subtle'}" .icon="${EyeClosed}" size="${this.size}" color="${!this.isAllChecked ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openField}">隐藏字段</ce-button>
+        <ce-button ${show(this.showControlFilter && !isEmpty(this.filterableFields))} appearance="${this.filterList.length > 0 ? 'pale' : 'subtle'}" .icon="${FilterListLight}" size="${this.size}" color="${this.filterList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFilter}">筛选</ce-button>
+        <ce-button ${show(this.showControlSort && !isEmpty(this.sortableFields))} .appearance="${this.sortList.length > 0 ? 'pale' : 'subtle'}" .icon="${Sort}" size="${this.size}" .color="${this.sortList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}"  @click="${this.openSort}">
           <span ${show(this.sortList.length > 0)} style="margin-right:var(--ce-spacing-sm);">${this.sortList.length}</span> 排序
         </ce-button>
-        <ce-button ${show(this.showControlAppearance)} appearance="subtle" icon="c-svg-brush-broad" size="${this.size}" @click="${this.openAppearance}" ${tooltip({ content: '外观', placement: 'top' })}></ce-button>
+        <ce-button ${show(this.showControlAppearance)} appearance="subtle" .icon="${BrushBroad}" size="${this.size}" @click="${this.openAppearance}" ${tooltip({ content: '外观', placement: 'top' })}></ce-button>
       </span>
     </ce-toolbar>
 
@@ -170,7 +170,7 @@ export class BoardBar extends BarActions {
                 <ce-list gap=".2rem" style="min-width: 10rem;padding: var(--ce-spacing-xs);">
                     ${forEach(this.allFields, f => f.prop, f => h`
                     <ce-list-item ripple="false" appearance="pale" style="padding-inline:0" ?unmovable="${!f.movable}">
-                    <ce-icon svg="c-svg-drag" color="Gainsboro" size="xs" ${styles(['cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' }])}></ce-icon>
+                    <ce-icon .svg="${Drag}" color="Gainsboro" size="xs" ${styles(['cursor:move;padding-right:var(--ce-spacing-md);', { visibility: f.movable ? 'visible' : 'hidden' }])}></ce-icon>
                     <span style="overflow: hidden;text-overflow: ellipsis;">${f.name}</span>
                     <ce-toggle slot="append" ${show(f.hidable)} ?disabled="${!f.hidable}" 
                     .value="${!this.hiddenList.includes(f.prop)}" 
@@ -207,11 +207,11 @@ export class BoardBar extends BarActions {
                         <ce-icon slot="inactive" .svg="${SortDown}" size="lg" style="color: var(--ce-color-text-desc);"></ce-icon>
                     </ce-toggle>
                     </div>
-                    <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delSort}" icon="c-svg-close"></ce-button>
+                    <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delSort}" .icon="${Close}"></ce-button>
                 </ce-list-item>
                 `)}
             </ce-list>
-            <ce-button slot="actions" appearance="pale" color="gray" ${show(this.sortList.length < BarActions.MAX_SORT_COUNT)} size="sm" style="margin-top: var(--ce-spacing-sm);" icon="c-svg-plus" @click="${this.openSortFieldPanel}">字段</ce-button>
+            <ce-button slot="actions" appearance="pale" color="gray" ${show(this.sortList.length < BarActions.MAX_SORT_COUNT)} size="sm" style="margin-top: var(--ce-spacing-sm);" .icon="${Plus}" @click="${this.openSortFieldPanel}">字段</ce-button>
             </ce-card>
             `)}
             </div>
@@ -226,7 +226,7 @@ export class BoardBar extends BarActions {
                     ${forEach(this.sortableFields, f => f.value, f => h`
                     <ce-list-item ripple="false" ?active="${this.sortList.some(x => x.prop == f.value)}" hoverable appearance="pale" value="${f.value}">
                     <span style="text-overflow: ellipsis;overflow: hidden;">${f.label}</span>
-                    <ce-icon slot="append" ${show(this.sortList.some(x => x.prop == f.value))} svg="c-svg-check" size="md" style="color: var(--ce-color-primary)"></ce-icon>
+                    <ce-icon slot="append" ${show(this.sortList.some(x => x.prop == f.value))} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
                     </ce-list-item>
                     `)}
                 </ce-list>
@@ -251,7 +251,7 @@ export class BoardBar extends BarActions {
                     ${forEach(this.filterableFields, (s, i) => i, (s, i) => h`
                     <ce-list-item ripple="false" value="${s.value}" data-type="${s.dataType}" hoverable style="padding-inline:var(--ce-spacing-md)">
                         <span style="overflow: hidden;text-overflow: ellipsis;">${s.label}</span> &nbsp;&nbsp; <span style="pointer-events:none;font-size:var(--ce-font-sm);color: var(--ce-color-text-desc);overflow: hidden;text-overflow: ellipsis;">${this.filterList.find(x => x.prop == s.value)?.search}</span>
-                        <ce-icon slot="append" svg="c-svg-chevron-right" style="color: var(--ce-color-text);"></ce-icon>
+                        <ce-icon slot="append" .svg="${CaretRight}" style="color: var(--ce-color-text);"></ce-icon>
                     </ce-list-item>
                     `)}
                 </ce-list>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import '../src/entries/ce-menu'
-import '../src/entries/ce-context-menu'
+import '../.generated/entries/ce-menu'
+import '../.generated/entries/ce-context-menu'
 
 /**
  * `ce-context-menu` 的关键约束（都是踩过的坑，不是风格偏好）：

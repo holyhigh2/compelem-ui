@@ -1,6 +1,8 @@
 import { classes, CompElem, computed, css, csscope, Csscope, debounced, emits, forEach, h, prop, query, state, styles, tag, Template, watch } from "compelem";
 import { arrayToTree, assign, concat, each, filterTree, findIndex, findTreeNode, get, isEmpty, isUndefined, map, range, remove, size, tail, test, toArray, trim, walkTree } from "myfx";
 import { getBox } from "uiik";
+import { CaretDown, CaretRight, CaretUp, Drag, MoveIn } from "../../../icons/icons";
+import type { IconFactory } from "../../../icons/registry";
 import { CLASS_EXPAND, TreeStructured } from "../../../mixins/TreeStructured";
 import { Virtualized } from "../../../mixins/Virtualized";
 import { isVisible, nodesToHTML } from "../../../utils/utils";
@@ -60,7 +62,7 @@ export enum CheckType {
  *  showCheck {boolean} 显示复选框，默认false
  *  checkType {string} 选择模式，leaf/independent/cascade。默认cascade
  *  showDrag {boolean} 是否可拖动，默认false
- *  caretIcon {string} 折叠图标名（c-svg-xxx），默认 c-svg-caret-right
+ *  caretIcon {string|function} 折叠图标名（c-svg-xxx）或图标工厂，默认内置 CaretRight
  *  accordion {boolean} 手风琴模式，开启后同级只能展开一棵子树。默认false 【未实现】
  *  search {string} 搜索关键字，可过滤显示节点
  * 
@@ -118,16 +120,16 @@ export class Tree extends TreeStructured(Virtualized(CompElem<any>)) {
 
   @prop showDrag = false;
   @prop accordion = false;
-  @prop caretIcon = 'c-svg-caret-right';
+  @prop({ type: [String, Function] }) caretIcon: string | IconFactory = CaretRight;
 
   /**
-   * 实际的折叠图标名。
+   * 实际的折叠图标。
    *
    * `@prop` 在 dev 构建下会被类字段初始化器遮蔽（见 `showCheck` 同款注释），
    * 属性赋值读不到，因此 `caret-icon` 属性优先、prop 兜底。
    */
-  get caretIconName(): string {
-    return this.getAttribute('caret-icon') || this.caretIcon || 'c-svg-caret-right';
+  get caretIconName(): string | IconFactory {
+    return this.getAttribute('caret-icon') || this.caretIcon || CaretRight;
   }
 
   @state expandedIdMap: Record<string, boolean> = {}
@@ -380,9 +382,9 @@ export class Tree extends TreeStructured(Virtualized(CompElem<any>)) {
                   @mousedown="${this.onNodeContentMouseDown}"
                   class="ce-tree-node-content"
                 >
-                  <span class="ce-tree-caret" part=""><ce-icon style="display:none" svg="${this.caretIconName}"></ce-icon></span>
+                  <span class="ce-tree-caret" part=""><ce-icon style="display:none" .svg="${this.caretIconName}"></ce-icon></span>
                   <span class="ce-tree-checkbox"><ce-checkbox @click.stop @change="${this.onCheck}"></ce-checkbox></span>
-                  <span class="ce-tree-dragflag" style="display:none" @mousedown="${this.onDragEmit}"><ce-icon svg="c-svg-drag"></ce-icon></span>
+                  <span class="ce-tree-dragflag" style="display:none" @mousedown="${this.onDragEmit}"><ce-icon .svg="${Drag}"></ce-icon></span>
                   <span class="ce-tree-label" part="node-label">
                   </span>
                 </div>
@@ -390,9 +392,9 @@ export class Tree extends TreeStructured(Virtualized(CompElem<any>)) {
           </ul>
         </ce-scroller>
       <div class="ce-tree-drag-bar" ?round="${this.round}" @dragenter="${this.onDragbarEnter}" @dragover.prevent @drop="${this.onDrop}">
-        <div class="ce-tree-drag-di" name="drag-di" action="insertBefore" style="min-width: 20%;"><ce-icon svg="c-svg-caret-up" size="sm"></ce-icon></div>
-        <div class="ce-tree-drag-di" name="drag-di" action="append" style="flex:1"><ce-icon svg="c-svg-move-in" size="sm"></ce-icon></div>
-        <div class="ce-tree-drag-di" name="drag-di" action="insertAfter" style="min-width: 20%;"><ce-icon svg="c-svg-caret-down" size="sm"></ce-icon></div>
+        <div class="ce-tree-drag-di" name="drag-di" action="insertBefore" style="min-width: 20%;"><ce-icon .svg="${CaretUp}" size="sm"></ce-icon></div>
+        <div class="ce-tree-drag-di" name="drag-di" action="append" style="flex:1"><ce-icon .svg="${MoveIn}" size="sm"></ce-icon></div>
+        <div class="ce-tree-drag-di" name="drag-di" action="insertAfter" style="min-width: 20%;"><ce-icon .svg="${CaretDown}" size="sm"></ce-icon></div>
       </div>
     </div>
     `;

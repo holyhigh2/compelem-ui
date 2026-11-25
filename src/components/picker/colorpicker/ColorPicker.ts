@@ -2,6 +2,7 @@ import { classes, csscope, Csscope, debounced, emits, forEach, h, ifTrue, prop, 
 import { findIndex, isEmpty, upperCase, values } from "myfx";
 import { getRectInContainer } from "uiik";
 import { AppearanceElem } from "../../../base/Appearance";
+import { ExpandVertical } from "../../../icons/icons";
 import { Virtualized } from "../../../mixins/Virtualized";
 import { ColorHelper, getRGBColorValue, HSL2RGB, RGB2HSL, RGB2HSV, HSV2RGB, toHexString, toHSLString, toRGBString } from "../../../utils/color";
 import { beginDrag, type DragSessionHandle } from "../../../utils/dragSession";
@@ -298,7 +299,7 @@ export class ColorPicker extends Virtualized(AppearanceElem) {
             `)}
           </ce-main>
           <ce-footer class="ce-color-picker-color-footer">
-            <ce-button @click="${this.changeColorMode}"  appearance="pale" icon="c-svg-expand-vertical">${this.colorModeString}</ce-button>
+            <ce-button @click="${this.changeColorMode}"  appearance="pale" .icon="${ExpandVertical}">${this.colorModeString}</ce-button>
             <ce-input  .value="${this.colorString}" appearance="default" @input="${this.onColorInput}" @change="${this.onColorCommit}"></ce-input>
           </ce-footer>
         </ce-main>

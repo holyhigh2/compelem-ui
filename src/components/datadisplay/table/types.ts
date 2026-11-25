@@ -80,6 +80,10 @@ export interface Column {
    */
   width?: number;
   /**
+   * 空值占位文本
+   */
+  emptyText?: string;
+  /**
    * 列中td样式
    */
   cellClass?: string;

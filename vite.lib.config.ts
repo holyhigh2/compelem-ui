@@ -47,10 +47,35 @@ function emitIndexCssPlugin(): Plugin {
   }
 }
 
+// 生成入口源码位于 src 外，dts 插件不会保留其目录结构；按清单直接发出
+// dist/entries/<tag>.d.ts，避免声明公共根目录从 src 扩到仓库根。
+function emitEntryTypesPlugin(): Plugin {
+  return {
+    name: 'compelem-ui:emit-entry-types',
+    generateBundle() {
+      if (isDebugBuild) return
+      const manifestFile = fileURLToPath(new URL('./.generated/entries/manifest.json', import.meta.url))
+      if (!fs.existsSync(manifestFile)) {
+        throw new Error(`[compelem-ui] 构建入口清单缺失：${manifestFile}，请运行 npm run build:lib`)
+      }
+      const { components } = JSON.parse(fs.readFileSync(manifestFile, 'utf8')) as {
+        components: Array<{ tag: string, declaration: string }>
+      }
+      for (const { tag, declaration } of components) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `entries/${tag}.d.ts`,
+          source: declaration
+        })
+      }
+    }
+  }
+}
+
 // 是否为 debug 构建：build:debug 通过 --outDir dist-debug 触发。
 // debug 构建面向本地/独立调试，产物可被直接引入（无需消费方逐个 import 组件入口），
 // 因此入口换成全量注册入口 register（见 src/register.ts）。
-// 生产 build:lib 走 src/index.ts + src/entries/*，保持 compelem 为 external、
+// 生产 build:lib 走 src/index.ts + .generated/entries/*，保持 compelem 为 external、
 // 由消费方负责注册（与原行为一致）。
 //
 // 注意：两种构建的 rollupOptions.external 相同，compelem / myfx / uiik 一律外置，
@@ -63,7 +88,7 @@ const __outDir = __odIdx >= 0
 const isDebugBuild = __outDir === 'dist-debug'
 
 // 收集入口：
-// - 生产：主入口 src/index.ts + 每个组件的自注册入口（src/entries/<tag>.ts），实现按需 subpath 打包
+// - 生产：主入口 src/index.ts + 每个组件的自注册入口（.generated/entries/<tag>.ts），实现按需 subpath 打包
 // - debug：仅 src/register.ts（全量注册，供本地调试），不拆分 subpath
 function collectEntries() {
   if (isDebugBuild) {
@@ -84,13 +109,14 @@ function collectEntries() {
     // 语言包独立入口：只引入单个组件子路径的宿主也要能配置内置文案
     locale: fileURLToPath(new URL('./src/locale/index.ts', import.meta.url))
   }
-  const entriesDir = fileURLToPath(new URL('./src/entries', import.meta.url))
-  if (fs.existsSync(entriesDir)) {
-    for (const f of fs.readdirSync(entriesDir)) {
-      if (f.endsWith('.ts') && !f.endsWith('.bak')) {
-        const name = f.replace(/\.ts$/, '')
-        entries[name] = path.join(entriesDir, f)
-      }
+  const entriesDir = fileURLToPath(new URL('./.generated/entries', import.meta.url))
+  if (!fs.existsSync(entriesDir)) {
+    throw new Error(`[compelem-ui] 构建入口缺失：${entriesDir}，请运行 npm run build:lib`)
+  }
+  for (const f of fs.readdirSync(entriesDir)) {
+    if (f.endsWith('.ts') && !f.endsWith('.bak')) {
+      const name = f.replace(/\.ts$/, '')
+      entries[name] = path.join(entriesDir, f)
     }
   }
   return entries
@@ -99,7 +125,7 @@ function collectEntries() {
 export default defineConfig({
   resolve: {
     // 组件源码统一是手写 .ts（`.ce` 单文件组件已废弃）。
-    // entries / types 里的导入都不带扩展名，靠这里的顺序解析。
+    // 组件源码与 .generated/entries 里的导入都不带扩展名，靠这里的顺序解析。
     extensions: ['.ts', '.tsx', '.mjs', '.js', '.json'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -114,10 +140,17 @@ export default defineConfig({
     compelemCompiler({ knownTags: collectKnownTags() }),
     compelemCss(),
     emitIndexCssPlugin(),
+    emitEntryTypesPlugin(),
     dts({
-      // 多入口构建：每个 entry 都会单独产出 .d.ts（dist/ce-*.d.ts 与 dist/entries/*.d.ts）。
+      // 多入口构建：组件源码声明与 emitEntryTypesPlugin 发出的入口声明。
       // 不能开 insertTypesEntry——它会额外再插一份入口声明，与插件自身输出叠加成重复 export。
       include: ['src', 'vite-env.d.ts'],
+      entryRoot: 'src',
+      strictOutput: true,
+      beforeWriteFile(filePath) {
+        // 仅用于补齐 ?inline 等模块类型，不随发布包发出。
+        if (filePath.endsWith('/vite-env.d.ts')) return false
+      },
       // 手写 .d.ts 默认被当作“输入声明”跳过而不会进 dist，这里保留兜底：
       // 将来新增手写声明仍能随包发出。
       copyDtsFiles: true

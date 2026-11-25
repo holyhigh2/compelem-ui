@@ -1,7 +1,7 @@
 import { classes, createRef, css, csscope, Csscope, debounced, emits, h, ifTrue, model, prop, query, show, state, tag, Template, watch } from "compelem";
 import { addTime, compareDate, formatDate, isArray, isBlank, padZ, range } from "myfx";
 
-import { Swap } from "../../../icons/icons";
+import { Calendar, Swap } from "../../../icons/icons";
 import { Overlay } from "../../overlays/overlay/Overlay";
 import { DatePicker } from "../../picker/datepicker/DatePicker";
 
@@ -167,11 +167,11 @@ export class InputDateRange extends RangeInput {
         <div part="control" class="ce-form-control" ?disabled="${this.disabled}">
           <span class="ce-input-prepend-inside" ${show(this.inside)}><slot name="prepend" ></slot></span>
           <ce-input-date no-icon name="min-input" align="${this.align}" tabindex="1" border="0" placeholder="${this.placeholderStart}" .min="${this.min}" readonly show-icon="false" ${model(this.startValue)} trigger-mode="none" type="${this.type}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearStart}" @change="${this.onChangeMin}">
-            ${ifTrue(this.dual, () => h`<ce-icon slot="append" class="ce-input-calendar" svg="c-svg-calendar" size="sm"></ce-icon>`)}
+            ${ifTrue(this.dual, () => h`<ce-icon slot="append" class="ce-input-calendar" .svg="${Calendar}" size="sm"></ce-icon>`)}
           </ce-input-date>
           <span class="ce-input-separator">${this.separator}</span>
           <ce-input-date no-icon name="max-input" align="${this.align}" tabindex="2" border="0" placeholder="${this.placeholderEnd}" .max="${this.max}" readonly show-icon="false" ${model(this.endValue)} trigger-mode="none" type="${this.type}" .error="${this.error || this.__rangeError}" .error-message="${this.errorMessage}" .hint="${this.hint}" .hide-hint="${this.hideHint}" ?clearable="${this.clearable}" @clear="${this.onClearEnd}" @change="${this.onChangeMax}">
-            <ce-icon slot="append" class="ce-input-calendar" svg="c-svg-calendar" size="sm"></ce-icon>
+            <ce-icon slot="append" class="ce-input-calendar" .svg="${Calendar}" size="sm"></ce-icon>
           </ce-input-date>
           <span class="ce-input-append-inside" ${show(this.inside)}><slot name="append" ></slot></span>
         </div>

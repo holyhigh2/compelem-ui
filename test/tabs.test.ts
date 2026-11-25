@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import '../src/entries/ce-tabs'
-import '../src/entries/ce-tab'
-import '../src/entries/ce-nav'
-import '../src/entries/ce-icon'
+import '../.generated/entries/ce-tabs'
+import '../.generated/entries/ce-tab'
+import '../.generated/entries/ce-nav'
+import '../.generated/entries/ce-icon'
 
 const flush = async (times = 5) => {
   for (let i = 0; i < times; i++) await new Promise(r => setTimeout(r, 30))

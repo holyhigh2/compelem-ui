@@ -5,16 +5,21 @@ import { describe, expect, it } from 'vitest'
 // vitest 从项目根目录运行
 const root = process.cwd()
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
-const entries = readdirSync(join(root, 'src/entries'))
+const entries = readdirSync(join(root, '.generated/entries'))
   .filter(file => file.endsWith('.ts'))
   .map(file => file.replace(/\.ts$/, ''))
 
 describe('package contract', () => {
-  it('每个组件入口都有对应的 exports 子路径', () => {
+  it('每个组件入口都匹配通配 exports 的 JS 与类型目标', () => {
+    const componentExport = pkg.exports['./ce-*']
+    expect(componentExport).toEqual({
+      types: './dist/entries/ce-*.d.ts',
+      import: './dist/ce-*.es.js'
+    })
     for (const tag of entries) {
-      expect(pkg.exports[`./${tag}`], `缺少 ${tag} 的 exports`).toBeDefined()
-      expect(pkg.exports[`./${tag}`].types).toBe(`./dist/entries/${tag}.d.ts`)
-      expect(pkg.exports[`./${tag}`].import).toBe(`./dist/${tag}.es.js`)
+      const suffix = tag.replace(/^ce-/, '')
+      expect(componentExport.types.replace('*', suffix)).toBe(`./dist/entries/${tag}.d.ts`)
+      expect(componentExport.import.replace('*', suffix)).toBe(`./dist/${tag}.es.js`)
     }
   })
 

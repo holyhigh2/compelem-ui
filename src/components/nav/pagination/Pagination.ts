@@ -1,5 +1,6 @@
 import { classes, csscope, Csscope, emits, forEach, h, ifTrue, prop, query, state, tag, Template, watch } from "compelem";
 import { clamp, range } from "myfx";
+import { ChevronLeft, ChevronRight } from "../../../icons/icons";
 import { AppearanceElem } from "../../../base/Appearance";
 import { t } from "../../../locale";
 import style from "./pagination.scss?tmpl";
@@ -132,7 +133,7 @@ export class Pagination extends AppearanceElem {
     // 顺带让 props 依赖被正确的信号追踪覆盖。
     return h`
     <nav class="ce-pagination" part="root" aria-label="${t('pagination.label')}" ${classes({ [`__${this.align}`]: true })}>
-      <ce-button part="prev" class="ce-pagination-prev" icon="c-svg-chevron-left" circle appearance="outlined"
+      <ce-button part="prev" class="ce-pagination-prev" .icon="${ChevronLeft}" circle appearance="outlined"
         size="${this.size}" ?disabled="${this.disabled || this.current <= 1}"
         aria-label="${t('pagination.prev')}"
         @click="${this.onPrev}"></ce-button>
@@ -149,7 +150,7 @@ export class Pagination extends AppearanceElem {
       ${ifTrue(this.simple, () => h`
         <span class="ce-pagination-simple-info">${this.simpleText}</span>
       `)}
-      <ce-button part="next" class="ce-pagination-next" icon="c-svg-chevron-right" circle appearance="outlined"
+      <ce-button part="next" class="ce-pagination-next" .icon="${ChevronRight}" circle appearance="outlined"
         size="${this.size}" ?disabled="${this.disabled || this.current >= this.totalPages}"
         aria-label="${t('pagination.next')}"
         @click="${this.onNext}"></ce-button>

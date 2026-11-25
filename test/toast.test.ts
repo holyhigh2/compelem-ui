@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import '../src/entries/ce-message'
-import '../src/entries/ce-notification'
+import '../.generated/entries/ce-message'
+import '../.generated/entries/ce-notification'
 import { ToastPostion, useToast } from '../src/components/overlays/toast/toast'
 
 const toast = useToast()

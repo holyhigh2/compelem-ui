@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 /**
- * 组件产物生成器：entries / types / exports 三个生成步骤的统一入口。
+ * 组件产物生成器：entries / types 两个生成步骤的统一入口。
  *
  * 用法：
- *   node scripts/gen.mjs [entries|types|exports|all] [--check]
+ *   node scripts/gen.mjs [entries|types|all] [--check]
  *   - 默认 all
  *   - 不带 --check：写入缺失/过期的产物
  *   - 带 --check：只校验，不一致时退出码 1
  *   - 可一次传多个目标：node scripts/gen.mjs entries types
  *
  * 各步骤的规则、忽略项与输出信息与合并前的独立脚本保持一致：
- *   entries —— 由组件源码的 @tag("ce-xxx") 生成 src/entries/ce-xxx.ts 自注册入口
+ *   entries —— 由组件源码的 @tag("ce-xxx") 生成 .generated/entries/ce-xxx.ts 自注册入口
  *   types   —— 由 @tag / @emits 生成 src/types/components.ts
- *   exports —— 由 src/entries/*.ts 生成 package.json 的 exports 字段
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isEntrySource, isSource, walkFiles } from './lib/files.mjs'
@@ -23,12 +22,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 ///////////////////////////////////////// entries
 
-/** 由组件源码生成 src/entries/ce-*.ts；返回退出码 */
+/** 由组件源码生成 .generated/entries/ce-*.ts；返回退出码 */
 function genEntries(checkOnly) {
   const componentsDir = join(root, 'src/components')
-  const entriesDir = join(root, 'src/entries')
+  const entriesDir = join(root, '.generated/entries')
+  const manifestFile = join(entriesDir, 'manifest.json')
 
-  /** @type {{ tag: string, className: string, source: string }[]} */
+  /** @type {{ tag: string, className: string, source: string, file: string }[]} */
   const components = []
 
   for (const file of walkFiles(componentsDir, isEntrySource)) {
@@ -53,7 +53,8 @@ function genEntries(checkOnly) {
       // 导入说明符不带扩展名：镜像生成的 dist/entries/*.d.ts 若引用 `.ts`，
       // 发布包内（files 只含 dist）消费方将解析失败。
       // 组件源码统一为 .ts；无扩展名导入交给各 vite 配置的 resolve.extensions。
-      source: relative(entriesDir, file).replace(/\\/g, '/').replace(/\.ts$/, '')
+      source: relative(entriesDir, file).replace(/\\/g, '/').replace(/\.ts$/, ''),
+      file: relative(root, file).replace(/\\/g, '/')
     })
   }
 
@@ -83,6 +84,27 @@ export { ${className} };
 export default ${className};
 `
 
+  const entryDeclaration = ({ tag, className, file }) => {
+    const source = file.replace(/^src\//, '').replace(/\.ts$/, '')
+    return `import { ${className} } from '../${source}';
+
+declare global {
+  interface HTMLElementTagNameMap {
+    '${tag}': ${className};
+  }
+}
+
+export { ${className} };
+export default ${className};
+`
+  }
+
+  const manifest = `${JSON.stringify({
+    components: components.map(component => ({
+      tag: component.tag,
+      declaration: entryDeclaration(component)
+    }))
+  }, null, 2)}\n`
   const stale = []
   const generatedTags = new Set(components.map(c => c.tag))
 
@@ -93,8 +115,11 @@ export default ${className};
       stale.push({ target, content, tag: component.tag })
     }
   }
+  if (!existsSync(manifestFile) || readFileSync(manifestFile, 'utf8') !== manifest) {
+    stale.push({ target: manifestFile, content: manifest, tag: 'manifest' })
+  }
 
-  // 找出没有对应 @tag 的孤儿入口（通常是组件改名/删除后遗留）
+  // 构建目录可能残留已删除组件的入口，不能让它继续进入 Vite 多入口。
   const orphans = existsSync(entriesDir)
     ? readdirSync(entriesDir)
       .filter(name => name.endsWith('.ts'))
@@ -103,27 +128,26 @@ export default ${className};
     : []
 
   if (!stale.length && !orphans.length) {
-    console.log(`[gen-entries] 入口已是最新（${components.length} 个组件）`)
+    console.log(`[gen-entries] 构建入口已是最新（${components.length} 个组件）`)
     return 0
   }
 
   if (checkOnly) {
-    console.error('[gen-entries] 入口与组件源码不一致')
+    console.error('[gen-entries] 构建入口与组件源码不一致')
     if (stale.length) console.error(`  需要更新: ${stale.map(s => s.tag).join(', ')}`)
-    if (orphans.length) console.error(`  需要删除: ${orphans.join(', ')}`)
+    if (orphans.length) console.error(`  需要清理: ${orphans.join(', ')}`)
     console.error('  运行 `node scripts/gen.mjs entries` 重新生成')
     return 1
   }
 
-  for (const item of stale) {
-    writeFileSync(item.target, item.content)
-    console.log(`[gen-entries] 写入 ${relative(root, item.target)}`)
+  rmSync(entriesDir, { recursive: true, force: true })
+  mkdirSync(entriesDir, { recursive: true })
+  for (const component of components) {
+    writeFileSync(join(entriesDir, `${component.tag}.ts`), entryFile(component))
   }
-  for (const tag of orphans) {
-    console.warn(`[gen-entries] 孤儿入口未自动删除，请确认后手动处理: src/entries/${tag}.ts`)
-  }
+  writeFileSync(manifestFile, manifest)
 
-  console.log(`[gen-entries] 完成，共 ${components.length} 个组件入口`)
+  console.log(`[gen-entries] 已生成 ${components.length} 个构建入口`)
   return 0
 }
 
@@ -314,7 +338,7 @@ function genTypes(checkOnly) {
 
   const content = `// 自动生成 —— 由 scripts/gen.mjs types 维护，勿手改。
 // 标签 → 类映射（HTMLElementTagNameMap）与 @emits 事件名类型。
-// 由 src/index.ts 以 export * 重新导出纳入类型图；子路径消费者由 src/entries 自带同名声明。
+// 由 src/index.ts 以 export * 重新导出纳入类型图；子路径消费者由 dist/entries 的同名声明提供类型。
 ${importLines.join('\n')}
 
 declare global {
@@ -352,96 +376,11 @@ export type CeEventPayload<T extends keyof CeEventsByTag, K extends keyof CeEven
   return 0
 }
 
-///////////////////////////////////////// exports
-
-/** 由 src/entries/*.ts 生成 package.json exports；返回退出码 */
-function genExports(checkOnly) {
-  const pkgPath = join(root, 'package.json')
-  const entriesDir = join(root, 'src/entries')
-
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
-
-  const tags = readdirSync(entriesDir)
-    .filter(f => f.endsWith('.ts'))
-    .map(f => f.replace(/\.ts$/, ''))
-    .sort((a, b) => a.localeCompare(b, 'en'))
-
-  if (tags.length === 0) {
-    console.error('[gen-exports] src/entries 下没有找到任何入口，拒绝生成空 exports')
-    return 1
-  }
-
-  const exportsMap = {
-    '.': {
-      types: './dist/index.d.ts',
-      import: './dist/compelem-ui.es.js'
-    },
-    './index.css': './dist/index.css',
-    './package.json': './package.json',
-    './dist/*': './dist/*',
-    './icons': {
-      types: './dist/icons/icons.d.ts',
-      import: './dist/icons.es.js'
-    },
-    // 全量图标注册逃生口：副作用模块，注册全部内置图标
-    './icons/full': {
-      types: './dist/icons/full.d.ts',
-      import: './dist/icons/full.es.js'
-    },
-    './locale': {
-      types: './dist/locale/index.d.ts',
-      import: './dist/locale.es.js'
-    },
-    './register': {
-      types: './dist/register.d.ts',
-      import: './dist/register.es.js'
-    },
-    // 兼容旧路径：0.1.x 文档使用过 compelem-ui/icons/icons
-    './icons/icons': {
-      types: './dist/icons/icons.d.ts',
-      import: './dist/icons.es.js'
-    }
-  }
-
-  for (const tag of tags) {
-    exportsMap[`./${tag}`] = {
-      types: `./dist/entries/${tag}.d.ts`,
-      import: `./dist/${tag}.es.js`
-    }
-  }
-
-  const next = { ...pkg, exports: exportsMap }
-  const nextJson = `${JSON.stringify(next, null, 2)}\n`
-  const currentJson = readFileSync(pkgPath, 'utf8')
-
-  if (currentJson === nextJson) {
-    console.log(`[gen-exports] exports 已是最新（${tags.length} 个组件入口）`)
-    return 0
-  }
-
-  if (checkOnly) {
-    const currentTags = Object.keys(pkg.exports ?? {}).filter(k => k.startsWith('./ce-'))
-    const missing = tags.filter(t => !currentTags.includes(`./${t}`))
-    const dangling = currentTags.filter(k => !tags.includes(k.slice(2)))
-
-    console.error('[gen-exports] package.json 的 exports 与 src/entries 不一致')
-    if (missing.length) console.error(`  缺少: ${missing.join(', ')}`)
-    if (dangling.length) console.error(`  多余: ${dangling.map(t => t.slice(2)).join(', ')}`)
-    console.error('  运行 `node scripts/gen.mjs exports` 重新生成')
-    return 1
-  }
-
-  writeFileSync(pkgPath, nextJson)
-  console.log(`[gen-exports] 已更新 package.json，共 ${tags.length} 个组件入口`)
-  return 0
-}
-
 ///////////////////////////////////////// 主流程
 
 const TARGETS = {
   entries: genEntries,
-  types: genTypes,
-  exports: genExports
+  types: genTypes
 }
 
 const argv = process.argv.slice(2)
@@ -451,7 +390,7 @@ const rawTargets = argv.filter(a => !a.startsWith('-'))
 
 if (unknownFlags.length) {
   console.error(`[gen] 未知参数: ${unknownFlags.join(', ')}`)
-  console.error('用法: node scripts/gen.mjs [entries|types|exports|all] [--check]')
+  console.error('用法: node scripts/gen.mjs [entries|types|all] [--check]')
   process.exit(1)
 }
 
@@ -459,7 +398,7 @@ const requested = rawTargets.length ? rawTargets : ['all']
 const unknownTargets = requested.filter(t => t !== 'all' && !TARGETS[t])
 if (unknownTargets.length) {
   console.error(`[gen] 未知目标: ${unknownTargets.join(', ')}`)
-  console.error('用法: node scripts/gen.mjs [entries|types|exports|all] [--check]')
+  console.error('用法: node scripts/gen.mjs [entries|types|all] [--check]')
   process.exit(1)
 }
 

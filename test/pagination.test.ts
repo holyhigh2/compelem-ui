@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 // 只注册分页模板实际用到的标签：全量 register 会加载所有组件，
 // 其中若干装饰器依赖浏览器布局 API，在 jsdom 下不适用。
-import '../src/entries/ce-pagination'
-import '../src/entries/ce-button'
-import '../src/entries/ce-icon'
-import '../src/entries/ce-progress-circular'
+import '../.generated/entries/ce-pagination'
+import '../.generated/entries/ce-button'
+import '../.generated/entries/ce-icon'
+import '../.generated/entries/ce-progress-circular'
 
 const flush = async () => {
   for (let i = 0; i < 5; i++) await new Promise(resolve => setTimeout(resolve, 30))

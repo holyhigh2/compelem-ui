@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { CompElem, h, ifTrue, slot, state, tag } from 'compelem'
-import '../src/entries/ce-tag'
+import '../.generated/entries/ce-tag'
 
 /**
  * 组件事件登记表的归属。

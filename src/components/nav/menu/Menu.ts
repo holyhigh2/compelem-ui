@@ -2,7 +2,7 @@ import { bind, classes, CompElem, csscope, Csscope, emits, forEach, h, html, pro
 import { capitalize, concat, each, filter, get, isArray, isFunction, isNil, isObject, join, map, split, trim } from "myfx";
 import { getBox } from "uiik";
 import { measureRowColumn, RowColumnFlags, rowColumnVars } from "../../../base/RowColumns";
-import { Check } from "../../../icons/icons";
+import { CaretRight, Check } from "../../../icons/icons";
 import style from "./style.scss?tmpl";
 
 const enum CheckMode {
@@ -558,7 +558,7 @@ export class Menu extends CompElem {
         </span>
         <span class="ce-menu__cell ce-menu__cell--caret" ${styles({ visibility: m.hasSub ? "visible" : "hidden" })} @mouseenter="${this.onCaretEnter}">
           <span class="ce-menu__caret" ${styles({ visibility: hasSub && !v.custom ? "visible" : "hidden" })}>
-            <ce-icon svg="c-svg-caret-right" size="sm"></ce-icon>
+            <ce-icon .svg="${CaretRight}" size="sm"></ce-icon>
           </span>
         </span>
         <span class="ce-menu__cell ce-menu__cell--check-end">

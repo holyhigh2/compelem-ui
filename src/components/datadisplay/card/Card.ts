@@ -2,13 +2,14 @@ import { Csscope, Template, classes, computed, csscope, h, html, ifTrue, prop, s
 import { isBlank, isEmpty } from "myfx";
 import { APPEARANCE_LAYER, AppearanceElem } from "../../../base/Appearance";
 import { ripples } from "../../../directives/ripples/Ripples";
+import type { IconFactory } from "../../../icons/registry";
 import style from "./style.scss?tmpl";
 /**
  * 标签组件
  * @attrs
  *  title {string} 卡片标题
  *  subtitle {string} 卡片子标题
- *  title-icon {string} 
+ *  title-icon {string|function} 图标名称或图标工厂
  *  link {boolean} 链接样式，为true时，卡片会有hover效果，并且点击时会跳转到href或to指定的地址。设置href或to属性后该属性自动为true
  *  href {string} 链接地址
  *  target {string} 链接打开方式，默认_blank
@@ -36,7 +37,7 @@ export class Card extends AppearanceElem {
 
   //////////////////////////////////// props
   @prop({ type: String }) title: string;
-  @prop({ type: String }) titleIcon: string;
+  @prop({ type: [String, Function] }) titleIcon: string | IconFactory;
   @prop({ type: String }) subtitle: string;
   @prop({ type: Boolean }) link: boolean = false;
   @prop({ type: String }) href: string;
@@ -113,7 +114,7 @@ export class Card extends AppearanceElem {
       >
         <header ?visible="${this.hasHeader}" ?bodyless="${!this.hasBody}">
           <div class="ce-card-prepend" ${show(!isBlank(this.titleIcon) || !isEmpty(this.slots.prepend))}>
-            ${ifTrue(!isBlank(this.titleIcon), () => h`<ce-icon part="icon" svg="${this.titleIcon}"></ce-icon>`)}
+            ${ifTrue(!isBlank(this.titleIcon), () => h`<ce-icon part="icon" .svg="${this.titleIcon}"></ce-icon>`)}
             <slot name="prepend"></slot>
           </div>
           <div class="ce-card-content">

@@ -1,7 +1,6 @@
 import { classes, CompElem, csscope, Csscope, emits, h, ifTrue, prop, styles, tag, Template, watch } from "compelem";
 import { scheduleSettle } from "../../../utils/transition";
 import { Close } from "../../../icons/icons";
-import { hasIcon, registerIcons } from "../../../icons/registry";
 import { ensurePx } from "../../../utils/utils";
 import {
   activateLayer, captureFocus, deactivateLayer, isLayerActive,
@@ -9,9 +8,6 @@ import {
 } from "../overlay/layerHost";
 import style from "./style.scss?tmpl";
 
-// 关闭按钮走 ce-button 的 icon 通道（字符串名），依赖图标注册表。
-// 此处兜底注册，避免宿主未调用 registerIcons 时图标渲染为空。
-if (!hasIcon("Close")) registerIcons({ Close });
 /**
  * 抽屉面板
  *
@@ -173,7 +169,7 @@ export class Drawer extends CompElem {
               class="ce-drawer-close ce-btn-close"
               appearance="subtle"
               size="md"
-              icon="c-svg-close"
+              .icon="${Close}"
               title="关闭"
               @click="${this.onClose}"
             ></ce-button>`

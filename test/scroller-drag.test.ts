@@ -5,7 +5,7 @@
  * 指针捕获把 `pointerup` 重定向回 thumb，以及「左键已不在按下」的自愈判断。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import '../src/entries/ce-scroller'
+import '../.generated/entries/ce-scroller'
 
 // jsdom 不提供 DOMMatrix，而拖动起始要读 thumb 的 translate 值
 if (!('DOMMatrix' in globalThis)) {

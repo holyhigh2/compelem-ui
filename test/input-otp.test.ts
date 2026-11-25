@@ -1,6 +1,6 @@
 ﻿import { afterEach, describe, expect, it } from 'vitest'
-import '../src/entries/ce-input'
-import '../src/entries/ce-input-otp'
+import '../.generated/entries/ce-input'
+import '../.generated/entries/ce-input-otp'
 import { nextFrame } from './helpers'
 
 const flush = async (times = 3) => {

@@ -3,6 +3,7 @@ import { classes, CompElem, computed, css, csscope, Csscope, CssHelper, debounce
 import { alphaIndex, alphaLabel, camelCase, clone, cloneDeep, closest, debounce, each, eachRight, filter, find, findIndex, flatDeep, flatMap, formatDate, formatNumber, fval, get, groupBy, isArray, isBlank, isDefined, isEmpty, isNil, isNumeric, isObject, isString, isUndefined, kebabCase, keys, last, map, randi, range, set, size, some, sortTree, startsWith, take, takeRight, test, walkTree } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 import { DataType, EMPTY_TAG_LABEL_COLOR, RandomColors, SortType } from "../../../constants";
+import { ChevronRight, ExpandDiagonal } from "../../../icons/icons";
 import { FieldContainer, FieldContainerEvents } from "../../../mixins/FieldContainer";
 import { CLASS_EXPAND, TreeStructured } from "../../../mixins/TreeStructured";
 import { Virtualized } from "../../../mixins/Virtualized";
@@ -866,7 +867,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
                 <div class="ce-table-column-fixed is-left"  part="fixed-column">
                   ${forEach(this.fixedLeftColumns, c => c.prop, (c, ci) => h`
                     <div role="cell" class="ce-table-cell" ${classes({ "is-expandable": c.indexButton, "ce-table-tree-cell": (c.tree && this.tree) || (this.grouping && this.groupRootColProp === c.prop) })} column="${c.prop}">
-                      ${ifTrue((c.tree && this.tree) || (this.grouping && this.groupRootColProp === c.prop), () => h`<span class="ce-table-caret"><ce-icon style="visibility: hidden;" svg="c-svg-chevron-right" size="md"></ce-icon></span>`)}
+                      ${ifTrue((c.tree && this.tree) || (this.grouping && this.groupRootColProp === c.prop), () => h`<span class="ce-table-caret"><ce-icon style="visibility: hidden;" .svg="${ChevronRight}" size="md"></ce-icon></span>`)}
                       <div class="ce-table-cell-content" style="${c.type === ColumnType.Selection || c.type === ColumnType.Index ? 'overflow:visible;display:flex;justify-content: center;align-items:center;' : ''}">
                         ${ifTrue(c.type === ColumnType.Selection, () => h`
                           ${ifElse(c.hoverSelection, () => h`
@@ -877,7 +878,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
                         `)}
                         <span name="text"></span>
                         ${ifTrue(c.type === ColumnType.Index, () => h`<span name="selectlabel"></span>`)}
-                        ${ifTrue(c.indexButton && (c.type === ColumnType.Selection || c.type === ColumnType.Index), () => h`<ce-icon title="展开详情" class="ce-table-expand" size="md" ?icon="${isString(c.indexButton) ? c.indexButton : ''}" svg="${isString(c.indexButton) ? c.indexButton : 'c-svg-expand-diagonal'}"></ce-icon>`)}
+                        ${ifTrue(c.indexButton && (c.type === ColumnType.Selection || c.type === ColumnType.Index), () => h`<ce-icon title="展开详情" class="ce-table-expand" size="md" ?icon="${isString(c.indexButton) ? c.indexButton : ''}" .svg="${isString(c.indexButton) ? c.indexButton : ExpandDiagonal}"></ce-icon>`)}
                         
                         ${ifTrue(c.dataType === DataType.Tag || this.groupRootColProp == c.prop, () => h`<div name="tags"></div>`)}
                         ${ifTrue(c.dataType === DataType.User || this.groupRootColProp == c.prop, () => h`<div name="users"></div>`)}
@@ -889,7 +890,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
                 <div class="ce-table-column-scroll">
                   ${forEach(this.scrollColumns, c => c.prop, (c, ci) => h`
                     <div role="cell" class="ce-table-cell" ${classes({ "is-expandable": c.indexButton, "ce-table-tree-cell": (c.tree && this.tree) || (this.grouping && this.groupRootColProp === c.prop) })} column="${c.prop}">
-                      ${ifTrue((c.tree && this.tree) || (this.grouping && this.groupRootColProp === c.prop), () => h`<span class="ce-table-caret"><ce-icon style="visibility: hidden;" svg="c-svg-chevron-right" size="md"></ce-icon></span>`)}
+                      ${ifTrue((c.tree && this.tree) || (this.grouping && this.groupRootColProp === c.prop), () => h`<span class="ce-table-caret"><ce-icon style="visibility: hidden;" .svg="${ChevronRight}" size="md"></ce-icon></span>`)}
                       <div class="ce-table-cell-content" style="${c.type === ColumnType.Selection || c.type === ColumnType.Index ? 'overflow:visible;display:flex;justify-content: center;align-items:center;' : ''}">
                         ${ifTrue(c.type === ColumnType.Selection, () => h`
                             ${ifElse(c.hoverSelection, () => h`
@@ -900,7 +901,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
                           `)}
                         <span name="text"></span>
                         ${ifTrue(c.type === ColumnType.Index, () => h`<span name="selectlabel"></span>`)}
-                        ${ifTrue(c.indexButton && (c.type === ColumnType.Selection || c.type === ColumnType.Index), () => h`<ce-icon title="展开详情" class="ce-table-expand" size="md" ?icon="${isString(c.indexButton) ? c.indexButton : ''}" svg="${isString(c.indexButton) ? c.indexButton : 'c-svg-expand-diagonal'}"></ce-icon>`)}
+                        ${ifTrue(c.indexButton && (c.type === ColumnType.Selection || c.type === ColumnType.Index), () => h`<ce-icon title="展开详情" class="ce-table-expand" size="md" ?icon="${isString(c.indexButton) ? c.indexButton : ''}" .svg="${isString(c.indexButton) ? c.indexButton : ExpandDiagonal}"></ce-icon>`)}
                         
                         ${ifTrue(c.dataType === DataType.Tag || this.groupRootColProp == c.prop, () => h`<div name="tags"></div>`)}
                         ${ifTrue(c.dataType === DataType.User || this.groupRootColProp == c.prop, () => h`<div name="users"></div>`)}
@@ -3450,9 +3451,10 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
           break;
       }
     }
-    // 空值占位（Column.emptyText）：仅影响显示，见 Column.emptyText 注释
-    if ((html === '' || isNil(html)) && !isEmpty(col.emptyText)) {
-      html = col.emptyText
+    // 空值归一化：NaN / null / undefined / 空串统一走列级占位，避免 writeText 的
+    // String(text) 把它们写成 "NaN"/"null"/"undefined"。
+    if (html === '' || isNil(html) || (typeof html === 'number' && Number.isNaN(html))) {
+      html = col.emptyText ?? ''
     }
     if (this.grouping) {
       const rowId = rowData[this.rowKey]

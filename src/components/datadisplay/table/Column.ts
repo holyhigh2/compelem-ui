@@ -2,7 +2,7 @@ import { csscope, Csscope, debounced, emits, h, ifElse, ifTrue, prop, show, stat
 import { closest, findIndex, isDefined, isEmpty, isNumeric, isUndefined, kebabCase, some, walkTree } from "myfx";
 import uii, { getBox } from 'uiik';
 import { AlignType, DataType, SortType } from "../../../constants";
-import { ArrowDownSolid, ArrowUpSolid, Close } from "../../../icons/icons";
+import { ArrowDownSolid, ArrowUpSolid, Close, FilterListLight } from "../../../icons/icons";
 import { Field } from "../../base/Field";
 import { Table } from "./Table";
 import columnStyle from "./column.scss?tmpl";
@@ -97,7 +97,7 @@ export class Column extends Field {
   @prop headerIcon = ''
   @prop multiple = false
   /**
-   * 空值占位文本：单元格显示值为空串/nil 时展示的占位（如「—」）。
+   * 空值占位文本：单元格显示值为 NaN/null/undefined/空串时展示的占位（如「—」）。
    * 仅影响渲染（_getCellValue 的返回），不写回数据；编辑框预填仍取原始数据
    * （Editable.activeInput 读 innerData），所以不会把占位符带进编辑态。
    */
@@ -273,7 +273,7 @@ export class Column extends Field {
           </ce-tag>
         `)}
         ${ifTrue(this.filterable && !this.hasChild && !!this.prop && this.type !== ColumnType.Index && this.type !== ColumnType.Selection, () => h`
-            <ce-button data-action="filter" class="ce-table-filter ce-table-trigger" color="text" ?filtering="${!!this.filterCondition}" style="padding: 0;" size="md" appearance="subtle" icon="c-svg-filter-list-light"></ce-button>
+            <ce-button data-action="filter" class="ce-table-filter ce-table-trigger" color="text" ?filtering="${!!this.filterCondition}" style="padding: 0;" size="md" appearance="subtle" .icon="${FilterListLight}"></ce-button>
         `)}
       </div>
       <div class="ce-table-subcolumn" ${show(!isEmpty(this.slots.default))}>

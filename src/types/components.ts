@@ -1,6 +1,6 @@
 // 自动生成 —— 由 scripts/gen.mjs types 维护，勿手改。
 // 标签 → 类映射（HTMLElementTagNameMap）与 @emits 事件名类型。
-// 由 src/index.ts 以 export * 重新导出纳入类型图；子路径消费者由 src/entries 自带同名声明。
+// 由 src/index.ts 以 export * 重新导出纳入类型图；子路径消费者由 dist/entries 的同名声明提供类型。
 import type { Accordion as CeAccordion } from '../components/nav/accordion/Accordion';
 import type { AccordionItem as CeAccordionItem } from '../components/nav/accordion/AccordionItem';
 import type { Alert as CeAlert } from '../components/overlays/modals/Alert';

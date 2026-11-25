@@ -19,6 +19,18 @@ const tableSource = stripComments(readFileSync(join(root, 'src/components/datadi
 const spanSource = stripComments(readFileSync(join(root, 'src/components/datadisplay/table/TableExtensionSpan.ts'), 'utf8'))
 const tableScss = stripComments(readFileSync(join(root, 'src/components/datadisplay/table/style.scss'), 'utf8'))
 
+describe('ce-table 空值占位', () => {
+  it('不再提供表级 emptyValue，空值只走 Column.emptyText', () => {
+    const columnSource = stripComments(readFileSync(join(root, 'src/components/datadisplay/table/Column.ts'), 'utf8'))
+    const typesSource = readFileSync(join(root, 'src/components/datadisplay/table/types.ts'), 'utf8')
+    expect(tableSource).not.toMatch(/emptyValue/)
+    expect(tableSource).toMatch(/html === '' \|\| isNil\(html\) \|\| \(typeof html === 'number' && Number\.isNaN\(html\)\)/)
+    expect(tableSource).toMatch(/html = col\.emptyText \?\? ''/)
+    expect(columnSource).toMatch(/@prop\(\{ type: String \}\) emptyText = ''/)
+    expect(typesSource).toMatch(/emptyText\?: string;/)
+  })
+})
+
 describe('ce-table 逐格跳过渲染', () => {
   it('格子按 content-visibility: auto 跳过视口外渲染', () => {
     expect(tableScss).toMatch(/\.ce-table-cell\s*\{[^}]*content-visibility:\s*auto/)

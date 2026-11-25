@@ -1,7 +1,8 @@
 import { classes, csscope, Csscope, h, ifElse, prop, show, state, tag, Template, watch } from "compelem";
-import { clamp, formatNumber, isBlank, isEmpty, lerp } from "myfx";
+import { clamp, formatNumber, isBlank, isEmpty, isString, lerp } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 import { ArrowDown, ArrowUp } from "../../../icons/icons";
+import type { IconFactory } from "../../../icons/registry";
 import style from "./style.scss?tmpl";
 
 /**
@@ -20,7 +21,7 @@ const TREND_ICONS: Record<string, () => Template> = { up: ArrowUp, down: ArrowDo
  *  trend {string} 变化趋势，可选 'up / down'
  *  trendValue {string} 变化值
  *  trendTag {boolean} 通过tag方式显示trend，默认false
- *  icon {string} 统计图标
+ *  icon {string|function} 图标名称或图标工厂
  *  pattern {string} 数字格式，默认 ',###.##'；置空时直接渲染 value 原文（视为调用方已格式化，不参与补间）
  *  valueFirst {boolean} 值在标题上方，默认 false（标题在上）；用于"数字为主、标签为辅"的看板卡片
  *  trendTone {string} 环比配色口径：auto（默认，涨=success 绿 / 跌=error 红）/ inverse（涨=error 红 / 跌=success 绿）
@@ -40,7 +41,7 @@ export class Stat extends AppearanceElem {
   @prop({ type: String, required: true }) title: string;
   @prop({ type: [String, Number], required: true }) value: string | number;
   @prop pattern = ',###.##'
-  @prop icon = ''
+  @prop({ type: [String, Function] }) icon: string | IconFactory = ''
   @prop trendValue = ''
   @prop valueDesc = ''
   @prop trend = ''
@@ -134,7 +135,7 @@ export class Stat extends AppearanceElem {
       'is-trend-below': this.trendPlacement === 'below',
     })}>
       <div class="ce-stat-icon" ${show(!!this.icon || !isEmpty(this.slots.icon))}>
-        <ce-icon icon="${this.icon}" svg="${this.icon}" ${show(isEmpty(this.slots.icon))}></ce-icon >
+        <ce-icon icon="${isString(this.icon) ? this.icon : ''}" .svg="${this.icon}" ${show(isEmpty(this.slots.icon))}></ce-icon >
         <slot name="icon"></slot>
       </div>
       <dl style="flex: 1;">

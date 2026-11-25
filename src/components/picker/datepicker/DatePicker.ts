@@ -1,6 +1,7 @@
 import { classes, createRef, csscope, Csscope, emits, forEach, h, prop, query, queryAll, state, tag, Template, watch } from "compelem";
 import { addTime, compareDate, formatDate, identity, isBlank, isEmpty, isSameDay, padZ, range, sort } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
+import { CaretDown, CaretUp } from "../../../icons/icons";
 import { isVisible } from "../../../utils/utils";
 import { settleTransition } from "../../../utils/transition";
 import { Overlay } from "../../overlays/overlay/Overlay";
@@ -184,8 +185,8 @@ export class DatePicker extends AppearanceElem {
       <header class="ce-date-picker-control">
         <div style="display: flex;">
           <ce-button appearance="subtle" @click="${this.onOpenYMPane}">${formatDate(this.renderDateObj.y + "/" + this.renderDateObj.m + "/" + this.renderDateObj.d, 'yyyy年MM' + this.monthUnit)}</ce-button>
-          <ce-button appearance="subtle" icon="c-svg-caret-up" color="var(--ce-color-text-desc-rgb)" @click="${this.prevMonth}"></ce-button>
-          <ce-button appearance="subtle" icon="c-svg-caret-down" color="var(--ce-color-text-desc-rgb)" @click="${this.nextMonth}"></ce-button>
+          <ce-button appearance="subtle" .icon="${CaretUp}" color="var(--ce-color-text-desc-rgb)" @click="${this.prevMonth}"></ce-button>
+          <ce-button appearance="subtle" .icon="${CaretDown}" color="var(--ce-color-text-desc-rgb)" @click="${this.nextMonth}"></ce-button>
         </div>
         <slot name="header"></slot>
       </header>

@@ -4,7 +4,7 @@ import uii from "uiik";
 import { SortType } from "../../../constants";
 import { syncFilterPaneActive } from "../../../base/BarActions";
 import { tooltip } from "../../../directives/tooltip/Tooltip";
-import { Check, Drag, SortDown, SortUp } from "../../../icons/icons";
+import { Check, ChevronRight, Close, Drag, FillColor, FilterListLight, Group, Nut, PinFill, Plus, RowHeight, RowHeightL, RowHeightM, RowHeightS, Sort, SortDown, SortUp, Times } from "../../../icons/icons";
 import { Button } from "../../button/Button";
 import { Toggle } from "../../form/toggle/Toggle";
 import { Overlay } from "../../overlays/overlay/Overlay";
@@ -204,25 +204,25 @@ export class TableBar extends CompElem {
         <slot></slot>
       </span>
       <span slot="${!this.reverse ? '' : 'left'}" ${show(this.selectionSize < 1 && this.showControls)} style="${this.controlsStyle}">
-        <ce-button ${show(this.showControlField)} ${tooltip({ content: '字段', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${!this.isAllChecked ? 'pale' : 'subtle'}" icon="c-svg-nut" size="${this.size}" color="${!this.isAllChecked ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openField}">
+        <ce-button ${show(this.showControlField)} ${tooltip({ content: '字段', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${!this.isAllChecked ? 'pale' : 'subtle'}" .icon="${Nut}" size="${this.size}" color="${!this.isAllChecked ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openField}">
         ${this.liteMode || this.compact ? '' : '字段'}
         </ce-button>
-        <ce-button ${show(this.showControlFillColor && !isEmpty(this.colorableFields))} ${tooltip({ content: '填色', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fillColorList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-fill-color" size="${this.size}" color="${this.fillColorList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFillColor}">
+        <ce-button ${show(this.showControlFillColor && !isEmpty(this.colorableFields))} ${tooltip({ content: '填色', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fillColorList.length > 0 ? 'pale' : 'subtle'}" .icon="${FillColor}" size="${this.size}" color="${this.fillColorList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFillColor}">
         ${this.liteMode || this.compact ? '' : '填色'}
         </ce-button>
-        <ce-button ${show(this.showControlGroup && !isEmpty(this.groupableFields))} ${tooltip({ content: '分组', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.groupList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-group" size="${this.size}" color="${this.groupList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openGroup}">
+        <ce-button ${show(this.showControlGroup && !isEmpty(this.groupableFields))} ${tooltip({ content: '分组', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.groupList.length > 0 ? 'pale' : 'subtle'}" .icon="${Group}" size="${this.size}" color="${this.groupList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openGroup}">
         ${this.liteMode || this.compact ? '' : '分组'}
         </ce-button>
-        <ce-button ${show(this.showControlFilter && !isEmpty(this.filterableFields))} ${tooltip({ content: '筛选', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.filterList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-filter-list-light" size="${this.size}" color="${this.filterList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFilter}">
+        <ce-button ${show(this.showControlFilter && !isEmpty(this.filterableFields))} ${tooltip({ content: '筛选', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.filterList.length > 0 ? 'pale' : 'subtle'}" .icon="${FilterListLight}" size="${this.size}" color="${this.filterList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFilter}">
         ${this.liteMode || this.compact ? '' : '筛选'}
         </ce-button>
-        <ce-button ${show(this.showControlSort && !isEmpty(this.sortableFields))} ${tooltip({ content: '排序', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.sortList.length > 0 ? 'pale' : 'subtle'}" icon="c-svg-sort" size="${this.size}" color="${this.sortList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}"  @click="${this.openSort}">
+        <ce-button ${show(this.showControlSort && !isEmpty(this.sortableFields))} ${tooltip({ content: '排序', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.sortList.length > 0 ? 'pale' : 'subtle'}" .icon="${Sort}" size="${this.size}" color="${this.sortList.length > 0 ? 'info' : 'var(--ce-color-text-secondary)'}"  @click="${this.openSort}">
           <span ${show(this.sortList.length > 0)} style="margin-right:var(--ce-spacing-sm);">${this.sortList.length}</span> ${this.liteMode || this.compact ? '' : '排序'}
         </ce-button>
-        <ce-button ${show(this.showControlFixed)} ${tooltip({ content: '冻结', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fixedIndex > 0 ? 'pale' : 'subtle'}" icon="c-svg-pin-fill" size="${this.size}" color="${this.fixedIndex > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFixed}">
+        <ce-button ${show(this.showControlFixed)} ${tooltip({ content: '冻结', placement: 'top', disabled: !(this.liteMode || this.compact) })} appearance="${this.fixedIndex > 0 ? 'pale' : 'subtle'}" .icon="${PinFill}" size="${this.size}" color="${this.fixedIndex > 0 ? 'info' : 'var(--ce-color-text-secondary)'}" @click="${this.openFixed}">
         ${this.liteMode || this.compact ? '' : '冻结'}
         </ce-button>
-        <ce-button ${show(this.showControlRowHeight)} appearance="subtle" size="${this.size}" color="var(--ce-color-text-secondary)" icon="c-svg-row-height" @click="${this.openRowHeight}" ${tooltip({ content: '行高', placement: 'top' })}></ce-button>
+        <ce-button ${show(this.showControlRowHeight)} appearance="subtle" size="${this.size}" color="var(--ce-color-text-secondary)" .icon="${RowHeight}" @click="${this.openRowHeight}" ${tooltip({ content: '行高', placement: 'top' })}></ce-button>
     
       </span>
 
@@ -233,7 +233,7 @@ export class TableBar extends CompElem {
       <span slot="${!this.reverse ? '' : 'left'}" style="display:flex;column-gap: var(--ce-spacing-sm);align-items: stretch;${this.reverse ? '' : 'margin-left:auto;'}">
         <slot name="selection"></slot>
         <ce-divider vertical="true"></ce-divider>
-        <ce-button appearance="subtle" size="${this.size}" color="var(--ce-color-text-secondary)" icon="c-svg-times" @click="${this.unselect}"></ce-button>
+        <ce-button appearance="subtle" size="${this.size}" color="var(--ce-color-text-secondary)" .icon="${Times}" @click="${this.unselect}"></ce-button>
       </span>
       `)}
     </ce-toolbar>
@@ -276,11 +276,11 @@ export class TableBar extends CompElem {
           ${forEach(this.groupList, s => s.prop, (s) => h`
             <ce-list-item ripple="false" style="padding-inline:var(--ce-spacing-md)">
               <span style="text-overflow: ellipsis;overflow: hidden;line-height: 1.5;">${this.groupList.indexOf(s) + 1}.&nbsp; ${s.name}</span>
-              <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delGroup}" icon="c-svg-close"></ce-button>
+              <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delGroup}" .icon="${Close}"></ce-button>
             </ce-list-item>
           `)}
         </ce-list>
-        <ce-button slot="actions" appearance="pale" color="gray" ${show(this.groupList.length < MAX_GROUP_COUNT)} size="sm" style="margin-top: var(--ce-spacing-sm);" icon="c-svg-plus" @click="${this.openGroupFieldPanel}">字段</ce-button>
+        <ce-button slot="actions" appearance="pale" color="gray" ${show(this.groupList.length < MAX_GROUP_COUNT)} size="sm" style="margin-top: var(--ce-spacing-sm);" .icon="${Plus}" @click="${this.openGroupFieldPanel}">字段</ce-button>
       </ce-card>
       `)}
       </div>
@@ -326,11 +326,11 @@ export class TableBar extends CompElem {
                   <ce-icon slot="inactive" .svg="${SortDown}" size="lg" style="color: var(--ce-color-text-desc);"></ce-icon>
                 </ce-toggle>
               </div>
-              <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delSort}" icon="c-svg-close"></ce-button>
+              <ce-button slot="append" prop="${s.prop}" appearance="subtle" size="sm" @click="${this.delSort}" .icon="${Close}"></ce-button>
             </ce-list-item>
           `)}
         </ce-list>
-        <ce-button slot="actions" appearance="pale" color="gray" ${show(this.sortList.length < MAX_SORT_COUNT)} size="sm" style="margin-top: var(--ce-spacing-sm);" icon="c-svg-plus" @click="${this.openSortFieldPanel}">字段</ce-button>
+        <ce-button slot="actions" appearance="pale" color="gray" ${show(this.sortList.length < MAX_SORT_COUNT)} size="sm" style="margin-top: var(--ce-spacing-sm);" .icon="${Plus}" @click="${this.openSortFieldPanel}">字段</ce-button>
       </ce-card>
       `)}
       </div>
@@ -370,7 +370,7 @@ export class TableBar extends CompElem {
             ${forEach(this.filterableFields, (s, i) => i, (s, i) => h`
               <ce-list-item ripple="false" value="${s.value}" data-type="${s.dataType}" hoverable style="padding-inline:var(--ce-spacing-md)">
                 <span style="overflow: hidden;text-overflow: ellipsis;">${s.label}</span> &nbsp;&nbsp; <span style="pointer-events:none;font-size:var(--ce-font-sm);color: var(--ce-color-text-desc);overflow: hidden;text-overflow: ellipsis;">${this.filterList.find(x => x.prop == s.value)?.search}</span>
-                <ce-icon slot="append" svg="c-svg-chevron-right" style="color: var(--ce-color-text);"></ce-icon>
+                <ce-icon slot="append" .svg="${ChevronRight}" style="color: var(--ce-color-text);"></ce-icon>
               </ce-list-item>
             `)}
           </ce-list>
@@ -414,15 +414,15 @@ export class TableBar extends CompElem {
         <ce-list nav gap=".2rem" selectable style="min-width: 10rem;padding: var(--ce-spacing-xs)" @select="${this.onRowHeight}">
           <ce-list-header space="compact">设置行高</ce-list-header>
           <ce-list-item value="compact" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Compact}" style="padding-inline:var(--ce-spacing-md)">
-            <ce-icon svg="c-svg-row-height-s" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>紧凑
+            <ce-icon .svg="${RowHeightS}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>紧凑
             <ce-icon slot="append" ${show(this.rowHeightType === RowHeightType.Compact)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
           <ce-list-item value="medium" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Medium}" style="padding-inline:var(--ce-spacing-md)">
-            <ce-icon svg="c-svg-row-height-m" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>中等
+            <ce-icon .svg="${RowHeightM}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>中等
             <ce-icon slot="append" ${show(this.rowHeightType === RowHeightType.Medium)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
           <ce-list-item value="loose" hoverable appearance="pale" ?active="${this.rowHeightType === RowHeightType.Loose}" style="padding-inline:var(--ce-spacing-md)">
-            <ce-icon svg="c-svg-row-height-l" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>宽松
+            <ce-icon .svg="${RowHeightL}" size="md" style="color: var(--ce-color-text-secondary);padding-right:var(--ce-spacing-md)"></ce-icon>宽松
             <ce-icon slot="append" ${show(this.rowHeightType === RowHeightType.Loose)} .svg="${Check}" size="md" style="color: var(--ce-color-primary)"></ce-icon>
           </ce-list-item>
         </ce-list>

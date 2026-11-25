@@ -1,10 +1,6 @@
 import { CompElem, csscope, Csscope, h, ifTrue, prop, tag, Template } from 'compelem'
 import { Gear, Times } from '../../../icons/icons'
-import { registerIcons } from '../../../icons/registry'
 import itemStyle from './portalItem.scss?tmpl'
-
-// 标题栏图标按钮以字符串名引用图标（c-svg-gear / c-svg-times），按需注册
-registerIcons({ Gear, Times })
 
 /**
  * 门户编辑态挂件卡片（标题栏 + 内容 + 缩放手柄）
@@ -57,9 +53,9 @@ export class PortalItem extends CompElem {
         <!-- 宿主注入的头部内容（卡片级筛选等）：右对齐，位于操作按钮之前 -->
         <slot name="header-extra"></slot>
         ${ifTrue(this.configurable, () => h`
-          <ce-button size="sm" icon-size="md" appearance="subtle" icon="c-svg-gear" color="text" title="配置" @click="${this.onConfigClick}"></ce-button>
+          <ce-button size="sm" icon-size="md" appearance="subtle" .icon="${Gear}" color="text" title="配置" @click="${this.onConfigClick}"></ce-button>
         `)}
-        <ce-button size="sm" icon-size="md" appearance="subtle" icon="c-svg-times" color="error" title="移除" @click="${this.onRemoveClick}"></ce-button>
+        <ce-button size="sm" icon-size="md" appearance="subtle" .icon="${Times}" color="error" title="移除" @click="${this.onRemoveClick}"></ce-button>
       </div>
       ${ifTrue(!this.denied, () => h`
         <div class="ce-portal-item-widget"><slot></slot></div>

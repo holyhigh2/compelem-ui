@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { CompElem, h, ifTrue, state, tag } from 'compelem'
-import '../src/entries/ce-button'
+import '../.generated/entries/ce-button'
 
 const flush = async (times = 5) => {
   for (let i = 0; i < times; i++) await new Promise(r => setTimeout(r, 30))

@@ -1,7 +1,7 @@
 ﻿import { afterEach, describe, expect, it } from 'vitest'
-import '../src/entries/ce-input'
-import '../src/entries/ce-icon'
-import '../src/entries/ce-input-number'
+import '../.generated/entries/ce-input'
+import '../.generated/entries/ce-icon'
+import '../.generated/entries/ce-input-number'
 import { nextFrame } from './helpers'
 
 const flush = async (times = 3) => {
