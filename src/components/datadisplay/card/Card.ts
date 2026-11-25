@@ -150,14 +150,16 @@ export class Card extends AppearanceElem {
     if (this.href) {
       window.open(this.href, this.target)
     } else if (this.to) {
+      let router
       try {
         const lib = await import('compelem-router'!);
-        const router = lib.useRouter();
-        if (!router) {
-          console.error('compelem-router: no router instance. Ensure createRouter() is called before using `to`.');
-          return;
-        }
-        await router.push(this.to);
+        router = lib.useRouter?.()
+      } catch {
+        return
+      }
+      if (!router) return
+      try {
+        await router.push(this.to)
       } catch (error) {
         console.error(`compelem-router navigation failed for '${this.to}':`, error);
       }

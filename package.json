@@ -1,6 +1,6 @@
 {
   "name": "compelem-ui",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A UI component library built with compelem, myfx and uiik",
   "keywords": [
     "web components",
@@ -81,18 +81,8 @@
   },
   "peerDependencies": {
     "compelem": ">=0.30.0-beta.13 <0.31.0",
-    "compelem-router": "^0.3.0-beta.4",
-    "exceljs": "^4.4.0",
-    "myfx": ">=2.0.0-beta.4 <2.1.0",
+    "myfx": ">=2.0.0",
     "uiik": "^1.5.0"
-  },
-  "peerDependenciesMeta": {
-    "compelem-router": {
-      "optional": true
-    },
-    "exceljs": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "compelem": "^0.30.0-beta.13",

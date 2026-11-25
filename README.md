@@ -16,15 +16,13 @@ npm install compelem-ui
 ```
 
 Peer dependencies (must be resolvable by your app): `compelem`, `myfx`, `uiik`.
-`exceljs` is an **optional** peer, only needed when calling `exportExcel`.
-`compelem-router` is also optional: install it when using `ce-card`'s `to` navigation.
+`exceljs` and `compelem-router` are not declared as peer or regular dependencies. Install them in the host app only when using `exportExcel` or `ce-card`'s `to` navigation; both are loaded dynamically. Missing `exceljs` only disables Excel export, while a missing `compelem-router` package or router instance leaves the card non-navigable without logging an error.
 
 | Package | Range |
 |---|---|
 | `compelem` | `>=0.30.0-beta.13 <0.31.0` |
-| `myfx` | `>=2.0.0-beta.4 <2.1.0` |
+| `myfx` | `>=2.0.0 <2.1.0` |
 | `uiik` | `^1.5.0` |
-| `exceljs` (optional) | `^4.4.0` |
 
 ## Usage
 
