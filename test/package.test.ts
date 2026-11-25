@@ -31,7 +31,7 @@ describe('package contract', () => {
   it('运行时依赖全部走 peerDependencies', () => {
     expect(pkg.dependencies ?? {}).toEqual({})
     expect(pkg.peerDependencies.compelem).toBeTruthy()
-    expect(pkg.peerDependencies.myfx).toBe('>=2.0.0 <2.1.0')
+    expect(pkg.peerDependencies.myfx).toBe('>=2.0.0')
     expect(pkg.peerDependencies.uiik).toBeTruthy()
   })
 
