@@ -20,6 +20,9 @@ import { isEntrySource, isSource, walkFiles } from './lib/files.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
+/** 读取文本并统一为 LF 行尾，供产物一致性比较使用 */
+const readNormalized = file => readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
+
 ///////////////////////////////////////// entries
 
 /** 由组件源码生成 .generated/entries/ce-*.ts；返回退出码 */
@@ -111,11 +114,11 @@ export default ${className};
   for (const component of components) {
     const target = join(entriesDir, `${component.tag}.ts`)
     const content = entryFile(component)
-    if (!existsSync(target) || readFileSync(target, 'utf8') !== content) {
+    if (!existsSync(target) || readNormalized(target) !== content) {
       stale.push({ target, content, tag: component.tag })
     }
   }
-  if (!existsSync(manifestFile) || readFileSync(manifestFile, 'utf8') !== manifest) {
+  if (!existsSync(manifestFile) || readNormalized(manifestFile) !== manifest) {
     stale.push({ target: manifestFile, content: manifest, tag: 'manifest' })
   }
 
@@ -361,7 +364,7 @@ export type CeEventPayload<T extends keyof CeEventsByTag, K extends keyof CeEven
 `}
 `
 
-  const current = existsSync(typesFile) ? readFileSync(typesFile, 'utf8') : ''
+  const current = existsSync(typesFile) ? readNormalized(typesFile) : ''
   if (current === content) {
     console.log(`[gen-types] 类型声明已是最新（${components.length} 个标签）`)
   } else if (checkOnly) {
