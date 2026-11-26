@@ -107,8 +107,6 @@
 
     .is-active,
     .is-inactive {
-      // 档位：用 rem 档。此处曾用 --ce-font-sm-em，嵌在 12.25px 的列表项里会
-      // 复合成 10.7px，再进一层就是 9.4px；轨道高 21px 足以承载 12.25px 文字。
       // 轨道文案默认用 sm 档；表格/看板面板通过 --ce-toggle-track-font-size
       // 覆盖成与面板文字同档（md），避免 14px 根下 12.25 与 14 混排。
       font-size: var(--ce-toggle-track-font-size, var(--ce-font-sm));

@@ -56,7 +56,7 @@ export class ContextMenu extends CompElem {
   }
 
   /**
-   * ⚠️ 原实现是 `updated(changed) { if (changed.itemList) … }`。
+   * 原实现是 `updated(changed) { if (changed.itemList) … }`。
    * compelem 0.31 起 `updated()` 只在 `forceUpdate()`（恒传 `{}`）里被调用，
    * 响应式重渲染走 per-point effect、**不再经过它** ⇒ `changed` 永远是空对象
    * ⇒ 外部换 items 后菜单内容不更新（`#init` 已是 true，`open()` 也不会再推一次）。
@@ -71,14 +71,7 @@ export class ContextMenu extends CompElem {
     if (menu) menu.setItems(nv)
   }
 
-  /**
-   * 取内层 `ce-menu`。
-   *
-   * ⚠️ 原 `open()` 用的是 `renderRoot.firstElementChild`，但 render 的根节点是
-   * `<nav class="ce-context-menu">`（见上面 render），`firstElementChild` 拿到的是
-   * 那个 nav、不是菜单 ⇒ `nav.setItems is not a function`。改成按标签取，@query
-   * 已经拿到的优先（省一次查询），未渲染时返回 null 让调用方早退。
-   */
+  /** 取内层 `ce-menu`：@query 已拿到的优先，未渲染时返回 null 让调用方早退。 */
   #menuEl(): Menu | null {
     return ((this.menu as Menu | undefined) ||
       (this.renderRoot?.querySelector?.('ce-menu') as Menu | null) ||
@@ -86,16 +79,7 @@ export class ContextMenu extends CompElem {
   }
 
   //////////////////////////////////// 目标绑定
-  /**
-   * 解析右键监听的目标容器。
-   *
-   * ⚠️ 原实现是 `@event('contextmenu', (c) => c.targetEl || c.parentComponent)`，但
-   * `bindEvents()` 在 `mounted()` **之前**执行（CompElem.ts:559-561），targetFn 求值时
-   * `targetEl` 必然是 undefined ⇒ 传了 `target` 选择器也只会绑到 parentComponent；
-   * 而 `onContextMenu()` 过滤用的却是 `this.targetEl.contains()`（undefined），
-   * 一行 `if (!target?.contains(t)) return` 把所有右键都吃掉 ——「配 target 就弹不出来」。
-   * 改成 mounted 里显式解析 + 绑定，`beforeDestroyed` 里摘除。
-   */
+  /** 解析右键监听的目标容器。 */
   #resolveTarget(): HTMLElement | undefined {
     const sel = (this.target || '').trim();
     if (sel) {
@@ -114,7 +98,6 @@ export class ContextMenu extends CompElem {
   mounted(): void {
     this.targetEl = this.#resolveTarget();
     if (!this.targetEl) {
-      // 配错选择器时原先完全静默，右键没反应也找不到原因
       console.warn(
         `[ce-context-menu] target 未解析到元素（target="${this.target}"），右键菜单不会响应`
       );
@@ -146,7 +129,7 @@ export class ContextMenu extends CompElem {
   /**
    * 点外面关闭。
    *
-   * ⚠️ 不能靠 `e.target.tagName` 判断"点在菜单内/外"：本组件（及宿主应用）都活在
+   * 不能靠 `e.target.tagName` 判断"点在菜单内/外"：本组件（及宿主应用）都活在
    * shadow DOM 里，事件冒泡到监听所在的 document 时 target 已被**重定向**为
    * 最外层宿主（实测 = `RB-WORKBENCH`），永远不等于 `CE-CONTEXT-MENU` ⇒ 点在菜单
    * 项上的 mousedown 也会 close()，元素被移到 -9999px，随后的 click 落空 ⇒
@@ -218,8 +201,7 @@ export class ContextMenu extends CompElem {
     e.preventDefault();
     if (isEmpty(this.itemList)) return
     const list = this.#menuEl()
-    // 未渲染（还没 renderRoot / 还没 upgrade）时不做任何事：
-    // 原先 `renderRoot!.firstElementChild` 会 TypeError
+    // 未渲染（还没 renderRoot / 还没 upgrade）时不做任何事。
     if (!list) return
     //渲染菜单
     if (!this.#init) {

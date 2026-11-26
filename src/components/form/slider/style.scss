@@ -110,7 +110,7 @@
       position: absolute;
       font-size: var(--ce-font-sm);
       transform: translateX(-50%);
-      /* ⚠️ 必须 nowrap：末位 mark 是 `left: 100%` + `right: auto` ⇒ 绝对定位
+      /* 必须 nowrap：末位 mark 是 `left: 100%` + `right: auto` ⇒ 绝对定位
          盒子的"可用宽度"= 包含块宽 − left = 0，shrink-to-fit 会把盒宽压到
          **min-content**。没有 nowrap 时 min-content = 最宽一个字（实测 12px）
          ⇒ 文案在盒内折行（"1 发散" 折成 3 行、盒高 37），再被 translateX(-100%)

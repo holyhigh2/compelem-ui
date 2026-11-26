@@ -10,8 +10,7 @@
  *    ⇒ 同层所有行共享同一套轨道，跨行左/右缘必然对齐。
  * 2. 列的存废由层级决定，单元格内容的显隐由组件用 `visibility` 控制
  *    （不能用 display:none —— grid 中隐藏项不占位，后面的单元格会串列）。
- * 3. 类名不两用：`__x` 只做元素、`--x` 只做修饰符（ce-menu-pane 的同名两用
- *    曾把 grid/center/灰色文字整套规则命中到 li 上）。
+ * 3. 类名不两用：`__x` 只做元素、`--x` 只做修饰符。
  */
 :host {
   position: absolute;
@@ -23,7 +22,6 @@
   color: var(--menu-fg);
 
   // 菜单自身是可换主题的浮层，但默认值必须来自语义 token，才能跟随 [data-theme="dark"]；
-  // 原先写死 #fff / rgba(10,20,28,...) ⇒ 暗色页面里浮层仍是白底黑字。
   // 需要独立配色时继续覆盖 --menu-* 即可（[theme="dark"] 分支保持不变）。
   --menu-bg: var(--ce-color-bg);
   --menu-bg-sub: var(--ce-color-bg);

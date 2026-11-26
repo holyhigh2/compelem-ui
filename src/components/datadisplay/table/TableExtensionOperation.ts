@@ -89,7 +89,7 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
      * Table**（只读预览用的 `ce-table`），那里没有这个方法 —— 直接调会抛
      * `is not a function`。这里改用「可见行矩形 + 列矩形」反查，两套表都能用。
      *
-     * ⚠️ 跳过 `data-row-index="-1"`（库里的**测量行**，不在可视区内）。
+     * 跳过 `data-row-index="-1"`（库里的**测量行**，不在可视区内）。
      */
     __cellAtPoint(e: MouseEvent): HTMLElement | null {
       const body = this.tableBody as HTMLElement | undefined
@@ -249,7 +249,7 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
         // ⇒ 走到这里会把按下整个吞掉并清空选区（用户表现为"再框选没反应"）。
         // 按坐标回退解析为选区右下角格，恢复普通框选语义
         // （是否进入填充拖拽仍由 onBeforeSelect 的角格命中区判定把关）。
-        // ⚠️ `_getCellDom` 定义在 `Editable`（子类）：本扩展同时混入**基础 Table**
+        // `_getCellDom` 定义在 `Editable`（子类）：本扩展同时混入**基础 Table**
         // （只读预览用的 `ce-table`），那里没有这个方法 —— 不能用 `this._getCellDom(...)`
         // 直接调，否则按空处时会抛 `is not a function`。
         const getCellDom = (this as any)._getCellDom
@@ -466,7 +466,7 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
           //导致「框选结束后触发 select({cellsPos})」的文档约定在行体框选下失效
           //（selectedCellsPos 也恒为 null）。此处补齐以与其余路径一致。
           //
-          //⚠️⚠️ `_selectedCells` / `selectedCellsPos` 只存在于 `Editable`（子类），
+          // `_selectedCells` / `selectedCellsPos` 只存在于 `Editable`（子类），
           //   本扩展却同时混入**基础 Table** —— 只读预览用的 `<ce-table>` 就是一个
           //   基础 Table（`ReportDoc` 预览不开放编辑）。在那里直接调会抛
           //   `that._selectedCells is not a function`（2026-10-21 预览界面报障，
@@ -528,14 +528,12 @@ export function TableExtensionOperation<T extends Constructor<any>>(spuerClass: 
      * 这次键盘事件是否发生在本组件**之外**的输入态里（别的输入框 / textarea /
      * contenteditable），是则全局键盘处理一律让路。
      *
-     * ⚠️ 为什么必须有这条守卫：`onGlobalKeydown` 绑在 `document.body` 上
+     * 为什么必须有这条守卫：`onGlobalKeydown` 绑在 `document.body` 上
      * （`@event('keydown', () => document.body)`，见 `Editable.onGlobalKeydown`），
      * 整页任何位置的按键都会进来。只要表里**有选区**，宿主页面里别的输入框就会遭殃：
      *   · `Ctrl+C` 被这里改成"复制表格"（宿主输入框里的选区被抢走 ⇒ 复制不出来）；
      *   · 可打印字符被当成"开始编辑单元格"（`activeInput("")` 直接把焦点搬进表格，
      *     宿主输入框丢掉正在输入的那个字符）。
-     * 实测：AI 助手输入框里敲 `/`，焦点会跳到 `.ce-table-cell-input__text`、`/` 丢失；
-     * `Ctrl+C` 会走一次 `doCopy()`。
      *
      * 判定方式：沿 `composedPath()` 往外走，遇到自己就停；途中第一个"输入态"元素
      * 只要不是**本站自己的单元格编辑器**（`inputCell`），即判为外部输入态。

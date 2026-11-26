@@ -35,7 +35,7 @@ const ARIA_KEYS = Object.keys(ARIA_ATTRS)
  * 默认值一律 undefined —— 框架 `wAttr` 对 null/undefined 走 removeAttribute，
  * 未显式给值时不会留下 `aria-label="undefined"` 脏属性。
  *
- * ⚠️ 不能写成 mixin：`@prop` 由编译器实现（运行时是空函数），esbuild 只接受
+ * 不能写成 mixin：`@prop` 由编译器实现（运行时是空函数），esbuild 只接受
  * **类声明**上的装饰器语法，类表达式里的 `@prop` 直接编译失败。
  */
 export abstract class AriaElem extends AppearanceElem {

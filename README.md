@@ -16,13 +16,35 @@ npm install compelem-ui
 ```
 
 Peer dependencies (must be resolvable by your app): `compelem`, `myfx`, `uiik`.
-`exceljs` and `compelem-router` are not declared as peer or regular dependencies. Install them in the host app only when using `exportExcel` or `ce-card`'s `to` navigation; both are loaded dynamically. Missing `exceljs` only disables Excel export, while a missing `compelem-router` package or router instance leaves the card non-navigable without logging an error.
+`exceljs` is **not** a dependency of this package at all — Excel export lives in the separate plugin [`compelem-ui-table-excel`](https://www.npmjs.com/package/compelem-ui-table-excel). `compelem-router` is also undeclared: `ce-card`'s `to` navigation loads it dynamically and degrades to "not navigable" when absent.
 
 | Package | Range |
 |---|---|
 | `compelem` | `>=0.30.0-beta.13 <0.31.0` |
 | `myfx` | `>=2.0.0 <2.1.0` |
 | `uiik` | `^1.5.0` |
+
+## Table data, for exporters
+
+`ce-table` owns no export code. It exposes the queries an exporter needs:
+
+```ts
+table.getRenderColumns()   // visible columns
+table.getColumn(prop)      // any registered column (incl. hidden)
+table.getColumnPath(prop)  // [leaf, parent group, ...] — multi-level headers
+table.getColumnStats(prop) // footer stats: { label, metric, fn, value }
+table.getData()            // rows
+table.getSpanData()        // merged regions
+table.getNotes()           // cell notes
+```
+
+Any format (xlsx, CSV, PDF) is a separate package consuming those — see
+[`compelem-ui-table-excel`](https://www.npmjs.com/package/compelem-ui-table-excel) for a working one:
+
+```ts
+import { exportTableExcel } from 'compelem-ui-table-excel'
+await exportTableExcel(table, { fileName: '库存明细' })
+```
 
 ## Usage
 

@@ -21,7 +21,7 @@ export function TableExtensionFillColor<T extends Constructor<any>>(spuerClass: 
         this.fillColorConditions = fillColorConditions
       //update view
       this.nextTick(() => {
-        // ⚠️ 必须先求值再 replaceSync：`this.__updatableFillColor?.replaceSync(this.__getFillColorStyle())`
+        // 必须先求值再 replaceSync：`this.__updatableFillColor?.replaceSync(this.__getFillColorStyle())`
         // 在 __updatableFillColor 为空时会**短路参数求值**，而 __getFillColorStyle()
         // 同时负责重建 matchConditions ⇒ 条件格式会整体静默失效。
         let cssText = this.__getFillColorStyle()
@@ -32,7 +32,7 @@ export function TableExtensionFillColor<T extends Constructor<any>>(spuerClass: 
         for (let r = 0; r < rowEls.length; r++) {
           const row = rowEls[r]
           const rowIndex = rowIndexs[r]
-          // ⚠️ 原来是 `return`：一个空行（回收行池里尚未填充的占位行）会终止整轮着色，
+          // 原来是 `return`：一个空行（回收行池里尚未填充的占位行）会终止整轮着色，
           // 后面的行永远轮不到。这里必须是 continue。
           if (row.children.length < 1) continue
           const rowData = this.renderList[rowIndex]
@@ -128,7 +128,7 @@ export function TableExtensionFillColor<T extends Constructor<any>>(spuerClass: 
         el.removeAttribute('fcid')
         el.classList.remove('fill-color')
       })
-      // ② 再逐条应用命中的条件。⚠️ 旧实现把"清空"放在 else（未命中）分支里，配置
+      // ② 再逐条应用命中的条件。 旧实现把"清空"放在 else（未命中）分支里，配置
       //    ≥2 条条件时后一条不命中会把前一条刚上的颜色擦掉。清理与匹配必须分离。
       each(this.matchConditions, condi => {
         let rs = condi.matcher(isArray(rowData[condi.prop]) ? rowData[condi.prop][0] : rowData[condi.prop])

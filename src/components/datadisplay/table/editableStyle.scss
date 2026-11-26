@@ -241,8 +241,7 @@ header[role="rowgroup"] {
     }
   }
 
-  // 编辑态（activeInput 时 renderRoot 加 __in-input；注意曾误写为
-  // ce-table-in-input 导致本块从未生效，2026-09 修正）。
+  // 编辑态（activeInput 时 renderRoot 加 __in-input）。
   &.__in-input {
     .ce-table-selector-caret {
       display: none;
@@ -358,7 +357,7 @@ header[role="rowgroup"] {
     background: var(--ce-color-bg, #fff);
     border: 2px solid var(--ce-color-primary);
     box-sizing: border-box;
-    // 置顶：必须压过编辑态下展开溢出的单元格内容层（曾为 1，被盖）
+    // 置顶：必须压过编辑态下展开溢出的单元格内容层。
     z-index: 10;
     resize: none;
     display: none;

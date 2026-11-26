@@ -13,10 +13,6 @@ export { AppearanceSize, AppearanceSpace };
  * 外观层：两个空的绝对定位层，供 `appearance.scss` 用 `::part(__underlay)` /
  * `::part(__overlay)` 做 hover / active 的着色与透明度过渡。
  *
- * 为什么是纯静态串而不是基类 render：外观的动态性**全部来自宿主属性**
- * （`[appearance]` / `[hoverable]` / `[active]` / `[disabled]` / `[loading]` …），
- * 由 CSS 选择器驱动；这两个 div 自身永远是空的。
- *
  * 单点维护：子类在 render() 里写 `${html(APPEARANCE_LAYER)}`。改样式只动
  * `appearance.scss`（本来就是全仓单点）；改 markup / 新增 part 只动这一行。
  */
@@ -176,10 +172,6 @@ export class AppearanceElem extends CompElem implements ILoadable, IColorable, I
         ColorHelper.setColor(nv, this.style, '--active-color')
     }
     //////////////////////////////////// lifecycles
-    // 0.30 起**无 own render()**：外观层由子类在自己的 render() 里以
-    // `${html(APPEARANCE_LAYER)}` 嵌入。原先靠 `${super.render()}` 挂基类视图，
-    // 该能力已随 super 支持一并移除（compelem 编译期会拦下 render() 内的 super 表达式）。
-    //
     // 单点维护：`APPEARANCE_LAYER` 是全仓唯一定义处，改 class / 新增 part 只动这一行。
     // 同文件时编译器会把它折进建树序列（零运行期开销）；跨文件时落回运行期 `html` 指令。
     //子类可覆盖后实现指定元素应用外观

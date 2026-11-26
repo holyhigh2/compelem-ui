@@ -88,7 +88,7 @@
   // div[popover] 与 dialog 一样有 ::backdrop，但它是非模态的：
   // backdrop=none 的抽屉必须让页面继续可交互，故把伪元素指针事件关掉
   //
-  // ⚠️ popover 的 ::backdrop 在 UA 样式里是**完全透明**的（dialog 才有 0.1），
+  // popover 的 ::backdrop 在 UA 样式里是**完全透明**的（dialog 才有 0.1），
   // 这里只改 opacity 不会产生任何可见遮罩。必须显式给背景，透明度沿用
   // ce-overlay 遮罩的 0.25，保持两套浮层观感一致。
   &::backdrop {
@@ -126,14 +126,13 @@
     }
   }
 
-  // 背景/圆角原先由内层的 ce-panel 提供，改为自渲染三段后由浮层根 div 兜底
   background-color: var(--ce-panel-bg, #fff);
   border-radius: var(--ce-panel-radius, var(--ce-round-lg));
 
   // 三段布局：head(固定) / body(滚动) / foot(固定)
   // 显隐统一由 layerHost 控制：top-layer 态看 :popover-open，
   // 降级路径（无 Popover API）看 .ce-drawer-open。
-  // ⚠️ 作者样式写死 display 会盖掉未打开态的隐藏规则 ⇒ 必须显式排除。
+  // 作者样式写死 display 会盖掉未打开态的隐藏规则 ⇒ 必须显式排除。
   &:not(:popover-open):not(.ce-drawer-open) {
     display: none;
   }

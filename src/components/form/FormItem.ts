@@ -78,7 +78,7 @@ export class FormItem extends CompElem {
   @computed get labelStyle() {
     // 计算 label 排版：item 自有值优先，缺省用 form 注入的兜底，文本对齐再缺省 'left'
     let lw: any = this.labelWidth != null ? this.labelWidth : this._formLabelWidth
-    // ⚠️ attribute 传入的 label-width（如 label-width="62"）到这里是字符串 "62"，
+    // attribute 传入的 label-width（如 label-width="62"）到这里是字符串 "62"，
     // 不归一会生成无单位的 width:62 —— 非法 CSS 被浏览器整条丢弃，label 退回自然宽
     // （表现为各行 label 不对齐）。纯数字字符串一律补成 number。
     if (typeof lw === 'string' && /^\d+(\.\d+)?$/.test(lw.trim())) lw = Number(lw)
@@ -147,7 +147,7 @@ export class FormItem extends CompElem {
     if (!this.control || !this.prop) return true;
 
     let rules: any[] = []
-    // ⚠️ 原实现 `rules = rule` 之后又 `if (rule) rules.push(rule)`：
+    // 原实现 `rules = rule` 之后又 `if (rule) rules.push(rule)`：
     // — rule 是数组时，把宿主 form.rules[prop] 那个数组**推进它自己** ⇒ 每次校验
     //   该数组长度 +1 个自引用，永不回收（规则配置被永久污染）；
     // — rule 是单个对象时，push 的是同一个对象，语义正确但依赖上面的分支顺序。

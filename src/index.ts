@@ -6,7 +6,7 @@ import { registerIcons, type IconFactory } from "./icons/registry";
 // 标签→类映射（HTMLElementTagNameMap）与事件类型；export * 保证声明产物保留该引用
 export * from './types/components';
 // API 词汇表（尺寸/语义色/事件名/slot 名），组件消费方做字面量联合校验用
-export { AppearanceSize, AppearanceSpace, SemanticColor, ComponentEvent, ComponentSlot } from "./constants";
+export { AppearanceSize, AppearanceSpace, ComponentEvent, ComponentSlot, SemanticColor } from "./constants";
 //components
 export { Board } from "./components/datadisplay/board/Board";
 export { BoardBar } from "./components/datadisplay/board/BoardBar";
@@ -51,21 +51,15 @@ export { PortalWidgetEditor } from "./components/datadisplay/portal/PortalWidget
 // 必须复用这里的几何规整，而不是再写一份 —— 两份规则一旦分叉，就会出现
 // 「宿主认为合法、组件认为非法」的静默偏差。
 export {
-  LAYOUT_VERSION as PORTAL_LAYOUT_VERSION,
-  MAX_ROWS as PORTAL_MAX_ROWS,
-  compactItems as compactPortalItems,
-  findFreeCell as findPortalFreeCell,
-  makePortalItemId,
-  normalizeLayout as normalizePortalLayout,
-  parseWidgetSize,
-  resolveColumns as resolvePortalColumns,
-  widgetKey as portalWidgetKey,
+    compactItems as compactPortalItems,
+    findFreeCell as findPortalFreeCell,
+    makePortalItemId,
+    normalizeLayout as normalizePortalLayout,
+    parseWidgetSize, LAYOUT_VERSION as PORTAL_LAYOUT_VERSION,
+    MAX_ROWS as PORTAL_MAX_ROWS, widgetKey as portalWidgetKey, resolveColumns as resolvePortalColumns
 } from "./components/datadisplay/portal/layout";
 export type {
-  ColumnCountOptions as PortalColumnCountOptions,
-  LayoutItem as PortalLayoutItem,
-  PortalLayout as PortalLayoutData,
-  WidgetSize as PortalWidgetSize,
+    ColumnCountOptions as PortalColumnCountOptions, PortalLayout as PortalLayoutData, LayoutItem as PortalLayoutItem, WidgetSize as PortalWidgetSize
 } from "./components/datadisplay/portal/layout";
 export { Aside } from "./components/layout/container/Aside";
 export { Container } from "./components/layout/container/Container";
@@ -145,26 +139,19 @@ export { Tooltip } from "./components/overlays/tooltip/Tooltip";
 export { Heading } from "./components/text/heading/Heading";
 export { Highlight } from "./components/text/highlight/Highlight";
 
+export * from "./directives/a11y/Activatable";
 export * from "./directives/ripples/Ripples";
 export * from "./directives/splits/Splits";
 export * from "./directives/tooltip/Tooltip";
-export * from "./directives/a11y/Activatable";
 
 export * from './components/overlays/modals/index';
 export * from './components/overlays/toast/toast';
 
 export * from './icons/icons';
-export { registerIcons, getIcon, hasIcon, iconCount, type IconFactory } from './icons/registry';
+export { getIcon, hasIcon, iconCount, registerIcons, type IconFactory } from './icons/registry';
 
-export * from "./utils/utils";
 export * from "./locale";
-
-// 表格导出（Excel）。`utils/excel.ts` 内 `exceljs` 已改为**动态 `import()`**
-// （可选运行时依赖），不再进入库主入口的静态依赖图 —— 包缺失时仅 `console.warn`
-// 并安全退出，不影响库主入口加载。导出是库的公开能力，使用方应能从 `compelem-ui`
-// 直接取到 `exportExcel`，不必知道内部路径。该接口返回 `Promise<void>`
-// （动态 import 天然异步），调用方通常 fire-and-forget，无需 await。
-export * from "./utils/excel";
+export * from "./utils/utils";
 
 (() => {
     setDefaults({

@@ -74,13 +74,8 @@
 }
 
 // hover 的方向只能是「加深」，绝不能把文字调浅。
-// 此处曾把 color 与 border 互换（文字→gray-300、边框→gray-700），浅灰字落在浅底上，
-// 对比度从 9.5:1 掉到 1.4:1（远低于 WCAG AA 的 4.5:1），文字基本不可辨认。
-// 与 AppearanceType.Outlined 的设计注释也对不上——原意是「悬浮后显示高透明度背景，
-// 同字体色」，即叠一层雾面，而不是反色。
-//
-// 为什么不用 [hoverable] 分支：compelem 的 Boolean prop 属性反射是单向的，
-// `hoverable = false` 不会移除属性（实测 host 上仍带 hoverable=""），CSS 无法据此区分；
+// compelem 的 Boolean prop 属性反射是单向的，
+// `hoverable = false` 不会移除属性，CSS 无法据此区分；
 // 而输入框类外壳（InputDate / InputColor / InputTime）不渲染 APPEARANCE_LAYER，
 // ::part(__underlay) 对它们天然无匹配。因此统一成两条互不干扰的规则：
 // 边框加深对全体生效，雾面对「有层的」自动生效。

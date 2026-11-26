@@ -1,6 +1,6 @@
 import type { CssTemplate } from "compelem";
 import { classes, CompElem, computed, css, csscope, Csscope, CssHelper, debounced, emits, forEach, h, html, ifElse, ifTrue, onced, prop, query, QueryCache, state, tag, Template, watch } from "compelem";
-import { alphaIndex, alphaLabel, camelCase, clone, cloneDeep, closest, debounce, each, eachRight, filter, find, findIndex, flatDeep, flatMap, formatDate, formatNumber, fval, get, groupBy, isArray, isBlank, isDefined, isEmpty, isNil, isNumeric, isObject, isString, isUndefined, kebabCase, keys, last, map, randi, range, set, size, some, sortTree, startsWith, take, takeRight, test, walkTree } from "myfx";
+import { alphaIndex, alphaLabel, camelCase, clone, cloneDeep, closest, debounce, each, eachRight, filter, find, findIndex, findKey, flatDeep, flatMap, formatDate, formatNumber, fval, get, groupBy, isArray, isBlank, isDefined, isEmpty, isNil, isNumeric, isObject, isString, isUndefined, kebabCase, keys, last, map, randi, range, set, size, some, sortTree, startsWith, take, takeRight, test, walkTree } from "myfx";
 import { AppearanceElem } from "../../../base/Appearance";
 import { DataType, EMPTY_TAG_LABEL_COLOR, RandomColors, SortType } from "../../../constants";
 import { ChevronRight, ExpandDiagonal } from "../../../icons/icons";
@@ -337,7 +337,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   /**
    * 表体（`.ce-table-body`）实测高度，单位为 px。
    *
-   * ⚠️ 必须走 `@state` 而不是在 `cssVars` 里直接读 `this.tableBody.offsetHeight`：
+   * 必须走 `@state` 而不是在 `cssVars` 里直接读 `this.tableBody.offsetHeight`：
    * `tableBody` 是 `@query`（非信号），把它写进 `cssVars` 会让编译器生成
    * `rc.__s.tableBody.offsetHeight.value`，而 `rc.__s` 中无此键 ⇒ 运行期 `TypeError`；
    * 更严重的是它会连带让**整个 cssVars 依赖提取失败**（详见 `get cssVars()` 上方注释）。
@@ -463,7 +463,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
     return [tableStyleSheet];
   }
   /**
-   * ⚠️⚠️ **`cssVars` 的每个取值表达式都必须只引用「可静态解析的响应式字段」**
+   * **`cssVars` 的每个取值表达式都必须只引用「可静态解析的响应式字段」**
    * （自有/祖先类的 `@prop` / `@state` / `@computed`）。
    *
    * 编译器对 `get cssVars()` 做**整体**依赖提取（`extractCssDeps`）：
@@ -471,16 +471,6 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
    * `if (cssDeps && cssDeps.length)` —— **整段 `cssEffect` 都不会生成**，
    * 于是宿主上一个 `--table-*` 变量都不会被写入（不是「某一项失效」，是**全灭**）。
    * 而且这条路径**没有运行时兜底**（`CompElem` 只在 `ceStatic.cssEffect` 存在时才挂 effect）。
-   *
-   * 本文件历史上踩过两次，务必不要再引入：
-   *  1. `tableHeight: isUndefined(this.height) ? …` —— `Table` **没有** `height` prop
-   *     （全仓 `@prop height` 只在 ProgressLinear / Drawer 上），标识符解析失败 ⇒ 全灭。
-   *     已删除；`--table-height` 改由使用方直接设置在宿主内联样式上，
-   *     `style.scss` 的 `height: var(--table-height, 100%)` 自带 `100%` 兜底。
-   *  2. `tableBodyHeight: \`${this.tableBody?.offsetHeight ?? 0}px\`` —— `tableBody` 是
-   *     `@query`，**不是信号**：提取器会把它当成依赖并生成 `rc.__s.tableBody.offsetHeight.value`，
-   *     而 `rc.__s` 里根本没有该键 ⇒ 首次执行即 `TypeError`。
-   *     改为读 `@state tableBodyHeight`（由 `resetVirtualList` 在测量处写入）。
    */
   get cssVars() {
     return {
@@ -512,7 +502,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   /**
    * 骨架扩展开关：是否在基类骨架里补出「编辑态附加节点」。
    *
-   * ⚠️ 这是 **0.30 编译期的骨架复用通道**，不是普通业务开关：
+   * 这是 **0.30 编译期的骨架复用通道**，不是普通业务开关：
    *   - 编译器要求 `render()` 内有且只有 1 个主视图 `h`` 模板（D7，见
    *     `compelem-compiler/src/analyze/template-extract.ts`），而 Editable 的
    *   6 个附加节点（caret/textarea/filler/tipmsg/menu/alert）**必须留在
@@ -693,10 +683,6 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
     if (this.tableHead)
       this.headerRowHeight = this.tableHead.clientHeight
   }
-  // 原先这里有一条 `@watch('showIndicator')`，已删除：
-  // `showIndicator` 并不是 `ce-table` 自己的响应式字段 —— 它声明在**子类** Editable
-  // (`Editable.ts:255 @prop`)，且 Editable 已有等价的 watchShowIndicator 处理。
-  // 在 Table 上监听它属于死代码（信号不存在，effect 永不触发），编译期报 E-WATCH-SOURCE。
   @watch('paddingLeft')
   watchPadding(v: number) {
     this._updateScrollWidth()
@@ -978,22 +964,11 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   onCloseTip(_e: Event) { }
   onSelectOption(_obj: Record<string, any>) { }
   /**
-   * ⚠️ `shouldUpdate` / `updated` 已从 compelem 移除（0.31）。
    *
    * 原因：signal 架构下更新单位是 effect，不存在「组件更新完了」这个时刻，也没有可 diff 的
    * 依赖集可供组装 `changed` —— 两个钩子只挂在已删除的组件级 render pass 上。
    * 替代物：数据响应 `@watch('field')`；「DOM 已落盘」用 `afterUpdate()`；
    * 条件闸门把逻辑放进 `@computed`（`untrack` 掉依赖即不订阅）或用 `ifElse` 包子树。
-   *
-   * 本组件原两处覆盖的迁移结论（此前 2026-10-09 实测 + A/B 复现）：
-   * 1. `shouldUpdate(changed)` 的两个 veto 分支依赖 `changed.fixedLeftColumns` /
-   *    `changed.vCachedRows`，而 `changed` 恒为 `{}` ⇒ 两分支永不进入 ⇒ 恒 true，纯空转；
-   *    且 `Editable` 的同名覆盖 `every(changed, k => k.includes('scrollColumns'))` 在 `{}`
-   *    上恒 true ⇒ 恒返回 false ⇒ 它的 `forceUpdate()` 早就是永久 no-op。均随钩子删除。
-   * 2. `updated()` 消费的 `#updateView` 早改成由 `resetVirtualList()` 显式调
-   *    `#applyViewUpdate()` 消费（那里同时量表体高度，是天然的重置出口）；此处仅剩
-   *    「被外部 `forceUpdate()` 时补做一次」的兜底，而 `forceUpdate()` 本身已无条件化，
-   *    钩子移除后该兜底由 `afterUpdate()` 承担（如仍需要，可在 forceUpdate 后显式调用）。
    */
   /**
    * 虚拟列表重置后的**延迟补填**：重算滚动边界 → 重新定位并填充可见行 →
@@ -1037,7 +1012,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
       if (this.showFooter)
         this.TableConfigPane?.onStat(this)
 
-      // ⭐ 修正 `--table-body-height` 恒为 0 的根因：
+      // 修正 `--table-body-height` 恒为 0 的根因：
       // `resetVirtualList()` 在顶部量的 `tableBody.offsetHeight` 是**行填充之前**的值（填充发生在本回调
       // 的 `__fillCells()` 之后、`setTimeout(0)` 此刻已 reflow），空表体高度为 0；
       // 而基础用法 `<ce-table>` 不设高度、`--table-height` 兜底 `100%` 相对 auto 父解析成 `auto`，
@@ -1128,7 +1103,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
     this.__updatableFillColor = this.__insertOwnSheet(css`${this.__getFillColorStyle()}`)
 
     //scroller track
-    // ⚠️ `scrollerWidth > 0` 才追加「滚动条占位列」(`__scroller`，fixed-right，
+    // `scrollerWidth > 0` 才追加「滚动条占位列」(`__scroller`，fixed-right，
     //    背景不透明)。它只在最右侧为**纵向滚动条**预留一条 `scrollerWidth` 宽的
     //    槽位 —— 宽度恒为 `scrollerWidth`，且**覆盖**在 `.ce-table-column-scroll`
     //    之上（fixed 列）。当表格宽度恰好 = Σ列宽（如报表预览：块宽 = Σ列宽、
@@ -1147,13 +1122,8 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   mounted(): void {
     let fontSize = parseFloat(window.getComputedStyle(this).fontSize)
     this.__fontSize = fontSize
-    // ⭐ rowHeight prop（文档写明「行高，默认为字体大小*2」）此前声明但从未被读取（装饰器债），
-    //   行高只有 _setRowHeightType 的三档（Compact 会被 mounted 强制设入，36px 兜底）。
-    //   现在尊重显式数值：**先走完整的 Compact 设定（保留全部副作用）**，
-    //   再把 vRowHeight 覆写为显式值 —— 不能跳过 _setRowHeightType：
-    //   实测跳过它会让虚拟列表首填不发生（行结构建不出来，表格永久空置，A/B 已证）。
-    //   行高必须走 vRowHeight（虚拟列表按它计算），纯 CSS 改行高会造成行内容与
-    //   虚拟列表定位错位。
+    // 不能跳过 `_setRowHeightType`：行高必须走 vRowHeight（虚拟列表按它计算），
+    // 纯 CSS 改行高会造成行内容与虚拟列表定位错位。
     this._setRowHeightType(RowHeightType.Compact)
     if (this.rowHeight > 0) {
       this.__rowHeightType = 'custom'
@@ -1182,7 +1152,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
     this.TableConfigPane = null!
   }
   /**
-   * ⭐ 这里**不能**加 `@debounced`。
+   * 这里**不能**加 `@debounced`。
    *
    * 全框架只有一个槽变化入口：`CompElem#onSlotChange` → `this.slotChange(slot, name)`；
    * 而 `@debounced` 的实现是「每实例一个共享的防抖函数」（`debounced.ts` 里
@@ -1193,11 +1163,6 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
    * 守卫就会命中并把列登记整个跳过 ⇒ `_columnMetaMap` / `_fieldMap` / `allColumns`
    * 永远为空 ⇒ 表头（slot 投影）照常显示、**表体永久空白**，且不再有任何后续事件
    * 能把状态救回来。
-   *
-   * 实测触发条件：`<ce-editable>` / `<ce-table>` 里投影了 `slot="overlay"` 的浮层
-   * （见 `Table.render()` 的 `<div style="position:absolute…"><slot name="overlay">`）。
-   * 时间线：`[ce-editable] t=414ms 事件2次 槽名=[(default), overlay] ⇒ 防抖后仅保留
-   * 最后参数: overlay`。
    *
    * 本方法体只是一次判空，开销可忽略；重活交给同样 `@debounced(100)` 的
    * `_appendColumn()` 去合并。
@@ -1258,20 +1223,19 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
 
       //preventDefault()
       this.bodyCon.scrollLeft = 0
-      // ⚠️⚠️ 上面那句**归零对象不对**，它自己的 `scrollLeft` 本来就是 0。
+      // 上面那句**归零对象不对**，它自己的 `scrollLeft` 本来就是 0。
       //    真正被原生滚走的是 `ce-scroller` 内部的 `.ce-scroller-content-wrapper`
       //    （`overflow:hidden` 只挡用户，JS 写 `scrollLeft` 照样生效），而
       //    `.ce-table-body-container`（**行号槽、固定列**都在里面）正好在它内部；
       //    外边那圈 `.ce-table-column-scroll` 又做了 `translateX(paddingLeft - to)`。
       //    ⇒ 行号槽只承担"原生"那一份、数据列承担"原生 + transform"两份，相对错位 `to` px；
       //      表头/表尾在 wrapper 之外（锚在 `position:relative` 的 `.ce-table` 上）⇒ 看着反而正常。
-      //    （2026-09-17 实测 to=240：行号槽左缘 270→30、首列左缘 300→-180，行号被拖出视野）
-      // ⚠️ 必须**排队到微任务**再清：`Scroller.moveThumb` 是先 `emit('scroll')`（→ 走到这里）
+      // 必须**排队到微任务**再清：`Scroller.moveThumb` 是先 `emit('scroll')`（→ 走到这里）
       //    再写 `contentWrapper.scrollLeft = to`，此刻它还没被写、读到的还是旧值
       //    （首次触发时恒为 0），同步清等于没清。
       const cw = this.scroller?.contentWrapper
       if (cw) queueMicrotask(() => { if (cw.scrollLeft) cw.scrollLeft = 0 })
-      // ⚠️ 表头隐藏时不能拿 `tableHead` 当同步源（见 __scrollLeft 注释）：
+      // 表头隐藏时不能拿 `tableHead` 当同步源（见 __scrollLeft 注释）：
       //    display:none 元素的 scrollLeft 恒为 0，写进去也读不出来。
       if (this.showHeader) this.tableHead.scrollLeft = to
 
@@ -1422,10 +1386,9 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
         if (c.dataType === DataType.User) return
         if (c.dataType === DataType.Image) return
         let colEl = this._fieldMap.get(c.prop)
-        // 缺口⑲之三（实测定位）：`_fieldMap` 里可能残留**已销毁**的 `ce-column`。
-        // 列的销毁先于表格、或 _fieldMap 尚未重建时，`colEl.slots` 会打在
-        // 失效代理上 → `Reflect.get called on non-object`
-        // （M5 换报表：8 列 → 6 列，两条被移除的列即为死列）。
+        // `_fieldMap` 里可能残留**已销毁**的 `ce-column`：列的销毁先于表格、
+        // 或 _fieldMap 尚未重建时，`colEl.slots` 会打在失效代理上 →
+        // `Reflect.get called on non-object`。
         if (colEl?.isDestroyed) return
         let cellTmpls = colEl?.slots?.cell!
         if (!isEmpty(cellTmpls)) {
@@ -1459,7 +1422,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
     this.nextTick(() => {
       // vPillar 来自 @query('#vpillar')，**可能取不到**：该访问器会被实例上的同名
       // 自有属性遮蔽（见 mixins/Virtualized.ts 的无初始化器字段声明），且首帧 mutate
-      // 早于模板插入时也解析不到。无守卫时会抛未捕获 TypeError（实测 ce-editable 4/4 必现），
+      // 早于模板插入时也解析不到。无守卫时会抛未捕获 TypeError，
       // 并且**中断后续 ready 流程**（scroller.reposition 不再执行）。这里只做「有就设」。
       if (this.vPillar) {
         this.vPillar.style.height = this.vScrollHeight + 'px'
@@ -1474,7 +1437,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
 
     this.#scheduleUpdateLastColProp()
 
-    // ⭐ 虚拟列表 DOM 就绪 ⇒ 调度补填（`__fillCells` 给行打 `available` 标）。
+    // 虚拟列表 DOM 就绪 ⇒ 调度补填（`__fillCells` 给行打 `available` 标）。
     //    0.31 起这一步**必须**显式驱动：`updated()` 只在 `forceUpdate()` 时触发，
     //    「置 `#updateView` 等下一次重渲染」的老路已断（详见 `updated()` 上方注释）。
     //    放在本方法末尾是因为这里是「wrapper 集合刚被 (重)建好」的唯一汇聚点：
@@ -1620,10 +1583,10 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
         { transform: `translateY(${newY}px)` }
       ], opts)
     } else if (oldY == null) {
-      const inner = row.firstElementChild as HTMLElement | null
-      if (inner) anim = inner.animate([
-        { opacity: 0, transform: 'translateY(-8px)' },
-        { opacity: 1, transform: 'none' }
+      // transform 会改变固定列的绝对定位基准，只能动画已有 translateY 的 wrapper。
+      anim = row.animate([
+        { opacity: 0, transform: `translateY(${newY - 8}px)` },
+        { opacity: 1, transform: `translateY(${newY}px)` }
       ], opts)
     }
     if (!anim) return
@@ -1668,7 +1631,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
    *
    * 展开态类不在这里就地切换 —— `_fillRow()` 每次填充都会按 `expandedIdMap`
    * 写回 caret 的 `is-expanded`（见树列分支），而那批填充与 FLIP 同一帧开始。
-   * 抢在这里切会让图标先转完再去等行位移（实测展开领先 64ms、折叠领先 70ms）。
+   * 抢在这里切会让图标先转完再去等行位移。
    * 没有动画窗口时（reduced-motion、时长为 0、行池未就绪）走原就地切换，
    * 保证点击即时响应。
    */
@@ -1978,15 +1941,13 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   /**
    * 横向滚动内容宽的**测量源**。
    *
-   * 原本只量表头（`.ce-table-head .ce-table-column-scroll`）。但表头隐藏时
-   * （`showHeader=false`）整个表头是 `display:none` 子树，`offsetWidth` 恒为 0
+   * 表头隐藏时（`showHeader=false`）整个表头是 `display:none` 子树，`offsetWidth` 恒为 0
    * ⇒ `vScrollWidth` 归零 ⇒ 传给 `ce-scroller` 的 `sWidth` 为 0 ⇒ Scroller 回落到
    * `contentWrapper.scrollWidth`（= 容器宽 —— 行的溢出不会算进祖先的 scrollWidth）
-   * ⇒ 判定"不需要横向滚动"、横向 thumb 宽度恒为 0
-   * （实测：11 列 1152px 塞进 1088px 容器，完全没有横向滚动条）。
+   * ⇒ 判定"不需要横向滚动"、横向 thumb 宽度恒为 0。
    *
-   * 此时改从**表体已渲染行**的滚动列容器量 —— 列宽几何与表头同源（都是各列
-   * `flex-shrink:0` 的宽度之和）。虚拟列表未建好时取不到行，退化为 0（与旧行为一致）。
+   * 表头隐藏时改从**表体已渲染行**的滚动列容器量 —— 列宽几何与表头同源（都是各列
+   * `flex-shrink:0` 的宽度之和）。虚拟列表未建好时取不到行，退化为 0。
    */
   #measureScrollColWidth(): number {
     if (this.showHeader) return this.tableHeadScroll?.offsetWidth ?? 0
@@ -2012,24 +1973,16 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
    * ⇒ `paddingLeft` 归零 ⇒ 每个数据行的滚动容器 `translateX(0)`，滚动列整段压在
    * 左固定槽（`position:absolute; left:0`）底下。
    *
-   * 症状（2026-10-21 用户报障）：预览里前 3 列冻结后，"非固定列的左侧与固定列重叠" ——
-   * 表头只剩一列被盖掉一半的文字、数据列整体左移。
-   *
    * 表头量不到时**按列宽求和**（不量表体行）：行内的 `.ce-table-column-fixed.is-left`
-   * 宽度会被**横向合并**撑开 —— 标题行（`colSpan` 覆盖整表）那一槽实测 1190px（= 整表宽），
-   * 拿来当 padding 更糟。列宽才是"固定区该占多宽"的唯一真值（`renderWidth` 就是
-   * `--column-width-<prop>` 的来源），隐藏列不占位、与 `display:none` 一致。
+   * 宽度会被**横向合并**撑开，拿来当 padding 更糟。列宽才是"固定区该占多宽"的唯一真值
+   * （`renderWidth` 就是 `--column-width-<prop>` 的来源），隐藏列不占位、与 `display:none` 一致。
    *
-   * ⭐⭐⭐ `offsetLeft` **两个分支都要加**（2026-10-27 修）：
+   * `offsetLeft` **两个分支都要加**：
    * `offsetLeft` 不只是"固定列自己的位移"，它还包含**行号槽**造成的整体右移 ——
    * `Editable.#syncRowIndicatorGutter()` 插的 `ce-column[__sn]`（表头）与
    * `.ce-table-row::before`（表体）都是 `position:absolute; z-index:1`，**不占 flex 空间**，
    * 而 `editableStyle.scss` 把左固定槽设成 `left: var(--editable-row-indicator-width)` ⇒
    * 槽宽只能通过 `offsetLeft` 体现。
-   * 旧实现只在 `clientWidth > 0`（有冻结列）时带它 ⇒ **一列都没冻结**时走求和分支、
-   * `offsetLeft = 30` 被整个丢掉 ⇒ `paddingLeft = 0` ⇒ `.ce-table-column-scroll` 的
-   * `translateX(0)` 不右移 ⇒ `show-indicator="row"` 的第一列被行号槽压住 30px
-   * （报表设计器默认不冻结列，必现；有冻结列时反而正常，所以长期没暴露）。
    * 表头隐藏时 `offsetLeft` 恒为 0 ⇒ 预览 / 渲染器空转，不受影响。
    */
   #measureFixedWidth(side: 'left' | 'right'): number {
@@ -2401,7 +2354,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   /**
    * 同步版的虚拟列表重置。树展开/折叠这轮直接调用它，跳过 50ms 防抖 ——
    * 防抖窗口叠在 `__scheduleExpandRefresh()` 的延迟上，会让点击到动画起步
-   * 多出近 70ms 的空窗（实测展开 64ms、折叠 70ms 的「先转图标后动行」）。
+   * 多出近 70ms 的空窗。
    */
   __resetVirtualListNow() {
     let oh = this.tableBody.offsetHeight
@@ -2769,12 +2722,6 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   //   }
   // }
   /////////////////////////////////  仅由列调用 结束
-  // R4 优化（2026-09-20）：#updateLastColProp() 内部逐列调用 isVisible() →
-  // getBoundingClientRect()，每次都会强制一次**整表同步布局**。而 scrollColumns 在首屏
-  // 会随着 <ce-column> 逐个插入反复变化（onColumnChange / #onListReady / 列 watch 各来一次），
-  // 同一个任务里能被同步调用几十次 ⇒ 几十次整表回流。CPU profile 实测 isVisible 自耗占
-  // 主线程 6.6%，其中最大的一块（约 328ms）就来自这里的调用链。
-  // 用微任务做合并：本帧内仍取到最终值（微任务先于渲染执行），但把 N 次回流压成 1 次。
   #updateLastColPropScheduled = false
   #scheduleUpdateLastColProp() {
     if (this.#updateLastColPropScheduled) return
@@ -2815,12 +2762,9 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
     const consuming = this.#treeAnimConsume
     this.#treeAnimConsume = false
     this.#treeAnimActive = consuming && this.#treeAnimSnapshot != null
-    // ⚠️ `vList` 由 `#updateListSize`（见下方的 `.ce-table-v-wrapper[available]` 查询）
+    //  `vList` 由 `#updateListSize`（见下方的 `.ce-table-v-wrapper[available]` 查询）
     //    在列表真正就绪**之后**才赋值；而 `__fillCells` 走 `setTimeout(...,0)` + `@debounced`
-    //    调度，**可能抢在那次赋值之前执行**。实测（2026-09-17）：页面就绪后立刻 `runPreview()`
-    //    会抛 `Cannot read properties of undefined (reading 'sort')`，并**中断整轮单元格填充**
-    //    （既有探针都在触发前等 1.5s，所以一直没暴露）。兜底为空数组：
-    //    没有可填的行就什么都不做 —— 比抛错中断安全，且不影响就绪后的正常路径。
+    //    调度，**可能抢在那次赋值之前执行**。vList 可能尚未赋值，按空数组处理。
     let rowEls = (this.vList ?? []).sort((a, b) => parseFloat(a.style.transform.replace(/translateY\((.*?)\)/, '$1')) - parseFloat(b.style.transform.replace(/translateY\((.*?)\)/, '$1')))
     let rowIndexs = rowEls.map(el => parseInt(el.dataset.rowIndex!))
     const win = this.__currentColWindow()
@@ -3000,8 +2944,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
           icon.style.visibility = 'hidden'
         }
         // 展开态类只在**这次真的翻转**时补动画：重填与 FLIP 同一帧开始，
-        // CSS 过渡在这个渲染上下文里不一定触发（实测同一份 class 切换，
-        // 由点击事件驱动会过渡、由重填驱动则直接跳到终值），所以旋转走 WAAPI。
+        // CSS 过渡在这个渲染上下文里不一定触发，所以旋转走 WAAPI。
         const caretEl = icon.parentElement as HTMLElement
         const nextExpanded = !!this.expandedIdMap[rowId]
         const caretFlipped = caretEl.classList.contains(CLASS_EXPAND) !== nextExpanded
@@ -3369,8 +3312,7 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
         switch (colEl.dataType) {
           case DataType.Number:
             // 非数字**保留原文**，不清空：格式化只负责"美化可解析的值"，
-            // 把无法格式化的内容吞成空串会让"表头行文字落在 number 列上"整格消失
-            // （实测示例：模板表头行的 单价/数量/金额）。
+            // 把无法格式化的内容吞成空串会让"表头行文字落在 number 列上"整格消失。
             rs = isNumeric(rs) ? formatNumber(rs, colEl.pattern) : rs
             break;
           case DataType.Time:
@@ -3517,6 +3459,54 @@ export class Table extends TableExtensionFillColor(TableExtensionFx(TableExtensi
   }
   getData() {
     return this.innerData
+  }
+
+  /**
+   * 取列组件实例（`ce-column`），**包含隐藏列**。
+   * 与 {@link getRenderColumns} 的区别：后者只返回当前可见、且排除滚动占位列的列。
+   */
+  getColumn(prop: string): Column | undefined {
+    return this._fieldMap.get(prop)
+  }
+
+  /**
+   * 列的分组路径：`[叶子列, 父分组列, 祖父分组列, ...]`（由内到外）。
+   *
+   * 多级表头这类「列在表头里占第几层」的消费方从这里取，不必自己沿
+   * `parentComponent` 往上走（那还要判 `constructor.name === 'Column'`）。
+   */
+  getColumnPath(prop: string): Column[] {
+    const path: Column[] = []
+    let node: any = this._fieldMap.get(prop)
+    while (node) {
+      path.push(node)
+      const parent = node.parentComponent
+      node = parent && parent.constructor.name === 'Column' ? parent : undefined
+    }
+    return path
+  }
+
+  /**
+   * 列的统计信息（表尾统计区）。`null` = 该列未开启统计或还没算过。
+   *
+   * - `label` 表尾显示的文字；
+   * - `metric` 指标键（`sum` / `mean` / `notfilled` / `filled` / `range` …）；
+   * - `fn` 配置里选定的统计函数，有值说明可按指标写公式，无值只能用 `value`；
+   * - `value` 列脚缓存值（自定义统计的结果）。
+   */
+  getColumnStats(
+    prop: string
+  ): { label: string; metric: string; fn: string | null; value: string | number | null } | null {
+    const self = this as any
+    const label = self.statsColLabelMap?.[prop]
+    if (!label) return null
+    const metric = findKey(self.statsLabelMap ?? {}, (v: any) => v === label) as string
+    return {
+      label,
+      metric: metric ?? "",
+      fn: self.TableConfigPane?.statsColStatMap?.[prop] ?? null,
+      value: self._columnFootMap?.get(prop)?.statValue ?? null
+    }
   }
 
   setCellStyle(style: string | Record<string, any>, rowIndex: number, colProp: string) {

@@ -4,10 +4,9 @@ import { each, isEmpty, walkTree } from "myfx";
 /**
  * 展开态类名。
  *
- * ⚠️ 必须与样式表里的选择器同名：`tree/style.scss` 与 `table/style.scss` 用的都是
+ * 必须与样式表里的选择器同名：`tree/style.scss` 与 `table/style.scss` 用的都是
  * `.is-expanded`（`.ce-tree-node.is-expanded > .ce-tree-node-content …` 、
- * `.ce-table-caret.is-expanded ce-icon`）。历史上这里是 `__expanded`，两边对不上，
- * 导致"展开后 caret 图标仍是右向（未展开）"以及分组列的同一现象。
+ * `.ce-table-caret.is-expanded ce-icon`）。两边对不上会导致展开后 caret 图标仍是右向（未展开）。
  */
 export const CLASS_EXPAND = "is-expanded";
 /**

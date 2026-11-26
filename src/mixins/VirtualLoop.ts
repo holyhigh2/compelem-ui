@@ -12,7 +12,7 @@ export const TransYReg = /translateY\((.*?)\)/
  */
 export function VirtualLoop<T extends Constructor<any>>(spuerClass: T) {
     return class VirtualLoop extends spuerClass {
-        /** ⚠️ 见 `mixins/Virtualized.ts` 顶部说明：存储由子类的五族装饰器提供，
+        /** 见 `mixins/Virtualized.ts` 顶部说明：存储由子类的五族装饰器提供，
          *  这里必须是 `declare`，否则 define 语义发射的 own undefined 属性会遮蔽原型访问器。 */
         declare rowHeight: number
         declare vViewHeight: number

@@ -321,12 +321,9 @@
       &-default {
         padding: 0.5rem 0rem;
 
-        // ⚠️ 不要给 slotted 项钉 margin-left: 0 !important —— 那曾是横排 default
-        //    外观 `::slotted(*:not(:first-child)) { margin-left: 0.5rem }` 项间距的
-        //    垂直抵消规则；横排间距在 0.1.0-alpha（e9962e3）已删，这条成了遗留死
-        //    规则，且 !important 会误杀宿主自己的合法横向 margin（如 margin:auto
-        //    定宽图标项的居中，2026-10-19 活动栏踩到）。需要顶格的宿主自己控制
-        //    margin 即可，库不必强干预。
+        // 不要给 slotted 项钉 margin-left: 0 !important —— 会误杀宿主自己的
+        //    合法横向 margin（如 margin:auto 定宽图标项的居中）。需要顶格的宿主
+        //    自己控制 margin 即可，库不必强干预。
       }
 
       &-tab {

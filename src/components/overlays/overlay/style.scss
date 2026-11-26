@@ -73,7 +73,7 @@
       transform: scale(1) !important;
     }
 
-    /* ⚠️ 模态遮罩**必须**吃命中，别改成 none。
+    /* 模态遮罩**必须**吃命中，别改成 none。
        backdrop 只在 `backdrop=true` 时才渲染（见 Overlay.ts 的 `ifTrue(this.backdrop, …)`），
        dropdown / tooltip / popover 默认 false，压根没有这个节点 —— 想"让非模态浮层不挡页面"
        不该动这里（改了也完全无效，只是白废一层）。

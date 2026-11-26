@@ -119,8 +119,6 @@
 }
 
 .ce-portal-widget-body {
-  // 原来是 `flex: 1`（basis 0）：内容高度不参与外层高度计算，卡片永远撑不高。
-  // 改成 basis auto —— 内容少时照样被 grow 撑满，内容多时把卡片顶高。
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;

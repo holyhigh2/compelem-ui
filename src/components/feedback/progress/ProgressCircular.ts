@@ -57,11 +57,6 @@ export class ProgressCircular extends CompElem {
     if (nv === ov && nv === undefined) return
     ColorHelper.setColor(nv, this.style, `--color`)
   }
-  // 原先这里有一条 `@watch("bgColor", { immediate: true })`，已删除：
-  // 本组件**没有** bgColor 这个字段（它属于 ProgressLinear），而且它写入的
-  // `--bg-color` 变量全库没有任何消费者（轨道 `<circle class="ce-progress-track">`
-  // 用的是硬编码 `stroke="gray"` + hideTrack 开关）。纯遗留死代码，
-  // 留在编译期会报 E-WATCH-SOURCE（信号不存在，effect 永不触发）。
   @watch('value', { immediate: true })
   watchValue(v: number) {
     if (v > 100) v = 100

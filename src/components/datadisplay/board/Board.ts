@@ -150,9 +150,8 @@ export class Board extends FieldContainer(CompElem) {
   }
   render(): Template {
     // keyFn 必须是纯函数：ForEach 在同一轮更新内最多调用它两轮（探测轮只走脏索引 / 构建轮走全部项），
-    // 且两轮共享外部状态 —— 原先的 'null_' + (nullId++) 会让同一索引在两轮拿到不同的 key，
-    // 导致 DOM 断言错乱（实测 4 项数据渲染出 5 个节点，含空节点、顺序错乱）。
-    // 现改为位置确定的 key，并给「数据行」「空位」两个命名空间加前缀以保证互不相交
+    // 且两轮共享外部状态。
+    // 给「数据行」「空位」两个命名空间加前缀以保证互不相交
     // （keyFn 的返回值不落 DOM，只用于 ForEach 内部的 key 序列比较，加前缀无副作用）。
     // 另注意 ForEach.ts:190 在 keyFn 返回 nil 时会静默跳过该项，
     // 所以缺 rowKey 字段的行必须落到空位分支，不能返回 undefined —— 否则整行无声消失。

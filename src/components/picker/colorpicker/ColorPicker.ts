@@ -87,7 +87,7 @@ export class ColorPicker extends Virtualized(AppearanceElem) {
   watchValue(nv: any) {
     const ok = this.syncUI(nv)
     this.hasColor = ok
-    // ⚠️ 空值 / 非法值只复位界面，**不回写**：否则 updateColor() 会按 NaN 拼出
+    // 空值 / 非法值只复位界面，**不回写**：否则 updateColor() 会按 NaN 拼出
     //    RGBA(NAN,NAN,NAN,1.00) 再 emit 回宿主，选一个"没有颜色"的格子就把脏值写进模型。
     if (!ok) return
     this.updateColor()

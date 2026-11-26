@@ -2,13 +2,10 @@
 @use "../../../css/utils";
 
 // ── 折叠/展开几何动画 ─────────────────────────────────────────
-// 原先 :host / .ce-list / .ce-list-container 各自写死 `transition 0.3s`，消费方
-// 既不能整体关闭，也不能和外壳（如 ce-aside）的时长对齐 ⇒ 行在动、外壳不动的错帧。
-// 现在统一走两个开关，默认值等于旧行为：
+// 统一走两个开关，默认值等于旧行为：
 //   --ce-list-transition-duration        几何动画时长，设 0s 即整体关闭插值
 //   --ce-list-transition-timing-function 缓动，外壳与行共用同一条曲线
-// hover 变色是另一回事（用户反馈，不该被折叠开关牵连），单独用
-// --ce-list-item-hover-transition-duration 控制（见 style-item.scss）。
+// hover 变色单独用 --ce-list-item-hover-transition-duration 控制（见 style-item.scss）。
 $_lt: var(--ce-list-transition-duration, 0.3s) var(--ce-list-transition-timing-function, ease);
 
 :host {

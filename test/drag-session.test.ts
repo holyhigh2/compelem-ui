@@ -36,8 +36,6 @@ describe('beginDrag 会话', () => {
   it('按下不捕获，位移超过阈值才捕获；抬起时释放并只回调一次 onEnd', () => {
     const { el, captured, releasedCount } = mount()
     const onEnd = vi.fn()
-    // 2026-11-12：按下瞬间不捕获 —— 指针捕获会让后续 click 的 target 被重定向到
-    // 捕获元素，单击表格时业务侧依赖 composedPath 的命中判定会全部失效。
     beginDrag(el, pev('pointerdown', { clientX: 0, clientY: 0 }), { onEnd })
 
     expect(captured).toEqual([])

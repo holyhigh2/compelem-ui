@@ -334,7 +334,7 @@ export class Editable extends Table {
    * （caret / textarea / filler / tipmsg 在 `.ce-table-body-container` 内 `#vpillar`
    * 之后，menu / alert 是 `.ce-table` 的最后两个子节点）。
    *
-   * ⚠️ 这里**不能**再写自己的 render()：
+   * 这里**不能**再写自己的 render()：
    *   ① 编译器要求 `render()` 内主视图 `h`` 模板唯一（D7）—— 原实现
    *      `super.render()` + `h``selectorTmpl` + `h``tmpl` 是 2 个主视图模板，
    *      直接 `StaticAnalysisError`；
@@ -475,7 +475,7 @@ export class Editable extends Table {
     }
 
     if (get(this.editOption, 'fillable', true)) {
-      // ⚠️ 类名必须是 `is-fillable`：`editableStyle.scss` 里控制填充柄可见性的规则是
+      // 类名必须是 `is-fillable`：`editableStyle.scss` 里控制填充柄可见性的规则是
       // `&.is-fillable { … ::after { display: block } }`。此前这里加的是 `fillable`，
       // 与选择器错配 ⇒ 该规则是死规则，填充柄的 `::after` 恒 `display:none`（不可见）。
       this.renderRoot!.classList.add("is-fillable");
@@ -792,7 +792,7 @@ export class Editable extends Table {
       caret.style.display = 'none'
       return
     }
-    // ⚠️ 必须先显示再测量：caret 常态是 display:none（hideSelector 收尾时置灰），
+    // 必须先显示再测量：caret 常态是 display:none（hideSelector 收尾时置灰），
     // 隐藏元素的 offsetParent 恒为 null —— 若此时回退到 renderRoot 量，得到的是
     // 宿主角度的坐标，而 CSS 绝对定位的包含块是 .ce-table-body-container，
     // 两者相差一个表头高度，首次点击的 caret 就会落到下一行（第二次点击时
@@ -980,7 +980,7 @@ export class Editable extends Table {
   onGlobalMousedown(e: MouseEvent) {
     const menu = this.el_input_options
     if (!menu) return
-    // ⚠️ 菜单挂在 <ce-editable> 的 shadow 里：事件冒到宿主时 target 已被重定向成宿主自身，
+    // 菜单挂在 <ce-editable> 的 shadow 里：事件冒到宿主时 target 已被重定向成宿主自身，
     //    `contains(target)` 恒为 false ⇒ 按下的瞬间就 closeList() 把菜单挪到 left:-9999px，
     //    随后的 click 落空，选项永远点不中。必须用 composedPath 看真实的命中链路。
     const insideMenu = menu.contains(e.target as Element) || e.composedPath().includes(menu)
@@ -988,7 +988,7 @@ export class Editable extends Table {
   }
   @event('keydown', () => document.body)
   onGlobalKeydown(e: KeyboardEvent) {
-    // ⚠️ 表外输入态（宿主页面的输入框 / textarea / contenteditable）里按键不归表格管：
+    // 表外输入态（宿主页面的输入框 / textarea / contenteditable）里按键不归表格管：
     //    本监听挂在 `document.body` 上，没有这条守卫时，只要表里有选区，
     //    在 AI 助手输入框里敲 `/` 就会被下面的可打印字符分支搬走焦点
     //    （`activeInput("")`）、`Ctrl+V` 会被改成往格子粘贴。判据见
@@ -1010,8 +1010,7 @@ export class Editable extends Table {
     if (k === 'Control') return;
     if (k === 'Alt') return;
 
-    // Tab 不劫持，留给浏览器原生焦点流转。原实现是链条中一条空的 else-if 分支，
-    // 本方法在链条之后没有语句，改成提前 return 与原来等价。
+    // Tab 不劫持，留给浏览器原生焦点流转。
     if (lowerCase(e.key) === "tab") return;
 
     if (e.ctrlKey && e.key === "v") {
@@ -1024,7 +1023,7 @@ export class Editable extends Table {
       this.closeList();
     } else if (lowerCase(e.key) == "enter") {
       if (this.activeCell && e.altKey) {
-        // alt+enter 换行。⚠️ textarea 是 `.ce-table-body-container` 的子节点
+        // alt+enter 换行。 textarea 是 `.ce-table-body-container` 的子节点
         // （不在单元格里，见 Table.ts 编辑态附加节点段），早年写在
         // `activeCell.querySelector(...)` 上恒为 null，`null.value += '\n'`
         // 直接抛 TypeError；且程序化改 .value 不触发 input 事件，编辑框
@@ -1978,7 +1977,7 @@ export class Editable extends Table {
           let colProp = colMeta.prop
           let cellPos = { colIndex: cIndex, rowIndex: rIndex, prop: colProp! }
           let oldValue = this.innerData[rIndex][colProp!]
-          // ⚠️ 必须与 Delete / Fill 输出**同款富对象**：消费方（如报表设计器）靠
+          // 必须与 Delete / Fill 输出**同款富对象**：消费方（如报表设计器）靠
           // `cell.prop` / `row.id` / `value` 定位单元格，只给裸 `CellPos`
           // （`{colIndex,rowIndex,prop}`，没有 `cell` 包裹也没有值）会被整段跳过 ——
           // 现象是"库明明 emit 了 change，外部却零回写"。
@@ -2280,13 +2279,11 @@ export class Editable extends Table {
       return { x: box.x, y: box.y, w: box.w, h: box.h, visible: true };
     }
     // 虚拟滚动下不可视行无 DOM：按行高推算**内容坐标**。
-    // ⚠️ 这里**不能**再减 `scroller.y`。`bodyCon` 自身就在滚动子树里
+    // 这里**不能**再减 `scroller.y`。`bodyCon` 自身就在滚动子树里
     //    （真正的滚动盒是 `ce-scroller` 的 `.ce-scroller-content-wrapper`），
     //    它与单元格 rect 同步位移，所以 `getBox(cell, bodyCon)` 得到的是**内容坐标**
     //    （滚动不变）。此前减了一次滚动偏移，导致同一方法对可视行返回内容坐标、
     //    对不可视行返回视口坐标 —— 两套坐标混用。
-    //    实测（220 行报表，scrollTop=960）：可视行 row=37 → y=1332（= 37*36，内容坐标）；
-    //    不可视行 row=0 → y=-960（= 0*36 - 960，视口坐标），同一坐标系下差 960。
     const y = this.vRowHeight * rowIndex;
     return { x: 0, y, w: 0, h: this.vRowHeight, visible: false };
   }
@@ -2364,7 +2361,7 @@ export class Editable extends Table {
     if (el === this.inputCell) return true
     if (!get(this.editOption, 'fillable', true)) return
 
-    // ⚠️ 命中区**不能**按入参 `el`（= `e.target`）来算：选区右下角格在样式里带
+    // 命中区**不能**按入参 `el`（= `e.target`）来算：选区右下角格在样式里带
     // `pointer-events: none`（只把 `.ce-table-cell-content` 和 `::after` 放行），
     // 所以鼠标压在它身上时 `e.target` 是 `.ce-table-column-scroll` **容器** ——
     // 拿容器去算"右下角 4px 命中区"会落到表格外面，鼠标永远碰不到 ⇒ 填充柄虽然
@@ -2377,9 +2374,9 @@ export class Editable extends Table {
     if (!rbCell) return
 
     let cellBox = rbCell.getBoundingClientRect()
-    // ⚠️ 按下点必须落在**角格本体范围内**：只查 `>=`（角格右下角原点）的话，
+    // 按下点必须落在**角格本体范围内**：只查 `>=`（角格右下角原点）的话，
     // 选区右下方整片区域的格子（点 E10 时 min 是 D9 的右下角）都满足条件，
-    // 会被误判进填充拖拽 —— 框选被吞、选区原地不动（实测：S1 fillMode=true）。
+    // 会被误判进填充拖拽 —— 框选被吞、选区原地不动。
     // 加上矩形上界后，只有按在角格上（且在右下角命中块内）才进入填充。
     if (
       e.clientX < cellBox.x ||

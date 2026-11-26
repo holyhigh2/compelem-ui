@@ -77,9 +77,7 @@
     }
 
     // 卡片无正文（默认/正文槽位均为空）时，header 不保留底部间距。
-    // 原先用 `:has(+ .ce-card-slot.bodyless)` 判断，但 :has() 需要
-    // Chrome105 / Safari15.4 / Firefox121+，旧 Firefox 会整条规则静默失效
-    // （卡片底部多出一截空白）——改为由模板在 header 上落 [bodyless] 标记。
+    // [bodyless] 标记由模板落在 header 上。
     &[visible][bodyless] {
       padding-bottom: 0;
     }

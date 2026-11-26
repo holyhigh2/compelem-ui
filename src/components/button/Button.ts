@@ -93,7 +93,7 @@ export class Button extends AriaElem implements IActivatable {
   }
   //////////////////////////////////// lifecycles
   /**
-   * ⚠️ loader 的 `<slot name="loader">` 必须**常驻**（默认进度环改为 ifTrue 条件支）：
+   * loader 的 `<slot name="loader">` 必须**常驻**（默认进度环改为 ifTrue 条件支）：
    * 框架的 slots 分组门禁只统计 shadow 内已存在对应 `<slot>` 元素的插槽名
    * （`CompElem.#updateSlotsAry`：`slotKeys.includes(sName)` 才归类）。条件渲染的
    * `<slot name="loader">` 在首渲染（slots 为空、走默认进度环支）时不存在 ⇒

@@ -147,14 +147,7 @@ export class PanelGroup extends CompElem<null> {
   }
 
   /**
-   * stagger 布局的标记同步。
-   *
-   * 样式表原先用 `[stagger]:has(> ce-panel[expanded])` 与
-   * `> ce-panel:has(+ ce-panel[expanded])` 判断「组内有展开项」「紧邻展开项」。
-   * `:has()` 需要 Chrome105 / Safari15.4 / Firefox121+，在旧 Firefox 上整条规则
-   * 静默失效（箭头错位、卡片底缘多出空白、间隔不出现），属"看起来像 bug"的失效。
-   * 面板是宿主的 light DOM 子节点，group 本就托管它们的展开态，因此改为在状态
-   * 变化时落两个标记，样式表只读属性：
+   * stagger 布局的标记同步：状态变化时落两个标记，样式表只读属性。
    *  - 宿主 [has-expanded]：组内存在展开面板
    *  - 面板 [prev-expanded]：它的下一个兄弟是展开面板
    */

@@ -127,10 +127,7 @@ export class List extends AppearanceElem {
   }
   /**
    * space 变化时同步给已挂载的列表项。
-   *
-   * 原先只有 `slotChange` 会透传 space ⇒ **挂载后改 space 不会重算子项**，
-   * 而两行项的行间内距/主副标题间距是按 space 分档的（ListItem.TWO_LINE_SPACING），
-   * 结果就是内距停在旧档位。与 appearance / collapsed 的 watch 保持一致。
+   * 与 appearance / collapsed 的 watch 保持一致。
    */
   @watch('space', { immediate: false })
   watchSpace(nv: string) {
@@ -209,7 +206,7 @@ export class List extends AppearanceElem {
   /**
    * 下发单个列表项。
    *
-   * ⚠️ 必须由 `ListItem.mounted()` 也调用一次：组件按需加载时，`<ce-list-item>`
+   * 必须由 `ListItem.mounted()` 也调用一次：组件按需加载时，`<ce-list-item>`
    * 在 `slotChange` / `mounted` 触发的那一刻**还没被升级**，`it instanceof ListItem`
    * 恒为 false ⇒ 「初始就折叠的列表」永远漏掉这些子项（只有之后再切换才生效）。
    */
@@ -230,7 +227,7 @@ export class List extends AppearanceElem {
 
   slotChange(slot: HTMLSlotElement, name: string): void {
     this._syncItemProps()
-    // ⚠️ 预选值回填必须走 slotChange，不能只靠 `@watch('select', {immediate:true})`。
+    // 预选值回填必须走 slotChange，不能只靠 `@watch('select', {immediate:true})`。
     //
     // 原因：watch 的 immediate 回调发生在**属性初始化期**，此刻 slot 尚未分发内容，
     // `_resetSelectItem()` 开头的 `if (!this.slotEl) return` 直接返回 ⇒ 受控的 `select`
@@ -257,7 +254,7 @@ export class List extends AppearanceElem {
         this.rowHeight = item.offsetHeight
     }, 100);
 
-    // ⚠️ 必须显式传 `this.select`：无参调用时 `_resetSelectItem()` 的 `selectValue` 为
+    // 必须显式传 `this.select`：无参调用时 `_resetSelectItem()` 的 `selectValue` 为
     // undefined ⇒ 落到末尾的 `else { //todo }` 空分支，预选值永远不落盘（现象：列表初始
     // 无高亮，手点一下才亮）。这里是「槽分发完成后」唯一的回填时机。
     this._resetSelectItem(this.select);

@@ -141,13 +141,8 @@ export class InputTag extends BaseInput {
       <ce-input class="ce-input-tag ce-input-floating-icon ${this.hideInput ? 'ce-input-tag-hideinput' : ''}" clearable align="${this.align}" size="${this.size}" appearance="${this.appearance}" ?active="${this.active}" .maxlength="${this.maxlength}" ?disabled="${this.disabled}" ?readonly="${this.readonly}" ${bind(this.ariaAttrs)} @keyup="${this.onKeyup}">
         <div slot="prepend" class="ce-input-tags" style="display: contents;">
           <!--
-            ⚠️ key 必须是**内容**（value + 下标），不能用下标：(v, i) => i 时
-            同长度改内容（如 ce-select 折叠态标签从「文本」变「数值」）key 不变
-            ⇒ forEach 判 REFRESH 只走 writeCells，而 cell 变化唤不醒嵌套在
-            ifElse 里的子视图（两个分支都在 ifElse 子视图内，其 guard 是条件值
-            而非 cell）⇒ 文本永久停在首渲染值（2026-10-18 实测，compelem
-            directive ForEach.ts:58 + writeCells 链）。
-            内容 key 下内容变化走 UPDATE 重建路径（增删节点实测正常）。
+            key 必须是**内容**（value + 下标），不能用下标：用下标时同长度改内容
+            （如 ce-select 折叠态标签从「文本」变「数值」）key 不变 ⇒ 文本永久停在首渲染值。
             下标后缀保证重复标签不撞 key（InputTag 入口有去重，但
             ce-select 多选的 selectLabelAry 允许同标签选项）。
           -->

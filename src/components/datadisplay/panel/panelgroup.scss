@@ -64,7 +64,6 @@ ce-panel-group {
   // thin 边框成为可见轮廓，容器若再画外阴影会在组外缘形成「外阴影 + 卡片边框」
   // 的重复描边——分离形态下关闭容器外阴影，成员恢复各自投影（与 gapped 卡片一致）
   // 标记由 PanelGroup.syncStaggerState() 维护：[has-expanded] / [prev-expanded]。
-  // 原先用 :has() 直接选择，旧 Firefox（<121）整条规则不生效——见组件内注释。
   &[stagger][has-expanded] {
     box-shadow: none;
 

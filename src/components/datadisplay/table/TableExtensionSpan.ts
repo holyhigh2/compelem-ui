@@ -5,7 +5,7 @@ import { CellSpan } from "./types";
 /**
  * 解析 `__mergedRowCellsMap` / `__mergedColCellsMap` 的键 —— 形状为 `rowIndex-prop`。
  *
- * ⚠️ **不能用 `k.split('-')`**：列 prop 自身可能含 `-`（宿主把列分组/区域前缀拼进 prop 时
+ * **不能用 `k.split('-')`**：列 prop 自身可能含 `-`（宿主把列分组/区域前缀拼进 prop 时
  * 很常见，例如 `block-1__c0`、`detail-2024__amount`）。`split('-')` 会把 prop 截成
  * `block`，于是第二圈取 `endIndexMap[截断后的 prop]` 得到 `undefined` ⇒
  * `__getSpanCellStyle()` 抛 `Cannot read properties of undefined (reading 'has')`。
@@ -129,8 +129,7 @@ export function TableExtensionSpan<T extends Constructor<any>>(spuerClass: T) {
      * 为什么需要：`__getSpanCellStyle()` 是"数据变更时才重算"的（由 `__spanCells` 调）。
      * 但隐藏策略现在取决于列落在哪个槽（见 `__zoneOfColumn`），而槽是 `fixColumns`
      * 后来才建的 —— 预览态就是"先设 data（此时还没冻结）→ 再 fixColumns"，
-     * 若不在分槽后重算，跨冻结边界的合并会一直按"全部同区"渲染 ⇒ 整行左移
-     * （实测：预览里 A1:E1 的 c3/c4 拿到的仍是 hide-span-cell，F 列错位）。
+     * 若不在分槽后重算，跨冻结边界的合并会一直按"全部同区"渲染 ⇒ 整行左移。
      * `__setDataColumns()` 在重建分槽后调用本方法。
      */
     __refreshSpanStyle() {
@@ -147,13 +146,6 @@ export function TableExtensionSpan<T extends Constructor<any>>(spuerClass: T) {
         }
         /*
          * 跨分槽区（冻结边界）的被吞列：**保布局、只隐藏**。
-         *
-         * display:none 会让所属容器的 flex 流丢掉这段宽度 —— 合并锚格在左固定槽里
-         * 宽 = Σ(A..E)、而被吞的 D/E 在滚动槽里 ⇒ 滚动槽少 192px，合并点之后整行
-         * 左移两列，又被 480px 宽的锚格盖住（实测：A–C 冻结 + A1:E1 时 F 列左缘
-         * 597 而不是 789，整行错位 + 第一行一片空白）。
-         * 换成 visibility:hidden：尺寸照占、边框底色内容全不画，锚格的溢出部分
-         * 正好盖在它上面 ⇒ 视觉上是一整块合并区，后续列位置不再漂。
          */
         .keep-span-cell{
           visibility:hidden !important;
@@ -191,12 +183,6 @@ export function TableExtensionSpan<T extends Constructor<any>>(spuerClass: T) {
          * 在整块里垂直居中的办法：
          *   rowSpan=1 → 1（不适用）；rowSpan=2 → 1（两行没有中间格）；
          *   rowSpan=3 → 2；rowSpan=4 → 2；rowSpan=5 → 3 …
-         *
-         * ⚠️ 2026-09-15 这里曾被改成恒 1（Excel"左上锚点"），理由是"合并块第一行是空的"
-         *    —— 那是把**取值问题**误诊成了**可见行问题**：可见行挪到中间后，中间行的
-         *    行数据是空的（业务只把值写在左上格），而库当时不做取值搬运，于是整块空白。
-         *    现在两件事配套：可见行回到中间行（本处），取值 / 样式回落到锚行
-         *    （`__spanTopRowMap` + `Table._fillRow`）⇒ 位置居中、内容仍是左上角的值。
          */
         let mIndex = rowSpan < 3 ? 1 : Math.ceil(rowSpan / 2)
         if (!middleIndexMap[prop]) {
@@ -247,7 +233,7 @@ export function TableExtensionSpan<T extends Constructor<any>>(spuerClass: T) {
       each(this.__mergedColCellsMap, (colSpan, k) => {
         let [rIndex, prop] = parseSpanKey(k)
         let idx = this.allColumns.findIndex((col: any) => col.prop === prop)
-        // ⚠️ 找不到锚列（列还没渲染出来 / 数据里的 prop 与列对不上）时整块跳过。
+        // 找不到锚列（列还没渲染出来 / 数据里的 prop 与列对不上）时整块跳过。
         //    旧实现直接 `findIndex(...) + 1` 当起点，`findIndex` 返回 -1 ⇒ `i = 0`，
         //    接着 `allColumns[si + i]` 在越界处抛
         //    `TypeError: Cannot read properties of undefined (reading 'prop')`。
@@ -302,7 +288,6 @@ export function TableExtensionSpan<T extends Constructor<any>>(spuerClass: T) {
       let cellWidth = this.__rowCellWidthMap[key]
 
       // 没有合并样式的格子占绝大多数：只有上一轮留过 `SPAN_MARK` 的才需要清理。
-      // 逐格无条件 remove 7 个 class 曾是单行填充里最贵的一段。
       if (!cellCls && !cellWidth) {
         if (force || cellEl.hasAttribute(SPAN_MARK)) {
           cellEl.classList.remove(...SPAN_CELL_CLASSES)

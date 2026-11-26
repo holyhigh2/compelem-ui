@@ -28,7 +28,7 @@ class Session implements DragSessionHandle {
   #onMove?: (e: PointerEvent) => void
   #onEnd?: () => void
   #throttled: ReturnType<typeof throttle> | null
-  /** 是否已经建立指针捕获（延后到确实发生位移时才建立，见构造函数注释） */
+  /** 是否已经建立指针捕获（延后到确实发生位移时才建立） */
   #captured = false
   /** 首次 move 的坐标：位移阈值判定用 */
   #originX: number | null = null
@@ -77,14 +77,6 @@ class Session implements DragSessionHandle {
       this.#originX = e.clientX
       this.#originY = e.clientY
     }
-
-    // ⚠️ 不在按下瞬间捕获（2026-11-12）：指针捕获期间 Chrome 会把后续 mouse / click
-    // 的 target 统一重定向到捕获元素 —— 单击只读表格时，原生 click 的
-    // `composedPath()` 会从 `CE-TABLE` 开始，业务侧任何「按内部节点判命中」的逻辑
-    // 都会失效（报表预览的 `rb-link` 就是这么挂的）。
-    // 捕获的目的是「指针移出窗口后仍能收到 pointerup」，只有真的拖动才需要，
-    // 所以延后到 `#move` 里位移超过阈值那一刻再建立。
-    // 单击不动 ⇒ 永不捕获；拖动 ⇒ 3px 时补上，移出窗口照旧收得到 pointerup。
 
     const interval = opts.interval ?? 0
     this.#throttled = interval > 0 ? throttle((ev: PointerEvent) => this.#onMove?.(ev), interval) : null

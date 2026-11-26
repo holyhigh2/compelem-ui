@@ -279,7 +279,7 @@ export class Tooltip extends CompElem implements IPlacement {
       this._relocate();
       this.renderRoot?.classList.add('ce-tooltip-visible')
       this.__timer = null;
-      // ⭐ alwaysShow 的坐标**不能只算一次**（见 __watchSettle 注释）：打开时目标
+      // alwaysShow 的坐标**不能只算一次**（见 __watchSettle 注释）：打开时目标
       // 往往还在被弹层搬家 / 居中，一次定位会留下陈旧坐标。这里补上"跟随"。
       if (this.alwaysShow) {
         this.__bindFollow();
@@ -622,7 +622,7 @@ export class Tooltip extends CompElem implements IPlacement {
     this.__timer = scheduleSettle(root, () => {
       // 同上：隐藏已被取消（如鼠标移入/重新打开）就不要摘节点
       if (token !== this.__hideToken) return;
-      // ⚠️ 组件可能已被销毁（路由切换 / 父级卸载）：此时 `renderRoot` 是
+      // 组件可能已被销毁（路由切换 / 父级卸载）：此时 `renderRoot` 是
       // **undefined**（`CompElem#destroy()` 把 `#renderRoot` 置 null，getter 里
       // `null?.deref()` 得 undefined）。原写法 `this.renderRoot!.parentElement`
       // 会抛 `Cannot read properties of undefined (reading 'parentElement')`。

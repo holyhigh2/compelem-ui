@@ -181,9 +181,7 @@ export class InputTime extends BaseInput {
     // @click 仍会走到这里，必须在入口拦住（与 Select.__showList 同口径）。
     if (this.disabled || this.loading) return
     // 先同步绑定面板 loop-list 的 select 原生监听（幂等）。
-    // 必须在 nextTick 数据推送/滚动之前绑定：nextTick 内的 scrollToSelected 在首开时
-    // 可能因 overlay 尚未布局完成而抛错，曾导致末尾的 bindSelectListeners 被跳过，
-    // 进而首开点选无法回写 selected*（旧 active 残留 → 时分秒多列多选）。
+    // 必须在 nextTick 数据推送/滚动之前绑定。
     // 此处同步绑定不依赖 nextTick，用户点击时 ref 必然已就绪，且原生监听随 overlay portal
     // 把节点移到 body 仍保留，故只绑一次即可。
     this.bindSelectListeners()

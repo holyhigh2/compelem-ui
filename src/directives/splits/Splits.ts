@@ -28,7 +28,7 @@ interface SplitOption {
    * 粘性吸附跃迁回调（2026-10-19 compelem-report-builder 需求透传）：
    * 拖拽把某子区域拖过 minSize/2 阈值时触发，position =
    * 'start'（前一个被压扁）/ 'end'（后一个被压扁）/ 'none'（拖离吸附区复位）。
-   * ⚠️ ghost 模式下不触发（uiik 语义：ghost 只移幽灵把手，不写真实尺寸）。
+   * ghost 模式下不触发（uiik 语义：ghost 只移幽灵把手，不写真实尺寸）。
    */
   onSticky?: (arg: { size1: number; size2: number; position: 'start' | 'end' | 'none' }, ev: Event) => void,
   /** 拖拽结束回调（每根把手 pointerup 都触发，参数为最终 size1 / size2） */
@@ -71,12 +71,12 @@ export const splits = directive((function Splits(option?: SplitOption) {
           minSize: option.minSize,
           sticky: option.sticky,
           handleSize: option.handleSize,
-          // ⚠️ 不要在这里兜底成 'start'。uiik 的语义是：
+          // 不要在这里兜底成 'start'。uiik 的语义是：
           //   oneSideMode = 'start' → 只写 dom1；'end' → 只写 dom2；
           //   **不传（undefined）→ updateStart 与 updateEnd 都为真，两侧都写**。
           // 强制单侧时，「三栏 + 中栏 flex:1」这类布局的右侧把手会失效：
-          // 该把手的 dom1 是中栏，而 flex-basis:0% 会让写入的 width 被完全忽略
-          // （实测写 880px 仍渲染 1000px），真正该变的 dom2 没被写过一个字节。
+          // 该把手的 dom1 是中栏，而 flex-basis:0% 会让写入的 width 被完全忽略，
+          // 真正该变的 dom2 没被写过一个字节。
           oneSideMode: option.oneSideMode,
           onSticky: option.onSticky,
           onEnd: option.onEnd,

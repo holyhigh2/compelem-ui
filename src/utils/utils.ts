@@ -1,4 +1,4 @@
-import { closest, each, escapeHtml as escapeHtmlPure, lowerCase } from "myfx";
+import { alphaLabel, closest, each, escapeHtml as escapeHtmlPure, lowerCase } from "myfx";
 import { Side } from "../constants";
 
 /**
@@ -146,7 +146,7 @@ export function isVisible(el: Element | null | undefined, styleOnly = false) {
   if ((el as HTMLElement).style.display === 'none') return;
   if (styleOnly) return true
 
-  // ⭐ 性能：**未连接文档**的元素没有布局盒子，`getBoundingClientRect()` 恒返回 0×0。
+  // 性能：**未连接文档**的元素没有布局盒子，`getBoundingClientRect()` 恒返回 0×0。
   //    而 `isConnected` 是 O(1) 且**不触发布局**，把它放在测量之前，可让"已卸载 /
   //    尚未挂载"的元素零成本返回（首屏 profile 里本函数自耗时约 250ms，占 8.4%，
   //    绝大部分是 rect 背后被反复触发的强制同步布局）。
@@ -240,7 +240,6 @@ export function ensurePx(value: string | number): string {
 /**
  * 浮层交叉轴对齐偏移量。
  * 'end' 与触发物远端对齐、'start' 不偏移，其余取值（含未设置的空串）居中。
- * Overlay 与 Tooltip 的位置计算原本各写了 4 份同样的 if/else if 空分支，统一走这里。
  * @param startOrEnd 对齐档位，见 Side 枚举
  * @param targetLen 触发物（锚点）在该轴上的尺寸
  * @param overlayLen 浮层在该轴上的尺寸
@@ -259,4 +258,12 @@ export function crossAxisOffset(startOrEnd: string, targetLen: number, overlayLe
 export function adoptStyleSheets(root: ShadowRoot | null | undefined, sheet: CSSStyleSheet) {
   if (!root || root.adoptedStyleSheets.includes(sheet)) return
   root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet]
+}
+
+/**
+ * 列序号（1-based）→ 列字母（A/B/...）
+ */
+export function getColLetter(col: number): string {
+  if (!(col >= 1)) return ""
+  return alphaLabel(col - 1)
 }

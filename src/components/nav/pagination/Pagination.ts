@@ -176,14 +176,14 @@ export class Pagination extends AppearanceElem {
     this.__syncSizes();
   }
   /**
-   * ⚠️ 原实现是 `updated() { this.__syncSizes() }`。compelem 0.31 起 `updated()` 只在
+   * 原实现是 `updated() { this.__syncSizes() }`。compelem 0.31 起 `updated()` 只在
    * `forceUpdate()` 里被调用（恒传 `{}`），响应式重渲染走 per-point effect、不再经过它
    * ⇒ 运行期改 `pageSizeOptions` / 切换 `showSizeChanger` 时下拉 data **不再同步**。
    *
    * 改为显式 `@watch`：两个源都是本类 `@prop`，编译器会编成 `rc.__s.<key>.value`
    * 的 signal effect，写入即回调。
    *
-   * ⚠️ 不能写 `@watch('sizeOptions')`：`sizeOptions` 是**普通 getter**（非 @state/@prop
+   * 不能写 `@watch('sizeOptions')`：`sizeOptions` 是**普通 getter**（非 @state/@prop
    * /@computed），编译器会生成 `rc.__s.sizeOptions.value` —— `__s` 上没有这个键，
    * 首次执行即 TypeError。这里改为监听它的**来源** `pageSizeOptions`。
    */

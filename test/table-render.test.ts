@@ -169,6 +169,18 @@ describe('ce-table 甩动降级', () => {
   })
 })
 
+describe('ce-table 树展开动画', () => {
+  it('新增行动画 wrapper 并保留最终 Y，避免固定列定位基准突变', () => {
+    const body = tableSource.match(/__playTreeRowAnim\(row: HTMLElement, rowId: string\)\s*\{([\s\S]*?)\n  \}/)
+    expect(body, '__playTreeRowAnim 实现缺失').toBeTruthy()
+    const src = body![1]
+    expect(src).toMatch(/oldY == null\)\s*\{\s*anim = row\.animate/)
+    expect(src).toMatch(/\{ opacity: 0, transform: `translateY\(\$\{newY - 8\}px\)` \}/)
+    expect(src).toMatch(/\{ opacity: 1, transform: `translateY\(\$\{newY\}px\)` \}/)
+    expect(src).not.toMatch(/firstElementChild[\s\S]{0,80}?\.animate/)
+  })
+})
+
 describe('ce-scroller 滚动顺序', () => {
   const scrollerSource = stripComments(readFileSync(join(root, 'src/components/datadisplay/scroller/Scroller.ts'), 'utf8'))
 

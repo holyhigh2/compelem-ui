@@ -48,8 +48,7 @@ button {
 
 /*
  * 表单控件默认**不继承**字体：UA 样式表给 input / textarea / select 指定了
- * `font: 400 13.33px Arial` 之类的值，只重置 button（见上）是不够的 —— 实测
- * 同一个表单里会并存 13 / 14 / 16px 三种字号，且字族回退到 Arial。
+ * `font: 400 13.33px Arial` 之类的值，只重置 button（见上）是不够的。
  * 这里显式继承（不用 `font: inherit` 简写，避免连带重置 line-height 影响控件高度）。
  */
 input,

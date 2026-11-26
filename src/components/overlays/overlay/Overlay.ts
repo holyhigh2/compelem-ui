@@ -12,7 +12,7 @@ const STACK: Set<Overlay> = new Set();
 let BodyEl: HTMLElement;
 
 /**
- * ⭐ overlay 容器的 top-layer 管理（2026-11-10，统一到 layerHost）。
+ * overlay 容器的 top-layer 管理（2026-11-10，统一到 layerHost）。
  *
  * ## 历史问题
  * 所有 overlay 的 renderRoot 都挂在 body 下的单例容器 `.ce-overlay-container`。
@@ -58,7 +58,7 @@ const BODY_LAYER_STYLE = [
   'max-height:none',
   'width:auto',
   'height:auto',
-  // ⭐ 容器本身**永不参与命中测试**。它是铺满视口的透明板：
+  // 容器本身**永不参与命中测试**。它是铺满视口的透明板：
   //  - 打开期间 pe:auto 会吞掉浮层外的所有点击（非模态下拉/工具提示下，
   //    背景元素收不到事件）；
   //  - 关闭态一旦 display 意外回到 block（见 deactivateLayer 的属性保留），
@@ -76,7 +76,7 @@ function pushBodyLayer(): void {
   // 降级（无 Popover API）：不进 top-layer，保持原有 z-index 行为
   if (!activateLayer(BodyEl)) return;
   bodyPopoverOn = true;
-  // ⭐ 共享容器长期驻留，必须每次抬到 top-layer 末尾。
+  // 共享容器长期驻留，必须每次抬到 top-layer 末尾。
   // 非模态 popover 内部按打开顺序叠放：若先开过 overlay、后开 Drawer，
   // 容器会被压住（探针 M）；hide+show 一次即恢复（探针 N）。
   bringLayerToFront(BodyEl);
@@ -178,17 +178,11 @@ export class Overlay extends CompElem implements IPlacement, IColorable {
 
   @state opened = false
   @state __visible = this.visible;
-  /**
-   * 本实例是否已经把容器推进 top-layer（2026-11-10）。
-   *
-   * 用**实例级布尔**而不是只看全局计数：`open()` / `openBy()` 都可能被重复调用
-   * （点击抖动、hover 反复进），没有这个标记就会重复 push ⇒ 计数漂移 ⇒
-   * 关不掉的 top-layer 层永远压在页面上（页面点不动）。
-   */
+  /** 本实例是否已经把容器推进 top-layer。 */
   private __layerOn = false;
   /** 登记到 layerHost 的 renderRoot 快照：disconnected 时 renderRoot 可能已空 */
   private __layerEl: HTMLElement | null = null;
-  /** 栈顶按 ESC 的回调（统一由 layerHost 分发，取代本文件原来的 keydown 监听） */
+  /** 栈顶按 ESC 的回调（统一由 layerHost 分发） */
   private __onEsc = (e: KeyboardEvent) => {
     if (this.esc) this.close(e);
     else this.renderRoot?.classList.add('ce-overlay-shake');
@@ -316,7 +310,7 @@ export class Overlay extends CompElem implements IPlacement, IColorable {
       let container = document.createElement('div')
       container.className='ce-overlay-container'
       // popover 属性由 activateLayer() 在首次打开时添加；这里只压掉 UA 给
-      // [popover] 的那套样式。⚠️ 降级路径（无 Popover API）刻意不设这套样式：
+      // [popover] 的那套样式。 降级路径（无 Popover API）刻意不设这套样式：
       // 否则容器会变成一个铺满视口、拦截点击的空 div。
       if (typeof (container as any).showPopover === 'function') {
         container.style.cssText = BODY_LAYER_STYLE
@@ -515,7 +509,7 @@ export class Overlay extends CompElem implements IPlacement, IColorable {
     if (this.autoActive && this.triggerEl && this.triggerEl !== trigger) {
       this.triggerEl.toggleAttribute('active', false)
     }
-    // ⚠️ 先记下 trigger：bindFollow() 要靠它解析滚动祖先链、relocate() 也用它。
+    // 先记下 trigger：bindFollow() 要靠它解析滚动祖先链、relocate() 也用它。
     // 原实现把赋值放在 bindFollow 之后，首次打开时拿到的是 undefined（再次打开是上一个
     // trigger），于是祖先链为空、只绑到 window —— 容器内滚动完全不触发重定位。
     this.triggerEl = trigger

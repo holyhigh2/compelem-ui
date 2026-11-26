@@ -11,7 +11,7 @@ import style from "./style.scss?tmpl";
  * `.ce-form-slider-bottom-tip` 的"高度撑子"：mark 全是绝对定位，容器本身
  * 没有在流内容 ⇒ 高度会塌成 0，需要一行不可见文字把行高撑起来。
  *
- * ⚠️⚠️ 不能用 HTML 实体写 `&nbsp;`：`h` 模板的静态文本**不做实体解码**，
+ * 不能用 HTML 实体写 `&nbsp;`：`h` 模板的静态文本**不做实体解码**，
  * 会字面渲染出 6 个字符 "&nbsp;"（实测 DOM 文本 = `"0 严谨1 发散0.3 推荐&nbsp;"`，
  * 用户可见且正好压在第一个 mark 上）。也不能写成裸 U+00A0 字符：编译器对静态
  * 文本做 trim 时会把 U+00A0 一起吃掉（`"\u00A0".trim() === ""`），撑子失效。
@@ -96,11 +96,11 @@ export class Slider extends FormControl {
   /////////////////////////////////// watches
   @watch('value')
   watchValue(nv: number) {
-    // ⚠️ plaintext 模式下 render 只输出 value 文本，没有 track/thumb；
+    // plaintext 模式下 render 只输出 value 文本，没有 track/thumb；
     // mounted() 里有 `if (!this.trackEl) return` 守卫，watch 路径却没有 ⇒
     // 切到 plaintext 后再改 value 会 `undefined.offsetWidth` 直接抛 TypeError。
     if (!this.trackEl) return
-    // ⚠️ 必须减 min 再归一：min≠0 时（如 4~60 的档位滑杆）直接 nv/max 会把
+    // 必须减 min 再归一：min≠0 时（如 4~60 的档位滑杆）直接 nv/max 会把
     // 初始位置算错（24/60=40%，正确 35.7%）。_moveThumbH 里的反向换算
     // （(perc/100)*(max-min)+min）一直是 min-aware 的，只有这里漏了。
     // max===min（退化为单点）时除零会出 NaN，钳到 0。
@@ -150,9 +150,9 @@ export class Slider extends FormControl {
    * 为什么需要：`@watch('value')` 可能在挂载期就触发，那时轨道尚未布局
    * （trackEl.offsetWidth === 0）⇒ left = 0 × ratio = 0，thumb 被钉在
    * 轨道左端；而此后 value  prop 不再变化、watch 不再触发，thumb 永远
-   * 停在 0%（实测：value=0.2 的滑杆 thumb 在轨道最左边）。
+   * 停在 0%。
    *
-   * ⚠️ 刻意不走 watchValue / _moveThumbH：那两个结尾会 emit
+   * 刻意不走 watchValue / _moveThumbH：那两个结尾会 emit
    * `update:value`，挂载期不该对外广播「值变了」（受控方会收到一次
    * 凭空的变化通知）。这里只做定位 + 同步 __innerValue。
    */

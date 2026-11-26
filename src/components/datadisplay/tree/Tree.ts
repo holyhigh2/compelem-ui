@@ -230,8 +230,7 @@ export class Tree extends TreeStructured(Virtualized(CompElem<any>)) {
       setTimeout(() => this.expandToLevel(9999), 100)
     }
 
-    // 三个属性观察者统一登记：早先建完即丢引用且无 disconnectedCallback，
-    // 元素每次重连都新叠一层（探针 V-C3 实测 3→3→6），闭包持 this 不可 GC。
+    // 三个属性观察者统一登记：重连前先断开旧观察者（闭包持 this，否则不可 GC）。
     this.#attrObservers.forEach((o) => o.disconnect())
     this.#attrObservers = [
       new MutationObserver(applyShowCheck),
@@ -403,7 +402,7 @@ export class Tree extends TreeStructured(Virtualized(CompElem<any>)) {
     this.__updatableStyleDragging = this.insertStyleSheet(this.__getDraggingPreffixCss())
   }
   /**
-   * ⚠️⚠️ **0.31 起 `updated()` 不再是「本组件重渲染之后」的钩子。**
+   * **0.31 起 `updated()` 不再是「本组件重渲染之后」的钩子。**
    *
    * 全框架唯一调用点是 `CompElem#forceUpdate()`（`CompElem.ts:1023`，恒传 `{}`），而 signal
    * 架构下响应式重渲染只跑 per-point effect、**不经过 `forceUpdate()`**；编译期生命周期

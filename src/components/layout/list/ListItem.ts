@@ -16,7 +16,7 @@ import { FADE_CSS } from "../../../css/transition";
  * `--list-item-min-height`：compact 24px / default 32px / loose 40px），
  * 所以两处必须同步调整，否则会出现「行高变了但内边距没变」的错位。
  *
- * ⚠️ 24/32/40 是**单行项**的行高基准；两行项实际高度 = padding-block +
+ * 24/32/40 是**单行项**的行高基准；两行项实际高度 = padding-block +
  * 标题 + 间距 + 副标题，恒大于此值，min-height 只当**下限**不会压矮两行项。
  * 需要整体抬高行高（如设置面板卡片行）用公开 token `--ce-list-item-min-height`，
  * 不要覆盖 min-height 属性。
@@ -168,7 +168,7 @@ export class ListItem extends AppearanceElem implements IActivatable {
         <div class="ce-list-subheading" part="subheading">
           <slot name="subheading"></slot> ${ifTrue(!isBlank(this.subheading), () => h`<span>${this.subheading}</span>`, { enter: "fade", leave: "fade" })}
         </div>
-        <!-- ⚠️ extra 容器必须**无条件渲染**：框架的 slots 映射只收「shadow 里已存在的
+        <!-- extra 容器必须**无条件渲染**：框架的 slots 映射只收「shadow 里已存在的
              <slot>」的分配结果（#updateSlotsAry 按 #slotsEl 的键分组），若把 <slot>
              包在依赖 slots.extra 的 ifTrue 里就死锁了（槽不存在 → 分配永远为空）。
              空态用响应式 is-empty 类隐藏（class 里的 slots 读取会随 slotchange 重算）。 -->

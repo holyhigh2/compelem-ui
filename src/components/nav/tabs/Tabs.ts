@@ -160,7 +160,7 @@ export class Tabs extends AppearanceElem implements ICloseable {
   /**
    * 按 index 取页签。
    *
-   * ⚠️ 不能用 `this.nav.querySelector(':scope>[index=...]')`：页签是 ce-tabs 的
+   * 不能用 `this.nav.querySelector(':scope>[index=...]')`：页签是 ce-tabs 的
    * 光 DOM 子节点，经插槽**分发**进 ce-nav，并没有被重新父化，所以 ce-nav 的
    * 直接子元素只有那个 <slot>，选择器恒返回 null —— 外部改 value 因此从来不同步。
    * slots.default 才是权威列表（changeTab / onSelect 一直用的就是它）。

@@ -80,7 +80,7 @@ export class Drawer extends CompElem {
    * 旧版靠 `<dialog>` 的 `::backdrop` 点击派发到 dialog 自身；div[popover] 的
    * ::backdrop 不派发，改由 layerHost 的 outside-click 统一分发到这里。
    *
-   * ⚠️ 不要再给 renderRoot 挂 click 兜底：点面板内部空白时 e.target 同样是
+   * 不要再给 renderRoot 挂 click 兜底：点面板内部空白时 e.target 同样是
    * renderRoot，旧实现会把它误判成「点遮罩」直接关掉抽屉。层内判定统一由
    * layerHost 按 composedPath 是否包含已登记层完成。
    */
@@ -133,7 +133,7 @@ export class Drawer extends CompElem {
    * 页脚**无条件**渲染：曾尝试 `ifTrue(!isEmpty(this.slots.footer))` 判空，
    * 但 slots 在首渲染时未必已分配，实测会把已经投影的页脚吞掉（回归）。
    *
-   * ⚠️ `popover` 属性刻意不写死在模板里：由 `activateLayer()` 在打开时添加，
+   * `popover` 属性刻意不写死在模板里：由 `activateLayer()` 在打开时添加，
    * 这样不支持 Popover API 的浏览器不会因 UA 的 `[popover]{display:none}`
    * 把抽屉藏掉（降级走 `.ce-drawer-open`）。
    */
@@ -207,7 +207,7 @@ export class Drawer extends CompElem {
   /**
    * 打开抽屉（幂等）。
    *
-   * ⚠️ 必须幂等：`visible` 是声明式入口（watch → open）、`mounted()` 又会按
+   * 必须幂等：`visible` 是声明式入口（watch → open）、`mounted()` 又会按
    * 初始 `visible` 再 open 一次 —— 两条路都走是**正常用法**。
    * 现在不再有 `showModal()` / `showPopover()` 两套抛错分支，统一由
    * `activateLayer()` 幂等处理。
@@ -242,7 +242,7 @@ export class Drawer extends CompElem {
   /**
    * 关闭抽屉。
    *
-   * ⚠️ 未打开时必须**同步返回**：`mounted()` 对 `visible=false` 的抽屉也会
+   * 未打开时必须**同步返回**：`mounted()` 对 `visible=false` 的抽屉也会
    * 调一次 `close()` 来对齐状态，而原实现无条件挂一个定时器去 `dialog.close()`，
    * 宿主若在这 300ms 内命令式 `open()` 会被迟到的定时器立刻关掉。
    * 收尾时机按真实过渡时长算，取不到时用 300ms 兜底。

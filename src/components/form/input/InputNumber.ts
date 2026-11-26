@@ -70,7 +70,7 @@ export class InputNumber extends ControlBox implements IInputRange {
   }
 
   /////////////////////////////////// watches
-  // ⚠️ 原为 `{ immediate: true, once: true }`：once 之后 watch 不再触发，
+  // 原为 `{ immediate: true, once: true }`：once 之后 watch 不再触发，
   // 于是下面 else 分支（removeEventListener）永远不会执行，动态改 scrollable
   // 既挂不上也摘不掉（一次生效后再改永久无效）。去掉 once；addEventListener
   // 同 (type, listener) 幂等，重复执行不会叠加监听。
@@ -95,14 +95,7 @@ export class InputNumber extends ControlBox implements IInputRange {
   /**
    * 外部 `value` → 内部 `__innerValue` 的单向同步。
    *
-   * ⚠️ **必须 `immediate: true`（2026-10-29）**：`__innerValue` 原本只由用户交互
-   *   （`onInput` / `onBlur` / `addStep`）写入，从不从 `value` 初始化。而 `value`
-   *   的典型来源是模板的 `.value="${...}"` property 绑定 —— 它在元素 **append 之前**
-   *   就赋值完成，此时该 effect 尚未建立，这次赋值不算"变化"，`__innerValue` 停在
-   *   `''`，**首次渲染永远是空框**（哪怕 `el.value` 与 `getAttribute('value')` 都对）。
-   *   实测：append 之后再设 property 才正常；写成 attribute `value="40"` 同样为空。
-   *
-   *   首次触发是**挂载回显**、不是用户改动 ⇒ 走静默分支，不抛 `update:changeValue`。
+   * 首次触发是挂载回显、不是用户改动 ⇒ 走静默分支，不抛 `update:changeValue`。
    */
   @watch('value', { immediate: true })
   watchValue(nv: any) {
@@ -124,7 +117,7 @@ export class InputNumber extends ControlBox implements IInputRange {
     const nv = isNil(v) ? '' : v
     const echo = !this.#hydrated;
     this.#hydrated = true;
-    // ⚠️ 用**字符串化比较**，别用 `!=`：`0 != ''` 是 false（`0 == ''` 成立），
+    // 用**字符串化比较**，别用 `!=`：`0 != ''` 是 false（`0 == ''` 成立），
     //    于是 `value = 0` 时这段被直接跳过 ⇒ 输入框永远空白。而"从 0 起"恰恰是
     //    值轴下限、起始值最常见的填法（2026-10-30 在图表「值轴范围」踩到）。
     if (String(nv) !== String(this.__innerValue)) {
@@ -242,10 +235,9 @@ export class InputNumber extends ControlBox implements IInputRange {
     if (this.pattern) {
       this.__formatValue = formatNumber(value, this.pattern);
     }
-    // ⚠️ `isNumeric(0)` 是 **false**（它按字符串校验"看起来像不像数"），数字 0
+    // `isNumeric(0)` 是 **false**（它按字符串校验"看起来像不像数"），数字 0
     //    会掉进下面的"回退到上一次值"分支 ⇒ 值 0 永远显示空白。
     //    而"从 0 起"恰恰是最常见的下限 / 起点。先按 `isNumber` 归一成字符串再判。
-    //    （2026-10-30 实测：`el.value = 0` ⇒ prop 是 0、`__innerValue` 是 ''、输入框空。）
     const probe = isNumber(value) ? String(value) : value;
     if (!isNumeric(probe)) {
       value = parseFloat((this.__innerValue + '').replace(/^[^0-9-]*/, '').replace(/(-)*/, '$1')) || '';

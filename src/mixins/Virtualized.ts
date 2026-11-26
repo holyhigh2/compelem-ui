@@ -12,7 +12,7 @@ import { filter, size } from "myfx"
 export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
     return class Virtualized extends spuerClass {
         /**
-         * ⚠️ 这些字段**只能**是 `declare`（纯类型声明，零运行期发射）。
+         * 这些字段**只能**是 `declare`（纯类型声明，零运行期发射）。
          *
          * 它们真正的存储由**子类**的五族装饰器提供：`@state vList` / `@query('#vpillar') vPillar` …
          * 编译器把这些访问器装在**原型**上（读写 `this.__s.<k>.value`）。
@@ -21,7 +21,7 @@ export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
          * 于是 `this.vList === undefined` 而 `this.__s.vList.value` 有真值：
          * Tree 整棵虚拟列表渲染不出节点、ListPicker 显示「无可选项」、Table 只剩 17px 空壳。
          *
-         * ⚠️ 不要用「给个初始化器」来绕过（`vPillar: HTMLElement = undefined!`）—— 照样发射 own 属性。
+         * 不要用「给个初始化器」来绕过（`vPillar: HTMLElement = undefined!`）—— 照样发射 own 属性。
          * 同 `mixins/FieldContainer.ts` 的 `invisibleFields` / `sortOrders` / `filterData` 范式。
          */
         declare vRowHeight: number
@@ -44,12 +44,6 @@ export function Virtualized<T extends Constructor<any>>(spuerClass: T) {
 
         /**
          * 把宿主 prop `rowHeight` 派生进 `vRowHeight`（虚拟列表实际使用的行高）。
-         *
-         * 此前二者只在构造期播种一次：`@state vRowHeight = this.rowHeight` 被编译成
-         * `states.vRowHeight = {prop:'rowHeight'}`，运行期 `CompElem#initStates` 只做一次
-         * `cloneDeep(src.peek())` 快照 —— 不是活链接。于是运行时改 `rowHeight` 后，
-         * 窗口行数 / 滚动总高 / 首行索引 / 行位移全部停在旧值（Tree、ListPicker 实测
-         * `vScrollHeight` 一动不动）。派生放在这里一次，五个宿主共用。
          *
          * 边界：`rowHeight > 0` 以 prop 为准；`<= 0` 是 Table 的自动测量档，
          * 必须留给 `TableExtensionConfig#_setRowHeightType` 写入的测量值，不能覆盖。

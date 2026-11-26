@@ -50,17 +50,14 @@ export function FieldContainer<T extends Constructor<any>>(spuerClass: T) {
     /**
      * 字段映射（prop → 字段组件实例）。
      *
-     * 用 `LiveFieldMap` 而非裸 `Map`：字段的销毁可能**先于**容器 —— 容器被整体
-     * 替换时（例如换一份列数不同的报表）子先父后，而容器侧的迟到回调
+     * 字段的销毁可能**先于**容器：容器被整体替换时子先父后，容器侧的迟到回调
      * （`@mutate.child.debounce:100` 的 `onListReady`、`@debounced(100)` 的
-     * `__fillCells`）仍会遍历本表。此时死字段的内部结构（`slots` / `slotHooks`）
+     * `__fillCells`）仍会遍历本表；此时死字段的内部结构（`slots` / `slotHooks`）
      * 已随 `__data_` 一起被置空，读它就会抛
-     * `Cannot read properties of null (reading 'cell')`
-     * （实测于 M5 预览「8 列报表 → 6 列报表」的重建）。
+     * `Cannot read properties of null (reading 'cell')`。
      *
-     * 这类消费点在全库有 30+ 处，逐处加守卫既啰嗦又必然漏；把守卫收敛到 `get()`
-     * 本身：死字段一律视为"不存在"并从表中剔除，调用方沿用既有的
-     * `if (!col) return` 分支即可，行为自然收敛。
+     * 守卫收敛在 `get()` 本身：死字段一律视为"不存在"并从表中剔除，
+     * 调用方沿用既有的 `if (!col) return` 分支即可。
      */
     _fieldMap: Map<string, any> = new LiveFieldMap()
     //<field,fieldColorMap>

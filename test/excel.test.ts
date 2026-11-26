@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getColLetter } from '../src/utils/excel'
+import { getColLetter } from '../src/utils/utils'
 
 describe('getColLetter', () => {
   it('1-based 下标 → Excel 列字母', () => {

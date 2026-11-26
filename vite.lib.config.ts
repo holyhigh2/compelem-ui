@@ -1,8 +1,8 @@
-import * as path from 'node:path'
+import { compelemCompiler, scanKnownTags } from '@compelem/compiler'
 import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
-import { compelemCompiler, scanKnownTags } from '@compelem/compiler'
 import { compelemCss } from 'vite-plugin-compelem-css'
 import dts from 'vite-plugin-dts'
 
@@ -181,11 +181,7 @@ export default defineConfig({
     },
     rollupOptions: {
       external: ['compelem', 'myfx', 'uiik', 'compelem-router'],
-      // exceljs 是可选运行时依赖（仅在调用 exportExcel 时由宿主解析），
-      // 其内部 `fs` 引用会在构建期触发 "externalized for browser compatibility" 警告。
-      // 这里只过滤这一条已知噪声，其余警告照常输出，避免掩盖真正的 externalize 问题。
       onwarn(warning, warn) {
-        if (typeof warning.message === 'string' && /"fs".*has been externalized/.test(warning.message)) return
         warn(warning)
       }
     }

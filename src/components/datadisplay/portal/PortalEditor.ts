@@ -452,13 +452,7 @@ export class PortalEditor extends ParentPortal {
 
   /**
    * 新卡片的实例标题：与画布上已有标题重名时补序号（`列表挂件 2`），不重名返回空串。
-   *
-   * 不重名返回空串而不是基础名：`item.title` 是写入存档的快照，提前固化会让挂件库
-   * 改名后已有卡片不跟随。只有真的出现重名（同类型挂了第二张）才固化 ——
-   * 那时标题是区分的唯一依据，必须落进数据里。
-   *
-   * 按**显示名**而不是 type 去重：调用方关心的是「用户看到两张同名卡」，
-   * 同一 type 的两张卡若已被手动改成不同标题，不该再补序号。
+   * 按**显示名**去重（同一 type 的两张卡若已被手动改成不同标题，不该再补序号）。
    */
   __newItemTitle(type: string): string {
     const base = this.widgetMap[type]?.title || type
@@ -568,7 +562,7 @@ export class PortalEditor extends ParentPortal {
       // 单击不插入挂件，只收尾：见 `onPaletteMouseDown` 的注释（不挂这句会漏清 __drag）
       onClick: () => this.__resetDrag(),
       onCancel: () => this.__resetDrag(),
-      // ⚠️ 内核的调用顺序是 onEnd 先于 onDrop：这里只收视觉，
+      // 内核的调用顺序是 onEnd 先于 onDrop：这里只收视觉，
       // 若把 dragging / __drag 一起清掉，紧接着的落点计算就会失效。
       onEnd: () => this.__teardownVisuals(),
     })

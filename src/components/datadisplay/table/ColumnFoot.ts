@@ -45,7 +45,7 @@ export class ColumnFoot extends CompElem {
   }
 
   /**
-   * ⚠️⚠️ **`cssVars` 里禁止出现「挂在响应式字段上的成员访问/方法调用」**（如 `this.prop.replaceAll(...)`）。
+   * **`cssVars` 里禁止出现「挂在响应式字段上的成员访问/方法调用」**（如 `this.prop.replaceAll(...)`）。
    *
    * 编译器 `deps-extract.ts` 的 `resolveChain()` 会把 `this.prop.replaceAll` 解析成**路径** `['prop','replaceAll']`，
    * 再由 `record()` 记成两条依赖：`'prop.replaceAll'` 与 `'prop'`；codegen 据此生成

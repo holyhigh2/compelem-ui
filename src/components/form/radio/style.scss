@@ -169,8 +169,6 @@
 }
 
 // 组内间距：与 ce-checkbox-group 统一为 flex + gap（水平 1rem / 垂直 0.5rem）。
-// 旧方案 ::slotted(*:not(:first-child)) + margin 在 inline 换行时每行末项右侧仍留
-// 外边距，且垂直/水平要写两套 margin 规则；改成 flex + gap 后行距与换行由布局接管。
 .ce-form-radio-group {
   display: flex;
   flex-direction: column;

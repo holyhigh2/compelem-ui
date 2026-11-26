@@ -110,8 +110,6 @@ export class InputDateRange extends RangeInput {
   }
   /**
    * 与 type 对应的日期比较/运算单位。
-   * 原先这套 switch 散落在 changeStartValue/changeEndValue 里且运算时硬编码 'd'，
-   * 导致 year/month 模式下间隔算错，这里统一收口
    */
   get dateUnit() {
     switch (this.type) {
@@ -264,7 +262,6 @@ export class InputDateRange extends RangeInput {
     return formatDate(dateOrDateTime, this.type == "date" ? this.pattern : (this.pattern + ' ' + this.patternTime));
   }
   changeStartValue() {
-    // 统一走 rangeCheck 流程，替代原先硬编码的「结束 = 起始 + 1 天」
     this.watchStart()
     this.nextTick(() => this.__checkRange('start'))
   }

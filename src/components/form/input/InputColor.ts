@@ -100,17 +100,6 @@ export class InputColor extends BaseInput {
   /**
    * 打开浮层后把当前值补进取色器。
    *
-   * ⚠️ 为什么非得在**打开之后**补（2026-10-23 实测，栈已抓到）：
-   * `ce-overlay.openBy()` 会把整棵 renderRoot 搬进 body 的 `.ce-overlay-container`
-   * （`Overlay.ts:385 → _append()`），这一步对取色器来说是**断开 + 重连**；
-   * 重连时 `CompElem.#initProps` 会拿元素上遗留的 `value=""` 属性重算属性，
-   * 把模型里的颜色冲掉（`connectedCallback → setup → initProps → updateAttribute`）。
-   * 于是：任何"打开前"的赋值都会被冲掉，取色器永远停在
-   * `value===''` / 色相红 / `alphaValue===1` 的初始态（带 alpha 的颜色每次重开都被重置）。
-   *
-   * 挂在 overlay 的 `open` / `opened` 上而不是塞进 `openLayer`：搬移是同步的、
-   * `open` 的 emit 在搬移之后（`Overlay.ts:397-410` 的 setTimeout 里），
-   * 这时机才对得上；`opened` 再补一次兜住"内容懒渲染"的情况。
    * 幂等：值相同时直接返回，不会和 `model` 形成回环。
    */
   __syncPicker() {

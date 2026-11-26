@@ -52,7 +52,7 @@ export class ButtonGroup extends AppearanceElem {
     return null
   }
   /**
-   * ⚠️ 原实现是 `updated(changed) { this.setButtonProps(changed) }`，且 `changed` 从未被用到
+   * 原实现是 `updated(changed) { this.setButtonProps(changed) }`，且 `changed` 从未被用到
    * （`setButtonProps()` 只读 `this.props`）。compelem 0.31 起 `updated()` 只在
    * `forceUpdate()` 里被调用（恒传 `{}`），响应式重渲染不再经过它 ⇒ **属性变更后
    * 不再向子按钮下发属性**（如运行时切 `divided`/`stacked`/`size`）。
@@ -60,7 +60,7 @@ export class ButtonGroup extends AppearanceElem {
    * 改为显式 `@watch`：逐个源各自触发一次，与「哪个 prop 变了就重下发」等价的保守近似
    * （`setButtonProps` 自身幂等：只 setAttribute，不做增量）。
    *
-   * ⚠️ 2026-10-18：早期列表**漏了外观族**（`appearance` / `size` / `color` / `round` …）⇒
+   * 2026-10-18：早期列表**漏了外观族**（`appearance` / `size` / `color` / `round` …）⇒
    *    运行时（如 DevTools「元素」面板）改 `appearance="flat"` 时组宿主属性变了、子
    *    `ce-button` 却纹丝不动（`setButtonProps` 根本没被唤醒）。此处补齐 —— 凡是
    *    `setButtonProps` 会下发的**可视**属性，变更都要触发一次下发。
@@ -85,7 +85,7 @@ export class ButtonGroup extends AppearanceElem {
       this.setButtonProps()
       this.syncSelection()
     }, 0)
-    // ⚠️ 子按钮可能晚于 mounted 才到位（子视图动态渲染、列表 forEach、ifTrue 切换）：
+    // 子按钮可能晚于 mounted 才到位（子视图动态渲染、列表 forEach、ifTrue 切换）：
     // mounted 里那一次下发会落空，而此后没有任何 trigger（@watch 只跟踪组自身的 prop）
     // ⇒ 组上 appearance/size/round 永远不下发，子按钮停在默认值上，改一次属性才生效。
     // 本组件是 light DOM（render() 返回 null，没有 <slot>），slotchange 无从触发，
@@ -139,7 +139,7 @@ export class ButtonGroup extends AppearanceElem {
   /**
    * 成员按钮在组内的唯一值：显式 value 优先，未设置时才用 'button_序号'。
    *
-   * ⚠️ 显式值必须每次实时读，不能进缓存：本组件是 light DOM，`mounted()` 会先于
+   * 显式值必须每次实时读，不能进缓存：本组件是 light DOM，`mounted()` 会先于
    * 子按钮自己的属性→prop 初始化跑到，那一刻 `btn.value` 还是 `undefined`。
    * 原实现把兜底 id 一并写进 `ValueMap` 且之后只认缓存 ⇒ 真实 value 被
    * `'button_N'` 永久顶掉，表现为初始 `value="a"` 不点亮 A、点击后组值变成

@@ -173,7 +173,7 @@ export class Input extends BaseInput {
         this.style.marginBottom = this.msgEl.offsetHeight + 'px'
       })
     } else {
-      // ⚠️ 不能写死 `margin-bottom: 0px`：这是**内联样式**，会压过外部布局类
+      // 不能写死 `margin-bottom: 0px`：这是**内联样式**，会压过外部布局类
       //   （Tailwind `space-y-4` 下发的是 margin-block-end），
       //   症状是多个输入框上下紧贴、完全没有间距。
       //   没有提示信息时直接移除内联声明，把间距交还给外部 / `:host(ce-input[hint])`。

@@ -36,7 +36,7 @@ function hotKeyText(it: any): string {
  * 或 `will-change` 命中上述属性、`contain` 含 paint/layout/strict/content 时，
  * 该元素的 **padding box** 即成为其后代（含 `position: fixed`）的包含块。
  *
- * ⚠️ 必须读 `getComputedStyle` 而不是 `node.style`（内联）：对话框/浮层的
+ * 必须读 `getComputedStyle` 而不是 `node.style`（内联）：对话框/浮层的
  * transform 来自 class 规则（如 `.ce-overlay-visible .ce-overlay-content
  * { transform: scale(1) !important }`），只查内联会漏判。
  */
@@ -129,10 +129,7 @@ interface LevelEntry {
 /**
  * 取某一层（`path` 指定）的 items。
  *
- * ⚠️ 供 `renderItem` 就地重算该层列表用 —— 不能依赖外层 forEach 的 `e.list`：
- * `renderItem` 的方法体会被编译器**内联进 forEach 子模板**，实测内联后子点工厂里
- * 捕获到的 `e` 是空壳（`e.list` 为 undefined），导致分割条判据 `isNil(list[i-1])`
- * 恒真、每行都被画上 is-divider。走模块函数 + 组件态 `this.itemList` 才稳定。
+ * 供 `renderItem` 就地重算该层列表用 —— 不能依赖外层 forEach 的 `e.list`。
  */
 function levelList(root: any, path: Array<number>): Array<any> {
   let list: Array<any> = root ?? [];
@@ -254,7 +251,7 @@ export type MenuEntry = MenuItem | null
  *  submenu-open({item,el,path})
  *  submenu-close({path})
  *  escape()
- *  ⭐ 事件**双通道**派发：模板内用 `@select`，命令式创建时用
+ * 事件**双通道**派发：模板内用 `@select`，命令式创建时用
  *  `menu.addEventListener('select', ...)`，两者都直接可用（详见 #fire）。
  * @methods
  *  setItems(items) / getItems() / reload() / getCheckedItems() / setIcon(index,iconClass)
@@ -269,7 +266,7 @@ export class Menu extends CompElem {
   /** path → 元素型 extra（渲染后被挂进 .ce-menu__extra，宿主自持引用） */
   /**
    * path → 元素型 extra（渲染后被挂进 .ce-menu__extra，宿主自持引用）。
-   * ⚠️ **不能用 #private 字段**：renderItem 的方法体会被编译器内联进 forEach
+   * **不能用 #private 字段**：renderItem 的方法体会被编译器内联进 forEach
    * 回调，prelude 里的 `this.#x` 在类外是语法错误，会让 collectPreludeDeclNames
    * 解析失败 ⇒ fx 工厂不注入 prelude ⇒ 运行期 ReferenceError（2026-10-17 实锤）。
    */
@@ -320,7 +317,7 @@ export class Menu extends CompElem {
   /**
    * 扁平化渲染：root 层与各展开层各是一个 ul，全部由 `levelEntries` 驱动。
    *
-   * ⭐ 为什么不再用「renderLevel 递归」：编译管线要求结构指令回调**直接返回**
+   * 为什么不再用「renderLevel 递归」：编译管线要求结构指令回调**直接返回**
    * h`` 模板。`${this.renderLevel(...)}` 是普通插值，被当纯文本写入
    * （Template 对象 → [object Object]）；renderItem 的自递归回调也过不了
    * 方法内联 pass 的 visited 护栏（cycle 直接放弃）。把子菜单从「li 的后代」
@@ -402,9 +399,9 @@ export class Menu extends CompElem {
   /**
    * 渲染单个菜单项（行模板，全层级共用一份）。
    *
-   * ⚠️ 引擎契约：forEach 子模板结构恒定（首项播种 meta），TplFn 内不可用
+   * 引擎契约：forEach 子模板结构恒定（首项播种 meta），TplFn 内不可用
    * ifTrue / 条件插值切换结构；条件一律走 styles(visibility/display) 与 html()。
-   * ⭐ 子菜单**不在本模板内**：摊平后由 render() 的 levelEntries 另建一层 ul
+   * 子菜单**不在本模板内**：摊平后由 render() 的 levelEntries 另建一层 ul
    * （见 `_expandChildren`），本模板只负责行本身。
    */
   renderItem(item: any, i: number, level: number, path: Array<number>, m: LevelMeta): Template {
@@ -412,16 +409,7 @@ export class Menu extends CompElem {
     const list: Array<any> = levelList(this.itemList, path);
     const visible = !isNil(item);
     /**
-     * ⭐⭐ `i` 的实参其实是 forEach 的 **key**，不是下标。
-     *
-     * compelem 给子模板的 `itemArgs = [v, k, index]`，而本组件的 key 工厂写成
-     * `(item, k, i) => i` ⇒ 传进来的是**被 String 化后的 key**。一位数 key 无碍，
-     * 两位起就出事：`concat(path, "10")` 会**逐字符展开**成 `["1","0"]`
-     * （实测 `concat([], "10") === ["1","0"]`）⇒ `data-path="1-0"` ⇒
-     * `#resolveItem` 解析成 `itemList[1].children[0]` = undefined ⇒
-     * ① hover 展不开子菜单（`onItemEnter` 里 `!isArray(item?.children)` 提前 return）；
-     * ② 点击时 `switch(item.id)` 抛 `Cannot read properties of undefined (reading 'id')`。
-     * 这正是"菜单第 11 项起出现的追加项全部失灵"的根因（2026-10-27 定位）。
+     * `i` 的实参其实是 forEach 的 **key**，不是下标（会被 String 化）。
      * 显式转回数字：`concat` 拿到 number 就只追加一个元素。
      */
     const idx = Number(i) || 0;
@@ -500,7 +488,7 @@ export class Menu extends CompElem {
     else delete this.extraEls[pathKey];
 
     //ARIA：role 与 aria-* 会随数据变化，用 bind 指令（属性值内插值不会被补丁更新）
-    //⚠️ 类型只能是 any：本方法体会被编译器内联进 forEach 回调，prelude 里
+    // 类型只能是 any：本方法体会被编译器内联进 forEach 回调，prelude 里
     //任何类型标识符（Record / 索引签名的 k…）都会撞 D3 自由标识符检查
     const aria: any = {
       role: visible
@@ -576,7 +564,7 @@ export class Menu extends CompElem {
    * 所以调用点的写法是固定的三行：
    *   const arg = { ... }; this.emit("hover", arg); this.#dispatch("hover", arg);
    *
-   * ⚠️ 两条通道必须都走：`CompElem.emit()` 在没有 `wrapperComponent` 时会**直接 return
+   * 两条通道必须都走：`CompElem.emit()` 在没有 `wrapperComponent` 时会**直接 return
    * 不派发任何事件**（CompElem.ts:1265-1269），而 `emit-native` 属性又会屏蔽框架通道。
    * 本组件的典型用法是命令式创建的浮层，只走框架通道等于事件全丢。
    */
@@ -660,7 +648,7 @@ export class Menu extends CompElem {
 
     if (this.submenuTrigger !== "hover") return;
     if (!isArray(item?.children)) return;
-    //⭐ separate 项：整行可点击，子菜单只由最右侧箭头触发（见 onCaretEnter）
+    // separate 项：整行可点击，子菜单只由最右侧箭头触发（见 onCaretEnter）
     if (item.separate) return;
     this.#scheduleExpand(li);
   }
@@ -702,7 +690,7 @@ export class Menu extends CompElem {
       const wrapper = li.querySelector<HTMLElement>(":scope > .ce-menu__row")!;
       const host = this as unknown as HTMLElement;
       const hostRect = host.getBoundingClientRect();
-      // ⚠️ 子层 ul 的绝对定位包含块是 **:host**（摊平后 li/div 都不定位，见 render 注释），
+      // 子层 ul 的绝对定位包含块是 **:host**（摊平后 li/div 都不定位，见 render 注释），
       //   所以 top 必须是「行相对宿主」的偏移。旧代码硬编码 top:-4（那是嵌套结构下
       //   相对 li 的值），摊平后等于把二级菜单顶到整个一级菜单的顶部 —— 即
       //   「默认比一级菜单还高」的根因。getBox 相对 parent padding box，正是该坐标系。
@@ -1002,7 +990,7 @@ export class Menu extends CompElem {
       let y = top;
       const pos = window.getComputedStyle(this).position;
       if (pos === "fixed") {
-        // ⚠️ `fixed` 的包含块未必是视口：任何带 transform / perspective / filter /
+        // `fixed` 的包含块未必是视口：任何带 transform / perspective / filter /
         //    backdrop-filter / will-change / contain 的祖先都会成为包含块，此时
         //    left/top 相对它解析、收缩宽度也受它的可用宽度约束。用 window.innerWidth
         //    比会永久判「没超」⇒ 靠右既不左移、又被压窄（系统配置弹层实测复现）。
@@ -1039,7 +1027,7 @@ export class Menu extends CompElem {
         const rect = op ? op.getBoundingClientRect() : { x: 0, y: 0 };
         if (rect.x + x < EDGE) x = EDGE - rect.x;
         if (rect.y + y < EDGE) y = EDGE - rect.y;
-        // ⚠️ 原实现绝对定位分支**只**钳左缘与纵向下缘，右/下溢出不会翻边。
+        // 原实现绝对定位分支**只**钳左缘与纵向下缘，右/下溢出不会翻边。
         //    x/y 与 offsetParent 的 padding box 同坐标系，故右/下钳制直接用它的
         //    clientWidth/Height 即可；下限仍以视口 EDGE 兜底，避免把左边顶出。
         if (op) {

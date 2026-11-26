@@ -130,8 +130,7 @@ export class Select extends ControlBox {
     if (!isObject(nv) && nv === ov) return;
     if (!this.selectPanel.current) {
       // 弹出面板尚未创建（firstPopup=false，从未展开过下拉）时没有 ListPicker
-      // 可取 label。此前直接 return ⇒ 受控 value 变化（父组件换选项）时折叠态
-      // 标签停在旧值（2026-10-18 实测：value text→number 后折叠态仍显示「文本」）。
+      // 可取 label。
       // 回退到 calcInitValue()：它直接查 this.data，不依赖面板。
       this.calcInitValue()
       return
@@ -146,10 +145,6 @@ export class Select extends ControlBox {
   }
   /**
    * 内容自然宽度：用 canvas 量出最长选项文本宽度，再加勾选图标 + 左右内距的 buffer。
-   *
-   * 为什么量 data 而不是量 DOM：面板内是虚拟化列表，行是 position:absolute，
-   * 不参与父容器 max-content 宽度计算（纯 CSS max-content 永远撑不开面板）。
-   * 量 data 还能避开"首帧行未填充→宽度跳变"的时序问题（2026-11-19 实测）。
    */
   @computed
   get contentWidth(): number {
@@ -296,7 +291,7 @@ export class Select extends ControlBox {
    * 自定义元素宿主上的 aria-* 读屏不会当成输入框属性。这里只负责产出，
    * 由 bind 逐层透传，各层的 prop 声明统一在 base/AriaElem.ts。
    *
-   * ⚠️ 类型只能是 any：本 getter 会被编译器内联进模板插值，prelude 里任何
+   * 类型只能是 any：本 getter 会被编译器内联进模板插值，prelude 里任何
    * 类型标识符都会撞 D3 自由标识符检查（同 Menu.ts 的 aria 对象）。
    */
   get __comboboxAria(): any {

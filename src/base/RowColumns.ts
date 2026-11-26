@@ -12,7 +12,7 @@
 /**
  * 层元信息：决定**整层**哪些列存在。
  *
- * ⭐ 列的存在性只由层级决定、单元格内容只由单项决定 —— 这是跨行对齐的唯一
+ * 列的存在性只由层级决定、单元格内容只由单项决定 —— 这是跨行对齐的唯一
  * 正确姿势。单项各自决定列宽会让「有图标/无图标」「有快捷键/无快捷键」的行
  * 文本左缘互相错开。
  */
@@ -72,7 +72,7 @@ export function rowColumnVars(m: RowColumnFlags, opts: RowColumnOptions = {}): R
 /**
  * 实测某列的自然宽，写回 `--<prefix>-col-<name>-fixed`。
  *
- * ⚠️ **绝不能去写 `--<prefix>-col-<name>` 本身**：那个变量是 `styles()` 指令
+ * **绝不能去写 `--<prefix>-col-<name>` 本身**：那个变量是 `styles()` 指令
  * 写在层容器上的（值为 `var(--<prefix>-col-<name>-fixed, 兜底)`），用
  * `style.setProperty(name, "")` 把它清掉等于**删掉**该自定义属性，而指令的
  * diff 认为值没变、不会补回，于是行模板里的 `var(...)` 全部回落到 0px ——

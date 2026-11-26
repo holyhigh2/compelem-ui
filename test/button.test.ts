@@ -135,7 +135,7 @@ describe('ce-button-group 行为', () => {
   })
 
   /**
-   * ⚠️ `emit-native` 不是可选装饰：compelem 的 `CompElem.emit()` 默认把事件交给
+   * `emit-native` 不是可选装饰：compelem 的 `CompElem.emit()` 默认把事件交给
    * 「包装它的 compelem 组件」（`emitEvent(this.wrapperComponent, ...)`），只有宿主
    * 带 `emit-native` 属性时才真正 `dispatchEvent(CustomEvent)`。脱离 compelem 渲染树
    * 直接 addEventListener 的纯 DOM 用法不加这个属性，永远收不到 change / update:value。

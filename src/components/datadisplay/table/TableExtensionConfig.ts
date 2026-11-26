@@ -16,7 +16,7 @@ import { ColumnType, ConfigType, Operation, RowHeightType, TableEvents } from ".
 export function TableExtensionConfig<T extends Constructor<any>>(spuerClass: T) {
   return class TableExtensionConfig extends spuerClass {
     /**
-     * ⚠️ 这三个字段**必须**是 `declare`（纯类型声明，零运行期发射）。
+     * 这三个字段**必须**是 `declare`（纯类型声明，零运行期发射）。
      *
      * 它们的真实存储由**子类 Table** 的同名装饰器提供（`@state groupOrders` /
      * `@state groupedData` / `@state filterTreeData` —— 见
@@ -27,11 +27,6 @@ export function TableExtensionConfig<T extends Constructor<any>>(spuerClass: T) 
      * —— **实例自有属性遮蔽原型访问器**：`this.groupOrders === undefined` 而
      * `this.__s.groupOrders.value` 有真值 ⇒ 分组（`table.groupOrders` 读不到，列配置面板
      * 勾不上分组）、树过滤（`arrayToTree(filterTreeData, …)` 恒得到空数组）全部静默失效。
-     *
-     * 实测（2026-10-09 `.ce-p10.mjs` 的「diag 遮蔽字段」段）：
-     * `shadowedFields: ["groupOrders","groupedData","filterTreeData"]`（ce-table / ce-editable 均命中）。
-     * 同 `mixins/Virtualized.ts` / `mixins/VirtualLoop.ts` / `mixins/FieldContainer.ts`
-     * 与 `mixins/TreeStructured.ts` 的 `declare filterTreeData`。
      */
     declare groupOrders: Array<{ prop: string, condition?: string, name?: string }> | undefined
     declare groupedData: Record<string, any>[] | undefined
@@ -85,12 +80,8 @@ export function TableExtensionConfig<T extends Constructor<any>>(spuerClass: T) 
     /////////////////////////////////////////////////// configs
     __rowHeightType: string
     _setRowHeightType(rowHeightType: string, cancelEmit = false) {
-      // ⭐ 性能：末尾那次 `forceUpdate()` 原先**无条件**执行 ⇒ 每次行高下发都换来一次
-      //    同步全量重渲染（实测 314ms/次；应用侧首屏挂载 + 网格重建会各下发一次，
-      //    合计 628ms，占首屏 CPU 的 ~9%）。
-      //    而 `this.vRowHeight = h` 走 @state setter，**同值赋值会被 setterValue 的
-      //    `Object.is` 短路**（连派发都不会发生）—— 所以"档位与行高都没变"时，
-      //    这次 forceUpdate 是彻头彻尾的浪费。改为：**真的变了才全量重渲染**。
+      // 性能：`this.vRowHeight = h` 走 @state setter，**同值赋值会被 setterValue 的
+      //    `Object.is` 短路**（连派发都不会发生）。
       //    副作用（__onRowHeightChange 的 emit / tableBar 同步）保持无条件执行。
       const typeChanged = this.__rowHeightType !== rowHeightType
       this.__rowHeightType = rowHeightType

@@ -35,13 +35,11 @@ describe('package contract', () => {
     expect(pkg.peerDependencies.uiik).toBeTruthy()
   })
 
-  it('exceljs 与 compelem-router 仅作为动态可选能力，不声明为 peer', () => {
-    const peerMeta = pkg.peerDependenciesMeta ?? {}
-    for (const name of ['exceljs', 'compelem-router']) {
-      expect(pkg.peerDependencies).not.toHaveProperty(name)
-      expect(peerMeta).not.toHaveProperty(name)
-    }
-    expect(pkg.devDependencies.exceljs).toBeTruthy()
+  it('核心包不声明可选能力依赖（导出插件是独立项目）', () => {
+    expect(pkg.peerDependencies).not.toHaveProperty('exceljs')
+    expect(pkg.peerDependenciesMeta ?? {}).not.toHaveProperty('exceljs')
+    expect(pkg.devDependencies).not.toHaveProperty('exceljs')
+    expect(pkg.exports).not.toHaveProperty('./table-excel')
   })
 
   it('发布目录包含 dist 且声明的类型文件不被源码泄漏', () => {

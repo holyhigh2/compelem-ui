@@ -38,11 +38,6 @@ declare module '*.css?tmpl' {
   export default css
 }
 
-// exceljs（运行时通过 CDN / 手写入包，仅在 utils/excel.ts 中按需 import）
-declare module 'exceljs' {
-  const ExcelJS: any
-  export default ExcelJS
-}
 
 // 表格扩展配置中读取的构建期环境变量
 declare const process: {

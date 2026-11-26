@@ -1,33 +1,9 @@
-/**
- * 浮层统一层栈 / top-layer 注册入口（2026-11-10）。
- *
- * ## 为什么存在
- * 库里曾并存两套浮层模型：`ce-overlay` 家族走 body 级容器 + z-index 栈，
- * `ce-drawer` 走原生 `<dialog>.showModal()` + 浏览器 top-layer。后者的模态语义
- * 会把「不在 dialog 子树内」的所有节点判为 inert —— 于是抽屉里的下拉、日期面板
- * 看得见却点不动、没有 hover。真机探针证明：让容器进 top-layer 或重排 z 序都
- * 无效，因为判据是 **DOM 血缘**，不是绘制顺序。
- *
- * 现在所有浮层（Overlay 容器 / Drawer / Dialog / Tooltip…）统一：
- *  - 一律用**非模态** `popover="manual"` 进 top-layer（不产生 document-blocked / inert）；
- *  - 一律通过本模块的 `activateLayer / deactivateLayer / isLayerActive` 管理开合；
- *  - 一律通过 `pushLayer / popLayer` 登记到**同一个层栈**，ESC 只由这里分发一次。
- * 「模态」降级为组件自己的视觉与 ARIA 语义（backdrop / aria-modal / 焦点归还），
- * 不再由浏览器按 DOM 血缘强制切分可交互区域。
- *
- * ## 降级
- * 不支持 Popover API 的浏览器：`activateLayer()` 返回 false，调用方自行加
- * 可见类并依赖宿主 z-index（与改造前行为一致，绝不会比以前更坏）。
- */
+/** 浮层统一层栈 / top-layer 注册入口。 */
 
 export interface LayerOptions {
   /** 本层处于栈顶时按 ESC 的回调；组件自行决定 close 还是 shake */
   onEsc?: (e: KeyboardEvent) => void;
-  /**
-   * 本层处于栈顶时点击「层外」的回调。
-   * 取代了旧 `<dialog>` 的 `::backdrop` 点击（popover 的 ::backdrop 不派发 click
-   * 到元素自身，真机验证：backdrop=initial 点外部不关、static 不抖动）。
-   */
+  /** 本层处于栈顶时点击「层外」的回调。 */
   onOutsideClick?: (e: MouseEvent) => void;
 }
 
@@ -45,10 +21,7 @@ export const supportsPopover: boolean =
 
 /**
  * 把元素放进 top-layer（幂等）。只负责「进入」，不负责「顺序」。
- *
- * ⚠️ 模态 `showModal()` 存在时重排**无效**（inert 按 DOM 血缘判定，与绘制顺序
- * 无关，真机探针 B 已证）。但改为非模态 popover 之后，top-layer 内部确实按
- * 打开顺序叠放，长期驻留的共享容器就需要显式置顶 —— 见 bringLayerToFront()。
+ * 长期驻留的共享容器需显式置顶 —— 见 bringLayerToFront()。
  */
 export function activateLayer(el: HTMLElement): boolean {
   if (!supportsPopover) return false;
@@ -68,7 +41,7 @@ export function activateLayer(el: HTMLElement): boolean {
  * 就长期驻留，之后打开的 Drawer / 其它 popover 会排在它后面把它压住。每次有新
  * overlay 打开时同步 hide+show 一次即可把容器抬到最上，同一任务内完成不会闪。
  *
- * ⚠️ 不要给每个浮层实例都调：单个实例 showPopover() 时本来就在末尾。
+ * 不要给每个浮层实例都调：单个实例 showPopover() 时本来就在末尾。
  */
 export function bringLayerToFront(el: HTMLElement): void {
   if (!supportsPopover || !isLayerActive(el)) return;
@@ -87,7 +60,7 @@ export function deactivateLayer(el: HTMLElement): void {
   } catch {
     /* 已隐藏 / 未连接：noop */
   }
-  // ⚠️ 刻意**保留** `popover="manual"` 属性，不要 removeAttribute。
+  // 刻意**保留** `popover="manual"` 属性，不要 removeAttribute。
   // UA 的 `[popover]:not(:popover-open){display:none}` 依赖这个属性；一旦删掉，
   // 关闭态元素会从 display:none 变回 display:block。共享 overlay 容器还带着
   // `position:fixed;inset:0`，于是变成铺满视口的空 div 永久吞掉页面点击
@@ -175,7 +148,7 @@ function isOutsideClick(e: MouseEvent): boolean {
   // 命中任一已登记层（含 shadow 内子树与 slot 投影内容）都算层内
   if (STACK.some((l) => path.includes(l.el))) return false;
   // 兜底：命中共享容器里**已打开的浮层内容**才算层内。
-  // ⚠️ 不能判「命中容器就算层内」：容器是铺满视口的 popover，点页面任意
+  // 不能判「命中容器就算层内」：容器是铺满视口的 popover，点页面任意
   // 位置（包括遮罩/背景）都会命中它，那样 outside-click 永远不会触发
   // （真机验证：backdrop=initial 点外部不关）。
   const container = document.querySelector('.ce-overlay-container');

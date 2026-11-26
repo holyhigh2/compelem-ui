@@ -103,8 +103,6 @@ $_hover: background-color var(--ce-list-item-hover-transition-duration, 0.3s);
 }
 
 // 行高下限档位：只写 --list-item-min-height，由 :host 的 min-height 统一消费。
-// 原先直接写 min-height，外部想覆盖（如设置面板卡片行 46px）只能整条属性覆盖，
-// 且与 :host 的 min-height 形成两条互不知情的规则。
 // 24/32/40 是**单行项**的行高基准；两行项实际高度由 padding-block + 内容决定，
 // 恒大于此值，所以这里只是下限，不会把两行项压矮。
 :host([space="loose"]) {
@@ -183,7 +181,7 @@ $_hover: background-color var(--ce-list-item-hover-transition-duration, 0.3s);
   // 标题 --ce-color-text(gray-700)，副标题 --ce-color-text-secondary(gray-600，
   // 与 Windows 设置的描述色 #616161 同档）。
   //
-  // ⚠️ 这里是 --ce-font-*-em 档的**合法用法**（见 css/root.scss 字号契约第 2 条）：
+  // 这里是 --ce-font-*-em 档的**合法用法**（见 css/root.scss 字号契约第 2 条）：
   // 主副标题必须等比跟随条目字号，属于「相对自身」的派生值，不是字号档位。
   // 条目字号本身由宿主用 rem 档（--ce-font-sm）设定，不要再写成 em，
   // 否则 0.875em × 0.875em 双重复合（列表项曾因此从 12.25px 掉到 10.7px）。

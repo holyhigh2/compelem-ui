@@ -1,8 +1,8 @@
 import { CompElem, computed, createRef, css, csscope, Csscope, forEach, h, ifTrue, prop, query, show, state, styles, tag, Template } from "compelem";
 import { every, flatMap, identity, includes, isArray, isBoolean, isEmpty, isObject, join, last, map, parseJSON, range, remove, size, some, startsWith } from "myfx";
 import uii from "uiik";
-import { SortType } from "../../../constants";
 import { syncFilterPaneActive } from "../../../base/BarActions";
+import { SortType } from "../../../constants";
 import { tooltip } from "../../../directives/tooltip/Tooltip";
 import { Check, ChevronRight, Close, Drag, FillColor, FilterListLight, Group, Nut, PinFill, Plus, RowHeight, RowHeightL, RowHeightM, RowHeightS, Sort, SortDown, SortUp, Times } from "../../../icons/icons";
 import { Button } from "../../button/Button";
@@ -79,10 +79,9 @@ export class TableBar extends CompElem {
   @state fillColorList: Record<string, any>[] = []
 
   @state selectionSize = 0
-  // ⚠️ 必须 @state：模板里「已选择 <b>${selectionSize}</b> / ${selectionTotal}」
+  // 必须 @state：模板里「已选择 <b>${selectionSize}</b> / ${selectionTotal}」
   // 的第二个插值若绑裸字段，compelem 细粒度绑定只求值一次 ⇒ 复选后
-  // selectionTotal 由 0 变 3 也不会重渲染，文本恒显示「1 / 0」
-  // （2026-10-15 在 compelem-report-builder 系统配置弹框实测）。
+  // selectionTotal 由 0 变 3 也不会重渲染，文本恒显示「1 / 0」。
   @state selectionTotal = 0
 
   @state liteMode = false
@@ -171,11 +170,10 @@ export class TableBar extends CompElem {
     // }
   }
   mounted(): void {
-    // ⚠️ 宿主组件的内容可能被 overlay 搬到 document.body（典型：ce-table-bar 嵌在
+    // 宿主组件的内容可能被 overlay 搬到 document.body（典型：ce-table-bar 嵌在
     // ce-dialog 里时，整个子树物理搬移出 wrapperComponent.renderRoot）⇒ 从
     // renderRoot 找不到 target 时必须退文档级查找，否则 tableRef 为 undefined、
-    // _setTableBar 从未调用，复选后 selection slot 等 table 联动全部失效
-    // （2026-10-15 在 compelem-report-builder 系统配置弹框实测）。
+    // _setTableBar 从未调用，复选后 selection slot 等 table 联动全部失效。
     this.tableRef = (this.wrapperComponent?.renderRoot?.querySelector(this.target) ?? document.querySelector(this.target)) as Table
     if (!this.tableRef) return
     if (typeof (this.tableRef as any)._setTableBar !== "function") {
@@ -392,14 +390,14 @@ export class TableBar extends CompElem {
               <ce-button appearance="text" color="red" size="sm" style="padding: 0;float: right;" ripple="false" @click="${this.cancelFixed}">取消</ce-button>
             </ce-list-header>
             ${forEach(this.fixedPropList, identity, (prop) => {
-              const pos = this.fixedPropList.indexOf(prop) + 1
-              return h`
+      const pos = this.fixedPropList.indexOf(prop) + 1
+      return h`
             <ce-list-item value="${prop}" appearance="pale" hoverable ?active="${this.fixedIndex === pos}" style="padding-inline:var(--ce-spacing-md)">
               第${pos}列
               <ce-icon slot="append" ${show(this.fixedIndex === pos)} .svg="${Check}" size="md" ttt="1" style="color: var(--ce-color-primary)"></ce-icon>
             </ce-list-item>
             `
-            })}
+    })}
           </ce-list>
         </ce-scroller>
       </ce-card>

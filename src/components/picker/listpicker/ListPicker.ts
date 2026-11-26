@@ -348,7 +348,7 @@ export class ListPicker extends Virtualized(AppearanceElem) {
       // let checkbox = rowEl.querySelector('.ce-list-picker-checkbox') as Checkbox
       // checkbox.toggleCheck(show)
     } else {
-      // ⚠️ show 必须兜成布尔值：rowData 为空（虚拟化占位行尚未填数据）时
+      // show 必须兜成布尔值：rowData 为空（虚拟化占位行尚未填数据）时
       // `rowData && ...` 求值为 undefined，而 toggleAttribute(name, undefined)
       // 按规范是「切换」⇒ 空行被误打上 active（蓝底 + 勾选图标的空行，
       // 2026-10-18 实测 8 项列表渲染出 7 个空 active 行）。
